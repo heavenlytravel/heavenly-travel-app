@@ -397,8 +397,8 @@ function entityLabelOf(
     case "business":
       return labels[entityType].get(row.entityId) ?? row.entityId;
     case "invoice":
-      // A draft issued or deleted is gone: its entry says which.
-      return labels[entityType].get(row.entityId) ?? "Former draft";
+      // An open invoice dropped is gone: its entry says why.
+      return labels[entityType].get(row.entityId) ?? "Former open invoice";
     default:
       return row.entityId;
   }

@@ -122,9 +122,9 @@ model Vendor {
   bankName          String    @default("")
   bankAccountNumber String    @default("")
   bankAccountName   String    @default("")
-  /// What it supplies, VENDOR_SERVICES: asked of every kind at sign-up.
-  /// It adds and is offered only what it ticked; "agent" sells our trips
-  /// to its own customers and is never offered work.
+  /// What it offers: exactly one of VENDOR_SERVICES, chosen at sign-up and
+  /// changed by staff alone (a list only because it once held several).
+  /// It adds and is offered only what that supplies (suppliesIt).
   services          String[]  @default([])
   /// Old, dropped by the next schema change: an agent's invoice period,
   /// from when agents were vendors. Agents are `Business` rows now.
@@ -936,6 +936,7 @@ model Booking {
   revisions    BookingRevision[]
   charges      BookingCharge[]
   invoiceLines InvoiceLine[]
+  payments     Payment[]
 
   @@unique([invoiceId, invoiceLine])
   @@index([agentId, startsAt])
@@ -1034,9 +1035,11 @@ model Invoice {
   id           String    @id @default(cuid())
   /// INVOICE_TYPES: "invoice" | "credit"
   type         String    @default("invoice")
-  /// Per type, from its counter, when issued; null while a draft.
+  /// Per type, from its counter: an invoice when opened (a booking
+  /// confirmed, an agent's period's first booking), a credit note when
+  /// issued. Null only on the old system's rows.
   number       Int?
-  /// INVOICE_STATUSES: "draft" | "issued" | "void"
+  /// INVOICE_STATUSES: "open" | "issued" | "void"
   status       String    @default("issued")
   /// The business billed; null for a customer of ours.
   businessId   String?
@@ -1084,9 +1087,9 @@ model Invoice {
   @@index([creditsId])
 }
 
-/// What one booking adds to an invoice or a credit note. On a draft, a
-/// booking ticked or not, with no amount: issuing writes what the booking
-/// has not been billed yet. See src/billing.ts.
+/// What one booking adds to an invoice or a credit note. On an open
+/// invoice, what the booking has not been billed yet, kept up with each
+/// change until it is issued. See src/billing.ts.
 model InvoiceLine {
   id          String           @id @default(cuid())
   invoiceId   String
@@ -1099,7 +1102,7 @@ model InvoiceLine {
   /// "HTB-1042 Rev 3: Stop at Pantai Cenang added".
   description String           @default("")
   amountSen   Int              @default(0)
-  /// A draft's line only: whether it goes on the invoice when issued.
+  /// Old: the month-end draft's tick, unused; dropped by the next schema change.
   ticked      Boolean          @default(true)
 
   @@unique([invoiceId, bookingId])
@@ -1107,11 +1110,16 @@ model InvoiceLine {
 }
 
 /// Money in (positive) or a refund out (negative), against an invoice or
-/// a credit note. Reversed with a reason, never deleted.
+/// a credit note, for one booking on it. Reversed with a reason, never
+/// deleted.
 model Payment {
   id            String    @id @default(cuid())
   invoiceId     String
   invoice       Invoice   @relation(fields: [invoiceId], references: [id])
+  /// The booking it pays or refunds: the document's one booking, or one of
+  /// an agent's month-end invoice's, so each booking reads its own.
+  bookingId     String
+  booking       Booking   @relation(fields: [bookingId], references: [id])
   amountSen     Int
   /// PAYMENT_METHODS: "transfer" | "cash" | "cash-to-driver" | "card" | "cheque" | "other"
   method        String
@@ -1126,6 +1134,7 @@ model Payment {
   createdAt     DateTime  @default(now())
 
   @@index([invoiceId])
+  @@index([bookingId])
 }
 
 /// The last number given, per kind: "booking" (HTB), "invoice" (HTI),

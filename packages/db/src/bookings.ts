@@ -415,7 +415,7 @@ function whereOf(filter: BookingFilter): Prisma.BookingWhereInput | undefined {
     const number = parseDocumentNumber(filter.search);
     const onDocument = (type: "invoice" | "credit", n: number) => ({
       invoiceLines: {
-        some: { invoice: { type, number: n, status: { not: "draft" } } },
+        some: { invoice: { type, number: n } },
       },
     });
     where.OR = [
@@ -1045,6 +1045,7 @@ export function amendItem(
       {
         kind: "change",
         summary: `${tripName(item.position)} changed`,
+        trip: item.position,
         reason: input.override?.reason ?? null,
       },
       now,
@@ -1770,16 +1771,19 @@ export function reinstateBooking(
  * Changes who a booking is for, as staff correct it: the name, the phone
  * and the email the booking's emails go to, checked by `parseContact`.
  * The account a booking shows under is left as it is. Not a revision:
- * nothing we deliver or charge changes. An invoice issued already keeps
- * who it was billed to; a wrong one is voided and reissued. Saving what
- * is already there logs nothing.
+ * nothing we deliver or charge changes. Its open invoice is billed to the
+ * new details at once; an invoice issued already keeps who it was billed
+ * to, for Finance to void and reissue. Saving what is already there logs
+ * nothing.
  */
 export function updateBookingContact(
   actor: Actor,
   bookingId: string,
   contact: ContactFields,
+  now: Date = new Date(),
 ): Promise<Change> {
   return db.$transaction(async (tx) => {
+    await lockBooking(tx, bookingId);
     const booking = await tx.booking.findUnique({
       where: { id: bookingId },
       select: { contactName: true, contactPhone: true, contactEmail: true },
@@ -1797,6 +1801,7 @@ export function updateBookingContact(
       before: changed.before,
       after: changed.after,
     });
+    await settleBilling(tx, actor, bookingId, now);
     return { ok: true };
   });
 }

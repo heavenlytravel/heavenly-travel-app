@@ -28,15 +28,17 @@
 // 7. The agent-only vendors are deleted; a vendor that also supplies only
 //    loses "agent".
 // 8. Every other confirmed booking billed nothing yet follows the rules:
-//    an open invoice while it is live, issued at once when it has ended.
+//    its own open invoice while it is live, issued at once when it has
+//    ended; a credit agent's, a line of the agent's open month-end
+//    invoice for its period.
 //
-// See docs/261108-billing-and-revisions.md, "One open invoice per
-// booking". With --dry-run it prints what it would do and writes nothing.
+// See docs/261108-billing-and-revisions.md, "Open invoices, month-end
+// too, and amendments". With --dry-run it prints what it would do and writes nothing.
 import { logActivity } from "../src/activity";
 import { SYSTEM_ACTOR } from "../src/activity-actions";
 import { bookingLabelOf, formatDocumentNumber } from "../src/booking-number";
 import { issueOldInvoice, settleBilling } from "../src/billing";
-import { isCredit, PAYMENT_TERMS } from "../src/billing-rules";
+import { isCredit } from "../src/billing-rules";
 import { db } from "../src/client";
 import { formatRinggit } from "../src/money";
 import {
@@ -245,24 +247,24 @@ async function billOldInvoices() {
 }
 
 /**
- * Every other confirmed booking billed nothing yet, not an agent's on
- * credit (those wait for the month-end run): an open invoice while live,
- * issued once ended.
+ * Every other confirmed booking billed nothing yet: its own open invoice
+ * while live, issued once ended; a credit agent's, a line of the agent's
+ * open month-end invoice for its period, for Finance to issue.
  */
 async function billTheRest() {
   const bookings = await db.booking.findMany({
     where: {
       confirmedAt: { not: null },
       invoiceLines: { none: {} },
-      OR: [
-        { businessId: null },
-        {
-          business: { paymentTerms: { notIn: PAYMENT_TERMS.filter(isCredit) } },
-        },
-      ],
     },
     orderBy: { createdAt: "asc" },
-    select: { id: true, number: true, status: true, priceTotalSen: true },
+    select: {
+      id: true,
+      number: true,
+      status: true,
+      priceTotalSen: true,
+      business: { select: { paymentTerms: true } },
+    },
   });
   for (const booking of bookings) {
     if (planned.reissued.has(booking.id)) continue;
@@ -270,7 +272,7 @@ async function billTheRest() {
       continue;
     if (DRY_RUN) {
       say(
-        `${labelOf(booking)} (${booking.status}): ${booking.status === "completed" || booking.status === "cancelled" ? "issued now" : "open invoice"}.`,
+        `${labelOf(booking)} (${booking.status}): ${booking.business && isCredit(booking.business.paymentTerms) ? "agent's month-end invoice" : booking.status === "completed" || booking.status === "cancelled" ? "issued now" : "open invoice"}.`,
       );
       continue;
     }

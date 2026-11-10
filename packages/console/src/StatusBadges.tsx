@@ -136,9 +136,9 @@ export function PaymentStateBadge({ state }: { state: string }) {
   );
 }
 
-/** A document's own step: a draft not numbered yet (amber), issued (brand blue), void (grey). */
+/** A document's own step: open and following its bookings (navy), issued (brand blue), void (grey). */
 export const INVOICE_STATUS_TONES: Record<InvoiceStatus, BadgeTone> = {
-  draft: "amber",
+  open: "navy",
   issued: "brand",
   void: "neutral",
 };

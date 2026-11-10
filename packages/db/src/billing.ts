@@ -13,27 +13,37 @@ import {
   dueAtOf,
   invoiceMoneyOf,
   isCredit,
-  lastEndedPeriod,
+  isInvoiceStatus,
+  localDayOf,
   localDayStart,
-  periodEndInstant,
   periodHasEnded,
   periodLabel,
+  periodOf,
+  spreadPayment,
   sumMoney,
   type BilledInvoice,
   type BillingPeriod,
   type BillingPlan,
   type BillTo,
+  type InvoiceBilled,
+  type InvoiceIssuedWhen,
   type InvoiceMoney,
   type InvoiceStatus,
   type InvoiceType,
   type PaymentMethod,
   type PaymentState,
 } from "./billing-rules";
-import { refuse, type Change, type Created, type Refusal } from "./change";
+import { refuse, type Change, type Refusal } from "./change";
 import { db } from "./client";
+import type { MadeOrder } from "./list-order";
 import type { Prisma } from "./generated/prisma/client";
 import { formatMyr } from "./money";
-import { latestRevisionOf } from "./revisions";
+import {
+  revisionSnapshotOf,
+  type RevisionDetail,
+  type SnapshotTrip,
+} from "./revision-rules";
+import { latestRevisionOf, withDetails } from "./revisions";
 
 type Tx = Prisma.TransactionClient;
 
@@ -42,10 +52,11 @@ type Tx = Prisma.TransactionClient;
  * month-end run, voids, and payments. Every rule is in ./billing-rules;
  * this reads and writes them. Staff never type an amount on an invoice:
  * the amounts come from the bookings, and an issued document never
- * changes. A live booking not on credit has one open invoice, a draft
- * that follows it and is issued when it ends or by Finance. Finance's
- * (`invoices.manage`), except what follows a booking's own change, which
- * bills inside that change's transaction. See
+ * changes. A live booking not on credit has one open invoice, numbered
+ * when it is confirmed, that follows it: payments go on it as they come
+ * in, and it is issued in full, its number kept, when the booking ends or
+ * by Finance. Finance's (`invoices.manage`), except what follows a
+ * booking's own change, which bills inside that change's transaction. See
  * docs/261108-billing-and-revisions.md, "Billing rules in code" and "One
  * open invoice per booking".
  */
@@ -180,9 +191,10 @@ function onCredit(booking: BilledBooking) {
 }
 
 /**
- * What billing plans for a booking were it to charge `chargedSen`. With
- * `now`, what issuing now bills: Finance's Issue now, on credit terms or
- * not, ended or not.
+ * What billing plans for a booking were it to charge `chargedSen`: a
+ * credit agent's booking on the agent's month-end invoice, any other on
+ * its own. With `now`, what issuing now bills: Finance's Issue now,
+ * ended or not.
  */
 async function planFor(
   client: Tx,
@@ -192,7 +204,7 @@ async function planFor(
 ): Promise<BillingPlan> {
   return billingPlanOf({
     confirmed: booking.confirmedAt !== null,
-    credit: now ? false : onCredit(booking),
+    credit: now ? false : await isMonthly(client, booking),
     ended: now || hasEnded(booking.status),
     chargedSen,
     billed: await billedInvoicesOf(client, booking.id),
@@ -253,25 +265,44 @@ async function issueDocument(
     select: { id: true, type: true, number: true },
   });
   const label = documentLabelOf(created);
+  await logIssued(
+    tx,
+    actor,
+    { id: created.id, label, totalSen, billTo: input.billTo },
+    input.lines,
+  );
+  return { id: created.id, label };
+}
+
+/** Logs a document issued, on it and on each booking it bills. */
+async function logIssued(
+  tx: Tx,
+  actor: Actor,
+  doc: { id: string; label: string; totalSen: number; billTo: BillTo },
+  lines: readonly { bookingId: string; amountSen: number }[],
+) {
   await logActivity(tx, actor, {
     action: "invoice.issued",
-    entityId: created.id,
-    after: { document: label, totalSen, billTo: input.billTo.name },
+    entityId: doc.id,
+    after: {
+      document: doc.label,
+      totalSen: doc.totalSen,
+      billTo: doc.billTo.name,
+    },
   });
-  for (const line of input.lines) {
+  for (const line of lines) {
     await logActivity(tx, actor, {
       action: "booking.billed",
       entityId: line.bookingId,
-      after: { document: label, amountSen: line.amountSen },
+      after: { document: doc.label, amountSen: line.amountSen },
     });
   }
-  return { id: created.id, label };
 }
 
 /**
  * A booking's line on an invoice: its first bill names the booking; a
  * later one, the revisions since the last bill, which an open invoice
- * gathers: "HTB-0042 Rev 3–5: Stop at B added; Late charge; Discount".
+ * gathers: "HTB-0042 Amendments 3–5: Stop at B added; Late charge; Discount".
  */
 async function lineDescription(
   tx: Tx,
@@ -303,17 +334,28 @@ async function lineDescription(
   if (!first || !latest) return label;
   const range =
     first === latest
-      ? `Rev ${first.number}`
-      : `Rev ${first.number}–${latest.number}`;
+      ? `Amendment ${first.number}`
+      : `Amendments ${first.number}–${latest.number}`;
   return `${label} ${range}: ${since.map((r) => r.summary).join("; ")}`;
 }
 
 type IssuingPlan = Extract<BillingPlan, { kind: "invoice" | "credit" }>;
 
+/** A booking's line as billed now: its latest revision, and the words for it. */
+async function lineOf(tx: Tx, booking: BilledBooking, amountSen: number) {
+  const revision = await latestRevisionOf(tx, booking.id);
+  return {
+    revisionId: revision?.id ?? null,
+    description: await lineDescription(tx, booking, revision),
+    amountSen,
+  };
+}
+
 /**
- * Issues what a plan asks for one booking: an invoice, or credit notes
- * against its invoices, each line naming the booking's latest revision.
- * `part` marks an invoice for part of what is due (a deposit).
+ * Issues what a plan asks for one booking: its open invoice, its number
+ * kept, or a new invoice when it has none (a change after it ended); or
+ * credit notes against its invoices. Each line names the booking's latest
+ * revision.
  */
 async function issuePlan(
   tx: Tx,
@@ -321,18 +363,19 @@ async function issuePlan(
   booking: BilledBooking,
   plan: IssuingPlan,
   now: Date,
-  { part = false }: { part?: boolean } = {},
 ): Promise<{ id: string; label: string }[]> {
-  const revision = await latestRevisionOf(tx, booking.id);
-  const description = await lineDescription(tx, booking, revision);
   const billTo = billToOfBooking(booking);
-  const line = (amountSen: number) => ({
+  const line = async (amountSen: number) => ({
     bookingId: booking.id,
-    revisionId: revision?.id ?? null,
-    description: part ? `${description} (part)` : description,
-    amountSen,
+    ...(await lineOf(tx, booking, amountSen)),
   });
   if (plan.kind === "invoice") {
+    const open = await ownOpenOf(tx, booking.id);
+    if (open) {
+      return [
+        await issueOpen(tx, actor, booking, open.id, plan.amountSen, now),
+      ];
+    }
     return [
       await issueDocument(
         tx,
@@ -340,7 +383,7 @@ async function issuePlan(
         {
           type: "invoice",
           billTo,
-          lines: [line(plan.amountSen)],
+          lines: [await line(plan.amountSen)],
           dueAt: dueOf(booking, now),
         },
         now,
@@ -357,7 +400,7 @@ async function issuePlan(
           type: "credit",
           billTo,
           creditsId: note.invoiceId,
-          lines: [line(note.amountSen)],
+          lines: [await line(note.amountSen)],
           dueAt: null,
         },
         now,
@@ -367,60 +410,395 @@ async function issuePlan(
   return issued;
 }
 
-/** The booking's open invoice: its own draft, of no period. */
-function openDraftOf(client: Tx, bookingId: string) {
-  return client.invoiceLine.findFirst({
-    where: { bookingId, invoice: { status: "draft", periodStart: null } },
-    select: { invoiceId: true },
+const OPEN_SELECT = {
+  id: true,
+  type: true,
+  number: true,
+  createdAt: true,
+  periodStart: true,
+  periodEnd: true,
+  _count: { select: { payments: { where: { reversedAt: null } } } },
+} as const satisfies Prisma.InvoiceSelect;
+
+/** The booking's own open invoice, with how many live payments it holds. */
+function ownOpenOf(client: Tx, bookingId: string) {
+  return client.invoice.findFirst({
+    where: {
+      status: "open",
+      periodStart: null,
+      lines: { some: { bookingId } },
+    },
+    select: OPEN_SELECT,
   });
 }
 
-/** The month-end draft a booking is a line of, if any. */
-function periodDraftOf(client: Tx, bookingId: string) {
-  return client.invoiceLine.findFirst({
+/** The agent's open month-end invoice the booking is a line of. */
+function periodOpenOf(client: Tx, bookingId: string) {
+  return client.invoice.findFirst({
+    where: {
+      status: "open",
+      periodStart: { not: null },
+      lines: { some: { bookingId } },
+    },
+    select: OPEN_SELECT,
+  });
+}
+
+type OpenInvoice = NonNullable<Awaited<ReturnType<typeof ownOpenOf>>>;
+
+/**
+ * A credit agent's booking billed on an invoice of its own: one Finance
+ * split out ("Bill on its own"), or one invoiced on its own from before
+ * its agent was on credit. It is billed as a direct booking from then on.
+ */
+async function billedAloneOf(client: Tx, bookingId: string) {
+  const own = await client.invoiceLine.count({
     where: {
       bookingId,
-      invoice: { status: "draft", periodStart: { not: null } },
+      invoice: {
+        type: "invoice",
+        periodStart: null,
+        status: { in: ["open", "issued"] },
+      },
     },
-    select: { invoiceId: true },
+  });
+  return own > 0;
+}
+
+/** Billed on its agent's month-end invoice: on credit terms, and not split out. */
+async function isMonthly(client: Tx, booking: BilledBooking) {
+  return onCredit(booking) && !(await billedAloneOf(client, booking.id));
+}
+
+/** A run's period as the database keeps its first day. */
+const periodStartOf = (period: BillingPeriod) =>
+  new Date(`${period.start}T00:00:00Z`);
+
+/**
+ * The period whose month-end invoice a credit agent's booking goes on:
+ * its first pick-up's, unless that one is issued already; then today's,
+ * or the first after it not issued (a late charge, a booking confirmed
+ * after its month was billed).
+ */
+async function targetPeriodOf(
+  client: Tx,
+  booking: BilledBooking,
+  now: Date,
+): Promise<BillingPeriod> {
+  const terms = booking.business?.paymentTerms ?? "";
+  if (!booking.business || !isCredit(terms)) {
+    throw new Error(
+      "Only a credit agent's booking goes on a month-end invoice.",
+    );
+  }
+  const businessId = booking.business.id;
+  const issued = async (period: BillingPeriod) =>
+    (await client.invoice.count({
+      where: {
+        businessId,
+        type: "invoice",
+        status: "issued",
+        periodStart: periodStartOf(period),
+      },
+    })) > 0;
+  const own = periodOf(localDayOf(booking.startsAt), terms);
+  if (!(await issued(own))) return own;
+  let period = periodOf(localDayOf(now), terms);
+  while (await issued(period)) {
+    const after = new Date(`${period.end}T00:00:00Z`);
+    after.setUTCDate(after.getUTCDate() + 1);
+    period = periodOf(after.toISOString().slice(0, 10), terms);
+  }
+  return period;
+}
+
+/**
+ * The agent's open month-end invoice for the booking's period, opened
+ * when the first booking of the period needs it, numbered when issued. The
+ * agent's row is held, so two saves never open two for one period.
+ */
+async function periodInvoiceFor(
+  tx: Tx,
+  actor: Actor,
+  booking: BilledBooking,
+  now: Date,
+): Promise<{ id: string }> {
+  const business = booking.business!;
+  await tx.$executeRaw`SELECT id FROM "Business" WHERE id = ${business.id} FOR UPDATE`;
+  const period = await targetPeriodOf(tx, booking, now);
+  const open = await tx.invoice.findFirst({
+    where: {
+      businessId: business.id,
+      type: "invoice",
+      status: "open",
+      periodStart: periodStartOf(period),
+    },
+    select: { id: true },
+  });
+  if (open) return open;
+  const billTo = billToOfBooking(booking);
+  const opened = await tx.invoice.create({
+    data: {
+      type: "invoice",
+      status: "open" satisfies InvoiceStatus,
+      businessId: business.id,
+      billTo,
+      periodStart: periodStartOf(period),
+      periodEnd: new Date(`${period.end}T00:00:00Z`),
+      totalSen: 0,
+      createdById: "userId" in actor ? actor.userId : null,
+    },
+    select: { id: true, type: true, number: true },
+  });
+  await logActivity(tx, actor, {
+    action: "invoice.opened",
+    entityId: opened.id,
+    after: { period: periodLabel(period), billTo: billTo.name },
+  });
+  return opened;
+}
+
+/**
+ * The number an open invoice takes as it is issued: the next from the
+ * counter, so numbers run in the order invoices are issued and none is
+ * lost to an invoice that never was. One numbered before this rule keeps
+ * its own.
+ */
+async function numberOnIssue(tx: Tx, invoiceId: string): Promise<number> {
+  const { number } = await tx.invoice.findUniqueOrThrow({
+    where: { id: invoiceId },
+    select: { number: true },
+  });
+  return number ?? (await nextBookingNumber(tx, "invoice"));
+}
+
+/**
+ * Drops an open invoice nothing was paid on, with why. Not numbered yet,
+ * it leaves no gap; the log keeps that it was.
+ */
+async function dropOpen(
+  tx: Tx,
+  actor: Actor,
+  open: { id: string; type: string; number: number | null },
+  reason: string,
+) {
+  await tx.invoice.delete({ where: { id: open.id } });
+  await logActivity(tx, actor, {
+    action: "invoice.dropped",
+    entityId: open.id,
+    after: { reason },
   });
 }
 
 /**
- * Keeps the booking's open invoice as the rules ask: one while it is
- * confirmed, live, not on credit and not invoiced in full, billed to whom
- * the booking is billed to now; none otherwise. Its amount is never
- * stored: it is what the booking has not been billed yet.
+ * An open month-end invoice's total, its lines' sum, after a line came,
+ * moved or went. One left with no booking and nothing paid is dropped.
  */
-async function syncOpenDraft(tx: Tx, booking: BilledBooking) {
-  const open = await openDraftOf(tx, booking.id);
-  const wanted =
-    booking.confirmedAt !== null &&
-    !hasEnded(booking.status) &&
-    !onCredit(booking) &&
-    booking.priceTotalSen !== (await billedSenOf(tx, booking.id)) &&
-    !(await periodDraftOf(tx, booking.id));
-  if (!wanted) {
-    if (open) await tx.invoice.delete({ where: { id: open.invoiceId } });
+async function retotalPeriod(tx: Tx, actor: Actor, invoiceId: string) {
+  const doc = await tx.invoice.findUniqueOrThrow({
+    where: { id: invoiceId },
+    select: {
+      ...OPEN_SELECT,
+      lines: { select: { amountSen: true } },
+    },
+  });
+  if (doc.lines.length === 0 && doc._count.payments === 0) {
+    await dropOpen(tx, actor, doc, "No booking is left on it.");
+    return;
+  }
+  await tx.invoice.update({
+    where: { id: invoiceId },
+    data: { totalSen: doc.lines.reduce((sum, l) => sum + l.amountSen, 0) },
+  });
+}
+
+/** Takes the booking's line off an open month-end invoice. */
+async function leavePeriod(
+  tx: Tx,
+  actor: Actor,
+  bookingId: string,
+  invoiceId: string,
+) {
+  await tx.invoiceLine.deleteMany({ where: { invoiceId, bookingId } });
+  await retotalPeriod(tx, actor, invoiceId);
+}
+
+/**
+ * Issues the booking's own open invoice for `amountSen`, numbered now,
+ * its payments kept: the amount, who it is billed to, its revision and
+ * when it is due frozen now.
+ */
+async function issueOpen(
+  tx: Tx,
+  actor: Actor,
+  booking: BilledBooking,
+  invoiceId: string,
+  amountSen: number,
+  now: Date,
+): Promise<{ id: string; label: string }> {
+  const billTo = billToOfBooking(booking);
+  const line = await lineOf(tx, booking, amountSen);
+  const issued = await tx.invoice.update({
+    where: { id: invoiceId },
+    data: {
+      number: await numberOnIssue(tx, invoiceId),
+      status: "issued" satisfies InvoiceStatus,
+      totalSen: amountSen,
+      businessId: billTo.businessId,
+      billTo,
+      issuedAt: now,
+      dueAt: dueOf(booking, now),
+      issuedById: "userId" in actor ? actor.userId : null,
+      lines: { updateMany: { where: { bookingId: booking.id }, data: line } },
+    },
+    select: { id: true, type: true, number: true },
+  });
+  const label = documentLabelOf(issued);
+  await logIssued(
+    tx,
+    actor,
+    { id: issued.id, label, totalSen: amountSen, billTo },
+    [{ bookingId: booking.id, amountSen }],
+  );
+  return { id: issued.id, label };
+}
+
+/**
+ * The booking's own open invoice, opened now for `amountSen`, numbered
+ * when issued: on confirming, or when Finance bills it on its own.
+ */
+async function openOwn(
+  tx: Tx,
+  actor: Actor,
+  booking: BilledBooking,
+  amountSen: number,
+  now: Date,
+): Promise<{ id: string; label: string }> {
+  const billTo = billToOfBooking(booking);
+  const opened = await tx.invoice.create({
+    data: {
+      type: "invoice",
+      status: "open" satisfies InvoiceStatus,
+      businessId: billTo.businessId,
+      billTo,
+      totalSen: amountSen,
+      dueAt: dueOf(booking, now),
+      createdById: "userId" in actor ? actor.userId : null,
+      lines: {
+        create: [
+          { bookingId: booking.id, ...(await lineOf(tx, booking, amountSen)) },
+        ],
+      },
+    },
+    select: { id: true, type: true, number: true },
+  });
+  const label = documentLabelOf(opened);
+  await logActivity(tx, actor, {
+    action: "invoice.opened",
+    entityId: opened.id,
+    after: { totalSen: amountSen, billTo: billTo.name },
+  });
+  return { id: opened.id, label };
+}
+
+/**
+ * Keeps the open invoice a confirmed booking is on as the rules ask. Its
+ * amount there is what the booking has not been billed yet, never below
+ * nothing, with its revision and billed-to, after every change.
+ *
+ * A credit agent's booking is a line of the agent's open month-end
+ * invoice for its period, moved when its period moves, taken off when
+ * nothing is left to bill. It stays there when the booking ends: the
+ * invoice is issued when the period ends.
+ *
+ * Any other booking has its own open invoice, numbered the first time it
+ * has something to bill, so the payments on it read Paid, then Partially
+ * paid after an amend that charges more. When it ends, what is left was
+ * issued on it (./settleBilling); one left over is closed.
+ */
+async function syncOpenInvoice(
+  tx: Tx,
+  actor: Actor,
+  booking: BilledBooking,
+  now: Date,
+) {
+  if (booking.confirmedAt === null) return;
+  const amountSen = Math.max(
+    0,
+    booking.priceTotalSen - (await billedSenOf(tx, booking.id)),
+  );
+  const onPeriod = await periodOpenOf(tx, booking.id);
+  if (await isMonthly(tx, booking)) {
+    const target =
+      amountSen > 0 ? await periodInvoiceFor(tx, actor, booking, now) : null;
+    if (onPeriod && onPeriod.id !== target?.id) {
+      await leavePeriod(tx, actor, booking.id, onPeriod.id);
+    }
+    if (target) {
+      const line = await lineOf(tx, booking, amountSen);
+      await tx.invoiceLine.upsert({
+        where: {
+          invoiceId_bookingId: { invoiceId: target.id, bookingId: booking.id },
+        },
+        create: { invoiceId: target.id, bookingId: booking.id, ...line },
+        update: line,
+      });
+      await retotalPeriod(tx, actor, target.id);
+    }
+    return;
+  }
+  if (onPeriod) await leavePeriod(tx, actor, booking.id, onPeriod.id);
+  const open = await ownOpenOf(tx, booking.id);
+  if (hasEnded(booking.status)) {
+    if (open) await closeOpen(tx, actor, booking, open, now);
+    return;
+  }
+  if (!open) {
+    if (amountSen > 0) await openOwn(tx, actor, booking, amountSen, now);
     return;
   }
   const billTo = billToOfBooking(booking);
-  if (open) {
-    await tx.invoice.update({
-      where: { id: open.invoiceId },
-      data: { businessId: billTo.businessId, billTo },
-    });
-    return;
-  }
-  await tx.invoice.create({
+  await tx.invoice.update({
+    where: { id: open.id },
     data: {
-      type: "invoice",
-      status: "draft" satisfies InvoiceStatus,
+      totalSen: amountSen,
       businessId: billTo.businessId,
       billTo,
-      lines: { create: [{ bookingId: booking.id }] },
+      dueAt: dueOf(booking, open.createdAt),
+      lines: {
+        updateMany: {
+          where: { bookingId: booking.id },
+          data: await lineOf(tx, booking, amountSen),
+        },
+      },
     },
   });
+}
+
+/**
+ * The own open invoice of a booking that has ended with nothing left on
+ * it: issued as it stands when money was paid on it, so the payments keep
+ * their invoice (a cancelled booking's, to refund); else dropped.
+ */
+async function closeOpen(
+  tx: Tx,
+  actor: Actor,
+  booking: BilledBooking,
+  open: OpenInvoice,
+  now: Date,
+) {
+  if (open._count.payments > 0) {
+    const unbilled =
+      booking.priceTotalSen - (await billedSenOf(tx, booking.id));
+    await issueOpen(tx, actor, booking, open.id, Math.max(0, unbilled), now);
+    return;
+  }
+  await dropOpen(
+    tx,
+    actor,
+    open,
+    "Nothing was left to bill when the booking ended.",
+  );
 }
 
 /** A booking as billing reads it, its row held to the end of the transaction. */
@@ -435,12 +813,13 @@ async function heldBooking(tx: Tx, bookingId: string) {
 /**
  * Bills what a booking's change asks, inside the change's transaction,
  * after the booking is refreshed and its revision written
- * (`billingPlanOf`): while it is live, the difference only moves its open
- * invoice; once it ends, what is due is issued at once, an invoice or
- * credit notes, so the open invoice is issued when the last trip is done
- * or the booking is cancelled. On credit terms more waits for the run;
- * less is a credit note at once. Answers the documents issued, for the
- * save's message.
+ * (`billingPlanOf`): while there is an open invoice to hold it, the
+ * difference only moves that; a booking of its own that has ended issues
+ * what is due at once: its open invoice, its number kept, when the last
+ * trip is done or the booking is cancelled, a new invoice for more after
+ * that, or credit notes for less. A credit agent's booking stays on the
+ * agent's month-end invoice; less than it was billed is a credit note at
+ * once. Answers the documents issued, for the save's message.
  */
 export async function settleBilling(
   tx: Tx,
@@ -453,14 +832,11 @@ export async function settleBilling(
     select: BILLED_BOOKING,
   });
   const plan = await planFor(tx, booking, booking.priceTotalSen);
-  const issuing =
-    plan.kind === "credit" ||
-    // A booking on a month-end draft is billed when the draft is issued.
-    (plan.kind === "invoice" && !(await periodDraftOf(tx, bookingId)));
-  const issued = issuing
-    ? await issuePlan(tx, actor, booking, plan as IssuingPlan, now)
-    : [];
-  await syncOpenDraft(tx, booking);
+  const issued =
+    plan.kind === "invoice" || plan.kind === "credit"
+      ? await issuePlan(tx, actor, booking, plan, now)
+      : [];
+  await syncOpenInvoice(tx, actor, booking, now);
   return issued.map((doc) => doc.label);
 }
 
@@ -516,14 +892,17 @@ export async function issueOldInvoice(
   );
   const totalSen = lines.reduce((sum, l) => sum + l.amountSen, 0);
   if (input.paid) {
-    await tx.payment.create({
-      data: {
+    const paidAt = input.paid.at;
+    // A payment per booking, so each reads its own.
+    await tx.payment.createMany({
+      data: lines.map((line) => ({
         invoiceId: issued.id,
-        amountSen: totalSen,
+        bookingId: line.bookingId,
+        amountSen: line.amountSen,
         method: "other" satisfies PaymentMethod,
-        paidAt: input.paid.at,
+        paidAt,
         note: "Paid before the switch-over",
-      },
+      })),
     });
   }
   return { ...issued, totalSen };
@@ -532,16 +911,39 @@ export async function issueOldInvoice(
 /** What saving a change would bill, in a sentence, for the save to show first. */
 export type BillingPreview = { plan: BillingPlan; sentence: string };
 
-async function previewOf(client: Tx, plan: BillingPlan, verb?: string) {
+/**
+ * The sentence for a plan, naming the open invoice it goes on when there
+ * is one, else the next number: the booking's own, or its agent's
+ * month-end invoice for its period. `monthly` without a booking: a new
+ * credit agent's booking, its period not known yet.
+ */
+async function previewOf(
+  client: Tx,
+  plan: BillingPlan,
+  {
+    verb,
+    booking,
+    monthly = false,
+  }: { verb?: string; booking?: BilledBooking; monthly?: boolean } = {},
+) {
   const [invoice, credit] = await Promise.all([
     lastBookingNumber(client, "invoice"),
     lastBookingNumber(client, "credit"),
   ]);
+  let opened = false;
+  let period: string | undefined = monthly ? "" : undefined;
+  if (booking && (await isMonthly(client, booking))) {
+    period = periodLabel(await targetPeriodOf(client, booking, new Date()));
+  } else if (booking) {
+    opened = (await ownOpenOf(client, booking.id)) !== null;
+  }
   return billingPlanSentence(
     plan,
     {
       invoice: formatDocumentNumber("invoice", invoice + 1),
       credit: (index) => formatDocumentNumber("credit", credit + 1 + index),
+      opened,
+      period,
     },
     verb,
   );
@@ -563,23 +965,24 @@ export async function billingPreviewOf(
     select: BILLED_BOOKING,
   });
   if (!booking) return null;
-  const plan = await planFor(
-    db,
-    confirms
-      ? { ...booking, confirmedAt: booking.confirmedAt ?? new Date() }
-      : booking,
-    chargedSen,
-  );
+  const saved = confirms
+    ? { ...booking, confirmedAt: booking.confirmedAt ?? new Date() }
+    : booking;
+  const plan = await planFor(db, saved, chargedSen);
   return {
     plan,
-    sentence: await previewOf(db, plan, confirms ? "Confirming" : undefined),
+    sentence: await previewOf(db, plan, {
+      verb: confirms ? "Confirming" : undefined,
+      booking: saved,
+    }),
   };
 }
 
 /**
- * What making a booking in Manage and confirming it bills: its open
- * invoice for its total, or nothing yet for an agent on credit. Saved as
- * received, nothing is billed until it is confirmed.
+ * What making a booking in Manage and confirming it bills: its own open
+ * invoice for its total, or a line on its agent's month-end invoice for
+ * an agent on credit. Saved as received, nothing is billed until it is
+ * confirmed.
  */
 export async function newBookingBillingPreview(input: {
   businessId: string | null;
@@ -591,19 +994,23 @@ export async function newBookingBillingPreview(input: {
         select: { paymentTerms: true },
       })
     : null;
+  const monthly = business ? isCredit(business.paymentTerms) : false;
   const plan = billingPlanOf({
     confirmed: true,
-    credit: business ? isCredit(business.paymentTerms) : false,
+    credit: monthly,
     ended: false,
     chargedSen: input.chargedSen,
     billed: [],
   });
-  return { plan, sentence: await previewOf(db, plan, "Confirming") };
+  return {
+    plan,
+    sentence: await previewOf(db, plan, { verb: "Confirming", monthly }),
+  };
 }
 
 /* A booking's billing, for its page */
 
-const DOCUMENT_MONEY = {
+export const DOCUMENT_MONEY = {
   id: true,
   type: true,
   number: true,
@@ -615,30 +1022,54 @@ const DOCUMENT_MONEY = {
   billTo: true,
   periodStart: true,
   periodEnd: true,
-  payments: { where: { reversedAt: null }, select: { amountSen: true } },
+  lines: { select: { bookingId: true, amountSen: true } },
+  payments: {
+    where: { reversedAt: null },
+    select: { amountSen: true, bookingId: true },
+  },
   creditNotes: {
     where: { status: "issued" },
     select: {
       totalSen: true,
-      payments: { where: { reversedAt: null }, select: { amountSen: true } },
+      lines: { select: { bookingId: true, amountSen: true } },
+      payments: {
+        where: { reversedAt: null },
+        select: { amountSen: true, bookingId: true },
+      },
     },
   },
 } as const satisfies Prisma.InvoiceSelect;
 
 type DocumentRow = Prisma.InvoiceGetPayload<{ select: typeof DOCUMENT_MONEY }>;
 
-/** An issued invoice's money, its credit notes folded in; a credit note's own refunds alone. */
-function moneyOf(doc: DocumentRow, now: Date): InvoiceMoney | null {
-  if (doc.status !== "issued") return null;
-  const paid = (rows: readonly { amountSen: number }[]) =>
-    rows.reduce((sum, p) => sum + p.amountSen, 0);
+/**
+ * An open or issued invoice's money, its credit notes folded in; null for
+ * a credit note or a void one. With `bookingId`, that booking's share
+ * only: its lines, its credit notes' lines and the payments for it, so
+ * a booking on an agent's month-end invoice reads its own amount and
+ * payments, never the other bookings'.
+ */
+export function moneyOf(
+  doc: DocumentRow,
+  now: Date,
+  bookingId?: string,
+): InvoiceMoney | null {
+  if (doc.status !== "issued" && doc.status !== "open") return null;
   if (doc.type === "credit") return null;
+  const sum = (rows: readonly { amountSen: number; bookingId: string }[]) =>
+    rows
+      .filter((r) => bookingId === undefined || r.bookingId === bookingId)
+      .reduce((total, r) => total + r.amountSen, 0);
   return invoiceMoneyOf({
-    totalSen: doc.totalSen,
-    creditSen: doc.creditNotes.reduce((sum, c) => sum + c.totalSen, 0),
+    totalSen: bookingId === undefined ? doc.totalSen : sum(doc.lines),
+    creditSen: doc.creditNotes.reduce(
+      (total, c) =>
+        total + (bookingId === undefined ? c.totalSen : sum(c.lines)),
+      0,
+    ),
     paidSen:
-      paid(doc.payments) +
-      doc.creditNotes.reduce((sum, c) => sum + paid(c.payments), 0),
+      sum(doc.payments) +
+      doc.creditNotes.reduce((total, c) => total + sum(c.payments), 0),
     dueAt: doc.dueAt,
     now,
   });
@@ -650,17 +1081,19 @@ export type BookingDocument = {
   type: InvoiceType;
   label: string;
   status: InvoiceStatus;
-  /** What it bills or credits this booking; the whole document's total beside it. */
+  /** What it bills or credits this booking. */
   amountSen: number;
-  totalSen: number;
-  /** The line: "HTB-0042 Rev 3: Stop at Pantai Cenang added". */
+  /** The line: "HTB-0042 Amendment 3: Stop at Pantai Cenang added". */
   description: string;
+  /** The revision (amendment) it bills up to: 3. */
+  revisionNumber: number | null;
   issuedAt: Date | null;
   dueAt: Date | null;
-  /** An invoice's money, credit notes folded in; null for a credit note, a draft or a void one. */
+  /** This booking's share of an invoice's money, credit notes folded in; null for a credit note or a void one. */
   money: InvoiceMoney | null;
   /** A credit note's invoice. */
   credits: string | null;
+  creditsId: string | null;
   /** A month-end run's period. */
   period: string | null;
 };
@@ -670,20 +1103,47 @@ export type BookingBilling = {
   documents: BookingDocument[];
   /** The old system's invoice number: a note for the team, it bills nothing. */
   oldInvoiceNumber: string | null;
-  /** On credit terms: billed by the run. */
-  credit: boolean;
+  /** On its agent's month-end invoice: on credit terms, not billed on its own. */
+  monthly: boolean;
   /** Completed or cancelled: what is due is issued at once. */
   ended: boolean;
   billedSen: number;
   /** What it charges less what is billed; 0 before it is confirmed. Negative: a credit to give. */
   unbilledSen: number;
-  /** Its open invoice, or the month-end draft it is ticked or unticked on. */
-  draft: { id: string; period: string | null; open: boolean } | null;
-  /** Its invoices' money together; null before any. */
+  /** The open invoice it is on: its own, or its agent's month-end one. */
+  open: { id: string; label: string; period: string | null } | null;
+  /**
+   * Its money on every invoice it is on, its own or its agent's month-end
+   * one, this booking's share only; null before any.
+   */
   money: InvoiceMoney | null;
+  /** The payments and refunds for it, on any document, the oldest first; reversed ones too. */
+  payments: BookingPayment[];
+  /**
+   * Where a payment for it is recorded: the oldest invoice it still owes
+   * on, the open one last. Null once nothing is owed.
+   */
+  payTo: { id: string; label: string; balanceSen: number } | null;
+  /** An invoice it paid over on, with what is to refund. */
+  refundFrom: { id: string; label: string; refundSen: number } | null;
 };
 
-function periodOfRow(row: {
+/** One payment in or refund out for a booking. */
+export type BookingPayment = {
+  id: string;
+  documentId: string;
+  /** The document it is on: HTI-0012, "Open invoice". */
+  document: string;
+  /** Below nothing for a refund. */
+  amountSen: number;
+  method: string;
+  paidAt: Date;
+  note: string | null;
+  reversedAt: Date | null;
+  reverseReason: string | null;
+};
+
+export function periodOfRow(row: {
   periodStart: Date | null;
   periodEnd: Date | null;
 }): string | null {
@@ -711,6 +1171,7 @@ export async function bookingBillingOf(
         select: {
           amountSen: true,
           description: true,
+          revision: { select: { number: true } },
           invoice: { select: DOCUMENT_MONEY },
         },
       },
@@ -720,73 +1181,114 @@ export async function bookingBillingOf(
   const labels = new Map(
     booking.invoiceLines.map((l) => [l.invoice.id, documentLabelOf(l.invoice)]),
   );
+  const payments = await db.payment.findMany({
+    where: { bookingId },
+    orderBy: [{ paidAt: "asc" }, { createdAt: "asc" }],
+    select: {
+      id: true,
+      invoiceId: true,
+      amountSen: true,
+      method: true,
+      paidAt: true,
+      note: true,
+      reversedAt: true,
+      reverseReason: true,
+    },
+  });
   const documents: BookingDocument[] = booking.invoiceLines
-    .filter((l) => l.invoice.status !== "draft")
     .map((line) => ({
       id: line.invoice.id,
       type: (line.invoice.type === "credit"
         ? "credit"
         : "invoice") as InvoiceType,
       label: documentLabelOf(line.invoice),
-      status: (line.invoice.status === "void"
-        ? "void"
-        : "issued") as InvoiceStatus,
+      status: isInvoiceStatus(line.invoice.status)
+        ? line.invoice.status
+        : "issued",
       amountSen: line.amountSen,
-      totalSen: line.invoice.totalSen,
       description: line.description,
+      revisionNumber: line.revision?.number ?? null,
       issuedAt: line.invoice.issuedAt,
       dueAt: line.invoice.dueAt,
-      money: moneyOf(line.invoice, now),
+      money: moneyOf(line.invoice, now, bookingId),
       credits: line.invoice.creditsId
         ? (labels.get(line.invoice.creditsId) ?? null)
         : null,
+      creditsId: line.invoice.creditsId,
       period: periodOfRow(line.invoice),
     }))
     .sort(
-      (a, b) => (a.issuedAt?.getTime() ?? 0) - (b.issuedAt?.getTime() ?? 0),
+      (a, b) =>
+        (a.issuedAt?.getTime() ?? Infinity) -
+        (b.issuedAt?.getTime() ?? Infinity),
     );
   const billedSen = booking.invoiceLines
     .filter((l) => l.invoice.status === "issued")
     .reduce((sum, l) => sum + l.amountSen, 0);
-  const draft = booking.invoiceLines.find((l) => l.invoice.status === "draft");
-  const live = documents.flatMap((d) => (d.money ? [d.money] : []));
-  const period = draft ? periodOfRow(draft.invoice) : null;
+  const open = documents.find((d) => d.status === "open");
+  const alone = documents.some(
+    (d) => d.type === "invoice" && d.period === null && d.status !== "void",
+  );
+  // Its share of each, oldest issued first and the open one last.
+  const invoices = documents.flatMap((d) =>
+    d.type === "invoice" && d.money ? [{ ...d, money: d.money }] : [],
+  );
+  const payTo = invoices.find((d) => d.money.balanceSen > 0);
+  const overpaid = invoices.find((d) => d.money.balanceSen < 0);
   return {
     documents,
     oldInvoiceNumber: booking.legacyInvoiceNumber,
-    credit: booking.business ? isCredit(booking.business.paymentTerms) : false,
+    monthly:
+      !alone &&
+      (booking.business ? isCredit(booking.business.paymentTerms) : false),
     ended: hasEnded(booking.status),
     billedSen,
     unbilledSen:
       booking.confirmedAt === null ? 0 : booking.priceTotalSen - billedSen,
-    draft: draft
-      ? { id: draft.invoice.id, period, open: period === null }
+    open: open ? { id: open.id, label: open.label, period: open.period } : null,
+    money: sumMoney(
+      invoices.map((d) => d.money),
+      now,
+    ),
+    payments: payments.map(({ invoiceId, ...payment }) => ({
+      ...payment,
+      documentId: invoiceId,
+      document: labels.get(invoiceId) ?? "",
+    })),
+    payTo: payTo
+      ? {
+          id: payTo.id,
+          label: payTo.label,
+          balanceSen: payTo.money.balanceSen,
+        }
       : null,
-    money: sumMoney(live, now),
+    refundFrom: overpaid
+      ? {
+          id: overpaid.id,
+          label: overpaid.label,
+          refundSen: -overpaid.money.balanceSen,
+        }
+      : null,
   };
 }
 
 /* Finance's own billing */
 
 /**
- * Finance's Issue now on one booking: what it has not been billed yet,
- * issued at once, an invoice for more to pay or credit notes for less.
- * Its open invoice, or a credit agent's booking that should not wait for
- * the run. `amountSen` bills part of what is due (a deposit), never more;
- * the rest stays not invoiced, on its open invoice while it is live.
- * Refused for a booking not confirmed, one with nothing to bill, and one
- * on a month-end draft (untick it there first).
+ * Finance's Issue now on one booking's own open invoice, in full: what
+ * it has not been billed yet, issued at once, its number kept; less is
+ * credit notes. Refused for a booking not confirmed, one with nothing to
+ * bill, and one on its agent's month-end invoice.
  */
 export async function billBookingNow(
   actor: Actor,
   bookingId: string,
-  { amountSen }: { amountSen?: number } = {},
   now: Date = new Date(),
 ): Promise<{ ok: true; id: string; label: string } | Refusal> {
   return db.$transaction(async (tx) => {
     const booking = await heldBooking(tx, bookingId);
     if (!booking) return refuse("This booking was deleted meanwhile.");
-    return issueNow(tx, actor, booking, amountSen, now);
+    return issueNow(tx, actor, booking, now);
   });
 }
 
@@ -795,15 +1297,14 @@ async function issueNow(
   tx: Tx,
   actor: Actor,
   booking: BilledBooking,
-  amountSen: number | undefined,
   now: Date,
 ): Promise<{ ok: true; id: string; label: string } | Refusal> {
   if (booking.confirmedAt === null) {
     return refuse("Only a confirmed booking is billed. Confirm it first.");
   }
-  if (await periodDraftOf(tx, booking.id)) {
+  if (await isMonthly(tx, booking)) {
     return refuse(
-      "This booking is on a month-end draft. Untick it there first, or issue the draft.",
+      "This booking is on its agent's month-end invoice. Bill it on its own, or issue that invoice.",
     );
   }
   const plan = await planFor(tx, booking, booking.priceTotalSen, {
@@ -812,333 +1313,170 @@ async function issueNow(
   if (plan.kind !== "invoice" && plan.kind !== "credit") {
     return refuse("Nothing on this booking waits to be billed.");
   }
-  let issuing: IssuingPlan = plan;
-  let part = false;
-  if (amountSen !== undefined) {
-    if (plan.kind !== "invoice") {
-      return refuse("A credit is given in full.", "amount");
-    }
-    if (!Number.isInteger(amountSen) || amountSen <= 0) {
-      return refuse("Enter the amount in RM.", "amount");
-    }
-    if (amountSen > plan.amountSen) {
-      return refuse(
-        `No more than what is due: ${formatMyr(plan.amountSen)}.`,
-        "amount",
-      );
-    }
-    issuing = { kind: "invoice", amountSen };
-    part = amountSen < plan.amountSen;
-  }
-  const issued = await issuePlan(tx, actor, booking, issuing, now, { part });
-  await syncOpenDraft(tx, booking);
+  const issued = await issuePlan(tx, actor, booking, plan, now);
+  await syncOpenInvoice(tx, actor, booking, now);
   return { ok: true, ...issued[0]! };
 }
 
-/** A booking a business has not been billed for in full, for its page and the run. */
-export type UnbilledBooking = {
-  id: string;
-  label: string;
-  contactName: string;
-  startsAt: Date;
-  status: string;
-  chargedSen: number;
-  unbilledSen: number;
-  /** The month-end draft it is on, if any. */
-  draftId: string | null;
-  /** It has an open invoice of its own: a booking not on credit. */
-  openInvoice: boolean;
-};
-
-/** The confirmed bookings of a business with something not billed yet, first pick-up first. */
-export async function listUnbilled(
-  businessId: string,
-  client: Tx = db,
-): Promise<UnbilledBooking[]> {
-  const bookings = await client.booking.findMany({
-    where: { businessId, confirmedAt: { not: null } },
-    orderBy: { startsAt: "asc" },
-    select: {
-      id: true,
-      number: true,
-      contactName: true,
-      startsAt: true,
-      status: true,
-      priceTotalSen: true,
-      invoiceLines: {
-        select: {
-          amountSen: true,
-          invoice: { select: { id: true, status: true, periodStart: true } },
-        },
-      },
-    },
-  });
-  return bookings.flatMap((b) => {
-    const drafts = b.invoiceLines.filter((l) => l.invoice.status === "draft");
-    const billed = b.invoiceLines
-      .filter((l) => l.invoice.status === "issued")
-      .reduce((sum, l) => sum + l.amountSen, 0);
-    const unbilledSen = b.priceTotalSen - billed;
-    if (unbilledSen === 0) return [];
-    return [
-      {
-        id: b.id,
-        label: bookingLabelOf(b),
-        contactName: b.contactName,
-        startsAt: b.startsAt,
-        status: b.status,
-        chargedSen: b.priceTotalSen,
-        unbilledSen,
-        draftId:
-          drafts.find((l) => l.invoice.periodStart !== null)?.invoice.id ??
-          null,
-        openInvoice: drafts.some((l) => l.invoice.periodStart === null),
-      },
-    ];
-  });
-}
-
 /**
- * The month-end run's draft for a business and its last ended period:
- * every booking with something not billed whose first pick-up is in the
- * period, ticked, and those of earlier periods, unticked, for Finance to
- * tick. Refused for a business not on credit, before the period ends,
- * when a draft or an issued run for it exists, and when there is nothing
- * to bill. The business's row is held, so two runs at once never make two
- * drafts. A booking already on another draft is left off.
+ * Finance's "Bill on its own" for a booking on its agent's open month-end
+ * invoice: its line leaves that invoice for an invoice of its own, still
+ * billed to the agent and due by the agent's days to pay. While the
+ * booking is live the new one is open, numbered now and followed like any
+ * booking's; once it has ended it is issued now. It stays on its own
+ * after: later changes bill it alone.
  */
-export async function createPeriodDraft(
+export async function billBookingAlone(
   actor: Actor,
-  businessId: string,
-  now: Date = new Date(),
-): Promise<Created> {
-  return db.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT id FROM "Business" WHERE id = ${businessId} FOR UPDATE`;
-    const business = await tx.business.findUnique({
-      where: { id: businessId },
-      select: {
-        id: true,
-        name: true,
-        paymentTerms: true,
-        contactEmail: true,
-        contactPhone: true,
-        address: true,
-        registrationNo: true,
-      },
-    });
-    if (!business) return refuse("This agent was deleted meanwhile.");
-    if (!isCredit(business.paymentTerms)) {
-      return refuse(
-        `${business.name} has no credit: each booking is billed on its own invoice.`,
-      );
-    }
-    const period = lastEndedPeriod(now, business.paymentTerms);
-    if (!periodHasEnded(period, now)) {
-      return refuse(`${periodLabel(period)} has not ended yet.`);
-    }
-    const periodStart = new Date(`${period.start}T00:00:00Z`);
-    const existing = await tx.invoice.findFirst({
-      where: {
-        businessId,
-        type: "invoice",
-        periodStart,
-        status: { in: ["draft", "issued"] },
-      },
-      select: { status: true, number: true, type: true },
-    });
-    if (existing) {
-      return refuse(
-        existing.status === "draft"
-          ? `${business.name}'s draft for ${periodLabel(period)} exists already. Open it under Invoices.`
-          : `${business.name}'s invoice for ${periodLabel(period)} is ${documentLabelOf(existing)}. Later bookings go in the next run.`,
-      );
-    }
-    // Open invoices left from before the agent was on credit give way to the run.
-    await tx.invoice.deleteMany({
-      where: {
-        status: "draft",
-        periodStart: null,
-        lines: { some: { booking: { businessId } } },
-      },
-    });
-    const end = periodEndInstant(period);
-    const open = (await listUnbilled(businessId, tx)).filter(
-      (b) => b.draftId === null && b.unbilledSen > 0 && b.startsAt < end,
-    );
-    if (open.length === 0) {
-      return refuse(
-        `${business.name} has nothing to bill for ${periodLabel(period)}.`,
-      );
-    }
-    const from = localDayStart(period.start);
-    const draft = await tx.invoice.create({
-      data: {
-        type: "invoice",
-        status: "draft" satisfies InvoiceStatus,
-        businessId,
-        billTo: {
-          name: business.name,
-          email: business.contactEmail,
-          phone: business.contactPhone,
-          address: business.address,
-          registrationNo: business.registrationNo,
-          businessId,
-        },
-        periodStart,
-        periodEnd: new Date(`${period.end}T00:00:00Z`),
-        createdById: "userId" in actor ? actor.userId : null,
-        lines: {
-          create: open.map((b) => ({
-            bookingId: b.id,
-            ticked: b.startsAt >= from,
-          })),
-        },
-      },
-      select: { id: true },
-    });
-    await logActivity(tx, actor, {
-      action: "invoice.drafted",
-      entityId: draft.id,
-      after: {
-        business: business.name,
-        period: periodLabel(period),
-        bookings: open.length,
-      },
-    });
-    return { ok: true, id: draft.id };
-  });
-}
-
-/** Ticks or unticks a booking on a draft. */
-export async function setDraftLine(
-  invoiceId: string,
   bookingId: string,
-  ticked: boolean,
-): Promise<Change> {
-  const line = await db.invoiceLine.findUnique({
-    where: { invoiceId_bookingId: { invoiceId, bookingId } },
-    select: { id: true, ticked: true, invoice: { select: { status: true } } },
-  });
-  if (!line || line.invoice.status !== "draft") {
-    return refuse("This draft was issued or deleted meanwhile. Reload it.");
-  }
-  if (line.ticked === ticked) return { ok: true };
-  await db.invoiceLine.update({ where: { id: line.id }, data: { ticked } });
-  return { ok: true };
-}
-
-/** Deletes a draft, its bookings free for another run or to issue now. Nothing was numbered. */
-export async function deleteDraft(
-  actor: Actor,
-  invoiceId: string,
-): Promise<Change> {
+  now: Date = new Date(),
+): Promise<{ ok: true; id: string; label: string } | Refusal> {
   return db.$transaction(async (tx) => {
-    const draft = await tx.invoice.findUnique({
-      where: { id: invoiceId },
-      select: {
-        status: true,
-        periodStart: true,
-        business: { select: { name: true } },
-      },
-    });
-    if (!draft || draft.status !== "draft") {
-      return refuse("This draft was issued or deleted meanwhile.");
-    }
-    if (draft.periodStart === null) {
+    const booking = await heldBooking(tx, bookingId);
+    if (!booking) return refuse("This booking was deleted meanwhile.");
+    const from = await periodOpenOf(tx, booking.id);
+    if (!from || !(await isMonthly(tx, booking))) {
       return refuse(
-        "A booking's open invoice follows the booking. Issue it, or change the booking.",
+        "This booking is not on an open month-end invoice. Reload it.",
       );
     }
-    await tx.invoice.delete({ where: { id: invoiceId } });
+    const amountSen = Math.max(
+      0,
+      booking.priceTotalSen - (await billedSenOf(tx, booking.id)),
+    );
+    if (amountSen === 0) {
+      return refuse("Nothing on this booking is left to bill.");
+    }
+    const own = hasEnded(booking.status)
+      ? await issueDocument(
+          tx,
+          actor,
+          {
+            type: "invoice",
+            billTo: billToOfBooking(booking),
+            lines: [
+              {
+                bookingId: booking.id,
+                ...(await lineOf(tx, booking, amountSen)),
+              },
+            ],
+            dueAt: dueOf(booking, now),
+          },
+          now,
+        )
+      : await openOwn(tx, actor, booking, amountSen, now);
+    // Billed alone now: its line leaves the month-end invoice.
+    await syncOpenInvoice(tx, actor, booking, now);
     await logActivity(tx, actor, {
-      action: "invoice.draft.deleted",
-      entityId: invoiceId,
-      before: { business: draft.business?.name ?? "" },
+      action: "booking.billed.alone",
+      entityId: booking.id,
+      before: { document: documentLabelOf(from) },
+      after: { document: own.label },
     });
-    return { ok: true };
+    return { ok: true, ...own };
   });
 }
 
 /**
- * Issues a draft: each ticked booking's line takes what the booking has
- * not been billed yet as it now stands, and its latest revision; the
- * unticked ones leave it, for the next run or to issue now. Refused when
- * nothing ticked has anything to bill. Only issuing gives the number.
+ * Issues an agent's open month-end invoice once its period has ended,
+ * its number and payments kept: each booking's line takes what the
+ * booking has not been billed yet as it now stands, and its latest
+ * revision; a booking with nothing left leaves it. Due the agent's days
+ * to pay from now. Refused before the period ends, and when nothing on it
+ * is left to bill and nothing was paid.
  */
-export async function issueDraft(
+export async function issueMonthEnd(
   actor: Actor,
   invoiceId: string,
   now: Date = new Date(),
 ): Promise<{ ok: true; id: string; label: string } | Refusal> {
   return db.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT id FROM "Invoice" WHERE id = ${invoiceId} FOR UPDATE`;
-    const draft = await tx.invoice.findUnique({
+    const doc = await tx.invoice.findUnique({
       where: { id: invoiceId },
       select: {
+        ...OPEN_SELECT,
         status: true,
-        billTo: true,
-        businessId: true,
-        periodStart: true,
-        periodEnd: true,
         business: { select: { daysToPay: true } },
-        lines: { select: { id: true, bookingId: true, ticked: true } },
+        lines: { select: { id: true, bookingId: true } },
       },
     });
-    if (!draft || draft.status !== "draft") {
-      return refuse("This draft was issued or deleted meanwhile. Reload it.");
+    if (
+      !doc ||
+      doc.status !== "open" ||
+      doc.periodStart === null ||
+      doc.periodEnd === null
+    ) {
+      return refuse("This is not an open month-end invoice. Reload it.");
     }
-    // A booking's open invoice: Issue now on its booking.
-    if (draft.periodStart === null) {
-      const line = draft.lines[0];
-      const booking = line ? await heldBooking(tx, line.bookingId) : null;
-      if (!booking) return refuse("This booking was deleted meanwhile.");
-      return issueNow(tx, actor, booking, undefined, now);
+    const period = {
+      start: doc.periodStart.toISOString().slice(0, 10),
+      end: doc.periodEnd.toISOString().slice(0, 10),
+    };
+    if (!periodHasEnded(period, now)) {
+      return refuse(`It is issued once ${periodLabel(period)} has ended.`);
     }
-    const lines: IssueInput["lines"] = [];
-    for (const line of draft.lines.filter((l) => l.ticked)) {
-      await tx.$executeRaw`SELECT id FROM "Booking" WHERE id = ${line.bookingId} FOR UPDATE`;
-      const booking = await tx.booking.findUniqueOrThrow({
-        where: { id: line.bookingId },
-        select: BILLED_BOOKING,
-      });
-      const unbilled =
-        booking.priceTotalSen - (await billedSenOf(tx, line.bookingId));
-      if (unbilled <= 0) continue;
-      const revision = await latestRevisionOf(tx, line.bookingId);
+    const lines: { id: string; booking: BilledBooking; amountSen: number }[] =
+      [];
+    for (const line of doc.lines) {
+      const booking = await heldBooking(tx, line.bookingId);
+      if (!booking) continue;
       lines.push({
-        bookingId: line.bookingId,
-        revisionId: revision?.id ?? null,
-        description: await lineDescription(tx, booking, revision),
-        amountSen: unbilled,
+        id: line.id,
+        booking,
+        amountSen: Math.max(
+          0,
+          booking.priceTotalSen - (await billedSenOf(tx, booking.id)),
+        ),
       });
     }
-    if (lines.length === 0) {
-      return refuse(
-        "Nothing ticked has anything to bill. Tick a booking, or delete the draft.",
-      );
+    const billing = lines.filter((l) => l.amountSen > 0);
+    if (billing.length === 0 && doc._count.payments === 0) {
+      return refuse("Nothing on it is left to bill. Reload it.");
     }
-    // The draft gives way to the issued invoice, numbered now.
-    await tx.invoice.delete({ where: { id: invoiceId } });
-    const period =
-      draft.periodStart && draft.periodEnd
-        ? {
-            start: draft.periodStart.toISOString().slice(0, 10),
-            end: draft.periodEnd.toISOString().slice(0, 10),
-          }
-        : null;
-    const issued = await issueDocument(
+    await tx.invoiceLine.deleteMany({
+      where: {
+        id: { in: lines.filter((l) => l.amountSen === 0).map((l) => l.id) },
+      },
+    });
+    for (const line of billing) {
+      await tx.invoiceLine.update({
+        where: { id: line.id },
+        data: await lineOf(tx, line.booking, line.amountSen),
+      });
+    }
+    const totalSen = billing.reduce((sum, l) => sum + l.amountSen, 0);
+    const billTo = billing[0]
+      ? billToOfBooking(billing[0].booking)
+      : billToOf(
+          (
+            await tx.invoice.findUniqueOrThrow({
+              where: { id: invoiceId },
+              select: { billTo: true },
+            })
+          ).billTo,
+        );
+    const issued = await tx.invoice.update({
+      where: { id: invoiceId },
+      data: {
+        number: await numberOnIssue(tx, invoiceId),
+        status: "issued" satisfies InvoiceStatus,
+        totalSen,
+        billTo,
+        issuedAt: now,
+        dueAt: dueAtOf(now, { daysToPay: doc.business?.daysToPay ?? 30 }),
+        issuedById: "userId" in actor ? actor.userId : null,
+      },
+      select: { type: true, number: true },
+    });
+    const label = documentLabelOf(issued);
+    await logIssued(
       tx,
       actor,
-      {
-        type: "invoice",
-        billTo: billToOf(draft.billTo),
-        lines,
-        period,
-        dueAt: dueAtOf(now, { daysToPay: draft.business?.daysToPay ?? 30 }),
-      },
-      now,
+      { id: doc.id, label, totalSen, billTo },
+      billing.map((l) => ({ bookingId: l.booking.id, amountSen: l.amountSen })),
     );
-    return { ok: true, id: issued.id, label: issued.label };
+    return { ok: true, id: doc.id, label };
   });
 }
 
@@ -1215,7 +1553,7 @@ export async function voidInvoice(
       // Its bookings are unbilled again: a live one's open invoice holds it.
       for (const bookingId of new Set(doc.lines.map((l) => l.bookingId))) {
         const booking = await heldBooking(tx, bookingId);
-        if (booking) await syncOpenDraft(tx, booking);
+        if (booking) await syncOpenInvoice(tx, actor, booking, now);
       }
       return { ok: true, replacement: null };
     }
@@ -1276,12 +1614,21 @@ export type PaymentInput = {
   /** The day it came in, "2026-11-08". */
   paidOn: string;
   note: string | null;
+  /**
+   * The booking it is for, one of the document's. Left out on a document
+   * of one booking; on an agent's month-end invoice, a payment left out is
+   * spread over its bookings, the oldest pick-up first (`spreadPayment`).
+   */
+  bookingId?: string;
 };
 
 /**
- * Records money in against an issued invoice, or a refund out (a minus
- * amount) against an issued credit note. One transfer paying three
- * invoices is three records.
+ * Records money in against an open or issued invoice, or a refund out (a
+ * minus amount) against an issued credit note or an invoice paid more than
+ * it comes to, no more than the overpayment: each for one booking on it,
+ * so a booking reads its own payments. One transfer for a month-end
+ * invoice is a record per booking it pays. One transfer paying three
+ * invoices is recorded on each.
  */
 export async function recordPayment(
   actor: Actor,
@@ -1292,32 +1639,79 @@ export async function recordPayment(
     return refuse("Enter the amount in RM.", "amount");
   }
   return db.$transaction(async (tx) => {
+    await tx.$executeRaw`SELECT id FROM "Invoice" WHERE id = ${invoiceId} FOR UPDATE`;
     const doc = await tx.invoice.findUnique({
       where: { id: invoiceId },
-      select: { type: true, number: true, status: true },
+      select: DOCUMENT_MONEY,
     });
-    if (!doc || doc.status !== "issued") {
-      return refuse("Payments go on an issued invoice. Reload it.");
+    const credit = doc?.type === "credit";
+    if (
+      !doc ||
+      !(doc.status === "issued" || (doc.status === "open" && !credit))
+    ) {
+      return refuse("Payments go on an open or issued invoice. Reload it.");
     }
     const refund = input.amountSen < 0;
-    if (refund !== (doc.type === "credit")) {
-      return refuse(
-        refund
-          ? "A refund is recorded against a credit note."
-          : "A payment is recorded against an invoice.",
+    if (credit && !refund) {
+      return refuse("A payment is recorded against an invoice.");
+    }
+    // Its bookings, the oldest pick-up first.
+    const bookings = (
+      await tx.invoiceLine.findMany({
+        where: { invoiceId },
+        orderBy: { booking: { startsAt: "asc" } },
+        select: { booking: { select: { id: true, number: true } } },
+      })
+    ).map((l) => l.booking);
+    const now = new Date();
+    const owedBy = (bookingId: string) =>
+      moneyOf(doc, now, bookingId)?.balanceSen ?? 0;
+    let parts: { bookingId: string; amountSen: number }[];
+    if (input.bookingId !== undefined) {
+      if (!bookings.some((b) => b.id === input.bookingId)) {
+        return refuse("That booking is not on this invoice. Reload it.");
+      }
+      parts = [{ bookingId: input.bookingId, amountSen: input.amountSen }];
+    } else if (bookings.length === 1) {
+      parts = [{ bookingId: bookings[0]!.id, amountSen: input.amountSen }];
+    } else if (refund || bookings.length === 0) {
+      return refuse("Choose the booking it is for.", "bookingId");
+    } else {
+      parts = spreadPayment(
+        input.amountSen,
+        bookings.map((b) => ({ bookingId: b.id, owedSen: owedBy(b.id) })),
       );
     }
-    const payment = await tx.payment.create({
-      data: {
-        invoiceId,
-        amountSen: input.amountSen,
-        method: input.method,
-        paidAt: new Date(`${input.paidOn}T00:00:00Z`),
-        note: input.note,
-        recordedById: "userId" in actor ? actor.userId : null,
-      },
-      select: { id: true },
-    });
+    if (!credit && refund) {
+      const over = -owedBy(parts[0]!.bookingId);
+      if (over <= 0) {
+        return refuse(
+          "Nothing was paid over for this booking. A refund goes against its credit note.",
+        );
+      }
+      if (-input.amountSen > over) {
+        return refuse(
+          `No more than was paid over: ${formatMyr(over)}.`,
+          "amount",
+        );
+      }
+    }
+    const recorded: string[] = [];
+    for (const part of parts) {
+      const payment = await tx.payment.create({
+        data: {
+          invoiceId,
+          bookingId: part.bookingId,
+          amountSen: part.amountSen,
+          method: input.method,
+          paidAt: new Date(`${input.paidOn}T00:00:00Z`),
+          note: input.note,
+          recordedById: "userId" in actor ? actor.userId : null,
+        },
+        select: { id: true },
+      });
+      recorded.push(payment.id);
+    }
     await logActivity(tx, actor, {
       action: refund ? "payment.refunded" : "payment.recorded",
       entityId: invoiceId,
@@ -1326,7 +1720,10 @@ export async function recordPayment(
         amountSen: input.amountSen,
         method: input.method,
         paidOn: input.paidOn,
-        payment: payment.id,
+        bookings: parts.map((part) =>
+          bookingLabelOf(bookings.find((b) => b.id === part.bookingId)!),
+        ),
+        payments: recorded,
       },
     });
     return { ok: true };
@@ -1384,9 +1781,38 @@ export type InvoiceFilter = {
   businessId?: string;
   /** Only those owed past their due date. */
   overdue?: boolean;
+  /** Who it bills: a customer's booking, an agent's booking, or an agent's month-end run. */
+  billed?: InvoiceBilled;
+  /** Issued in this month, the last, or this year, Malaysia's calendar. */
+  issued?: InvoiceIssuedWhen;
   /** HTI-0012, HTC-0003, a booking's HTB number, or billed-to text. */
   search?: string;
+  /** By when each was made; the newest first unless the oldest. */
+  order?: MadeOrder;
 };
+
+/** The span an issued filter means, from its first instant to the next span's, Malaysia's calendar. */
+function issuedSpanOf(
+  when: InvoiceIssuedWhen,
+  now: Date,
+): { gte: Date; lt: Date } {
+  const [year, month] = localDayOf(now).split("-").map(Number) as [
+    number,
+    number,
+  ];
+  const monthStart = (y: number, m: number) => {
+    const at = new Date(Date.UTC(y, m - 1, 1));
+    return localDayStart(at.toISOString().slice(0, 10));
+  };
+  switch (when) {
+    case "this-month":
+      return { gte: monthStart(year, month), lt: monthStart(year, month + 1) };
+    case "last-month":
+      return { gte: monthStart(year, month - 1), lt: monthStart(year, month) };
+    case "this-year":
+      return { gte: monthStart(year, 1), lt: monthStart(year + 1, 1) };
+  }
+}
 
 /** One row of Finance's list. */
 export type InvoiceRow = {
@@ -1403,9 +1829,14 @@ export type InvoiceRow = {
   money: InvoiceMoney | null;
   /** A credit note's invoice. */
   credits: string | null;
+  creditsId: string | null;
   bookings: string[];
-  /** A booking's open invoice: a draft that follows its booking. */
+  /** Open: numbered, it follows its bookings until issued. */
   open: boolean;
+  /** An open month-end invoice whose period has ended: Finance issues it. */
+  ready: boolean;
+  /** An invoice's credit notes in the list, shown under it. */
+  notes: InvoiceRow[];
 };
 
 const LIST_SELECT = {
@@ -1414,8 +1845,8 @@ const LIST_SELECT = {
   credits: { select: { type: true, number: true } },
   lines: {
     select: {
-      ticked: true,
-      booking: { select: { id: true, number: true, priceTotalSen: true } },
+      ...DOCUMENT_MONEY.lines.select,
+      booking: { select: { id: true, number: true } },
     },
     orderBy: { booking: { startsAt: "asc" } },
   },
@@ -1423,71 +1854,55 @@ const LIST_SELECT = {
 
 type ListedDocument = Prisma.InvoiceGetPayload<{ select: typeof LIST_SELECT }>;
 
-/**
- * What each draft would bill if issued now: its ticked bookings' amounts
- * not billed yet. A draft stores none; they follow the bookings.
- */
-async function draftTotalsOf(
-  client: Tx,
-  docs: readonly ListedDocument[],
-): Promise<Map<string, number>> {
-  const drafts = docs.filter((d) => d.status === "draft");
-  const ids = [
-    ...new Set(drafts.flatMap((d) => d.lines.map((l) => l.booking.id))),
-  ];
-  if (ids.length === 0) return new Map();
-  const billed = await client.invoiceLine.groupBy({
-    by: ["bookingId"],
-    where: { bookingId: { in: ids }, invoice: { status: "issued" } },
-    _sum: { amountSen: true },
-  });
-  const billedOf = new Map(
-    billed.map((b) => [b.bookingId, b._sum.amountSen ?? 0]),
-  );
-  return new Map(
-    drafts.map((draft) => [
-      draft.id,
-      draft.lines
-        .filter((l) => l.ticked)
-        .reduce(
-          (sum, l) =>
-            sum + l.booking.priceTotalSen - (billedOf.get(l.booking.id) ?? 0),
-          0,
-        ),
-    ]),
+/** An open month-end invoice whose period has ended: Finance issues it. */
+function readyToIssue(
+  doc: { status: string; periodStart: Date | null; periodEnd: Date | null },
+  now: Date,
+) {
+  return (
+    doc.status === "open" &&
+    doc.periodStart !== null &&
+    doc.periodEnd !== null &&
+    periodHasEnded(
+      {
+        start: doc.periodStart.toISOString().slice(0, 10),
+        end: doc.periodEnd.toISOString().slice(0, 10),
+      },
+      now,
+    )
   );
 }
 
-function rowOf(
-  doc: ListedDocument,
-  now: Date,
-  draftTotals: ReadonlyMap<string, number>,
-): InvoiceRow {
+function rowOf(doc: ListedDocument, now: Date): InvoiceRow {
+  const period = periodOfRow(doc);
   return {
     id: doc.id,
     type: doc.type === "credit" ? "credit" : "invoice",
     label: documentLabelOf(doc),
-    status: (["draft", "issued", "void"] as const).find(
-      (s) => s === doc.status,
-    )!,
+    status: isInvoiceStatus(doc.status) ? doc.status : "issued",
     billTo: billToOf(doc.billTo),
-    period: periodOfRow(doc),
-    totalSen: draftTotals.get(doc.id) ?? doc.totalSen,
+    period,
+    totalSen: doc.totalSen,
     issuedAt: doc.issuedAt,
     dueAt: doc.dueAt,
     createdAt: doc.createdAt,
     money: moneyOf(doc, now),
     credits: doc.credits ? documentLabelOf(doc.credits) : null,
+    creditsId: doc.creditsId,
     bookings: doc.lines.map((l) => bookingLabelOf(l.booking)),
-    open: doc.status === "draft" && doc.periodStart === null,
+    open: doc.status === "open",
+    ready: readyToIssue(doc, now),
+    notes: [],
   };
 }
 
 /**
- * Every document of the new series, newest first: drafts, invoices and
- * credit notes, narrowed by the filter. The payment state is worked out
- * here from the payments, so a state's filter reads every row of the
- * other filters; there are hundreds, not millions.
+ * Every document of the new series, newest first: open and issued
+ * invoices, and credit notes, narrowed by the filter. A credit note whose
+ * invoice is listed too is under it (`notes`), not a row of its own. The
+ * payment state is worked out here from the payments, so a state's
+ * filter reads every row of the other filters; there are hundreds, not
+ * millions.
  */
 export async function listInvoices(
   filter: InvoiceFilter = {},
@@ -1496,11 +1911,18 @@ export async function listInvoices(
   const where: Prisma.InvoiceWhereInput = {
     // The old system's rows wait for db:set-billing to move them.
     agentId: null,
-    OR: [{ status: "draft" }, { number: { not: null } }],
+    OR: [{ number: { not: null } }, { status: "open" }],
   };
   if (filter.type) where.type = filter.type;
   if (filter.status) where.status = filter.status;
   if (filter.businessId) where.businessId = filter.businessId;
+  if (filter.billed === "customer") where.businessId ??= null;
+  if (filter.billed === "agent") {
+    where.periodStart = null;
+    where.businessId ??= { not: null };
+  }
+  if (filter.billed === "month-end") where.periodStart = { not: null };
+  if (filter.issued) where.issuedAt = issuedSpanOf(filter.issued, now);
   const search = filter.search?.trim();
   if (search) {
     const number = /(\d{1,7})\s*$/.exec(search)?.[1];
@@ -1518,16 +1940,24 @@ export async function listInvoices(
   }
   const docs = await db.invoice.findMany({
     where,
-    orderBy: [{ createdAt: "desc" }],
+    orderBy: [{ createdAt: filter.order === "oldest" ? "asc" : "desc" }],
     select: LIST_SELECT,
   });
-  const draftTotals = await draftTotalsOf(db, docs);
-  const rows = docs.map((doc) => rowOf(doc, now, draftTotals));
-  return rows.filter(
-    (row) =>
-      (!filter.state || row.money?.state === filter.state) &&
-      (!filter.overdue || row.money?.overdue === true),
-  );
+  const rows = docs
+    .map((doc) => rowOf(doc, now))
+    .filter(
+      (row) =>
+        (!filter.state || row.money?.state === filter.state) &&
+        (!filter.overdue || row.money?.overdue === true),
+    );
+  if (filter.type === "credit") return rows;
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  return rows.filter((row) => {
+    const invoice = row.creditsId ? byId.get(row.creditsId) : undefined;
+    if (!invoice) return true;
+    invoice.notes.unshift(row);
+    return false;
+  });
 }
 
 /** One document with everything its page shows. */
@@ -1562,7 +1992,7 @@ export async function getInvoice(invoiceId: string, now: Date = new Date()) {
           id: true,
           description: true,
           amountSen: true,
-          ticked: true,
+          revision: { select: { number: true } },
           booking: {
             select: {
               id: true,
@@ -1586,17 +2016,23 @@ export async function getInvoice(invoiceId: string, now: Date = new Date()) {
           recordedById: true,
           reversedAt: true,
           reverseReason: true,
+          booking: { select: { id: true, number: true } },
         },
       },
     },
   });
   if (!doc) return null;
+  // Each booking's share, for a document of several.
+  const shares = await db.invoice.findUnique({
+    where: { id: invoiceId },
+    select: DOCUMENT_MONEY,
+  });
   const live = (
     rows: readonly { amountSen: number; reversedAt?: Date | null }[],
   ) =>
     rows.filter((r) => !r.reversedAt).reduce((sum, r) => sum + r.amountSen, 0);
   const money =
-    doc.status === "issued" && doc.type === "invoice"
+    (doc.status === "issued" || doc.status === "open") && doc.type === "invoice"
       ? invoiceMoneyOf({
           totalSen: doc.totalSen,
           creditSen: doc.creditNotes
@@ -1611,29 +2047,16 @@ export async function getInvoice(invoiceId: string, now: Date = new Date()) {
           now,
         })
       : null;
-  // A draft's lines show what issuing would bill each booking now.
-  const unbilled =
-    doc.status === "draft"
-      ? new Map(
-          await Promise.all(
-            doc.lines.map(
-              async (line) =>
-                [
-                  line.booking.id,
-                  line.booking.priceTotalSen -
-                    (await billedSenOf(db, line.booking.id)),
-                ] as const,
-            ),
-          ),
-        )
-      : null;
+  const changes = await changesOf(doc, now);
   return {
     id: doc.id,
     type: (doc.type === "credit" ? "credit" : "invoice") as InvoiceType,
     label: documentLabelOf(doc),
     status: doc.status as InvoiceStatus,
-    /** A booking's open invoice: a draft that follows its booking. */
-    open: doc.status === "draft" && doc.periodStart === null,
+    /** Open: numbered, it follows its bookings until issued. */
+    open: doc.status === "open",
+    /** An open month-end invoice whose period has ended. */
+    ready: readyToIssue(doc, now),
     billTo: billToOf(doc.billTo),
     businessId: doc.businessId,
     period: periodOfRow(doc),
@@ -1666,28 +2089,146 @@ export async function getInvoice(invoiceId: string, now: Date = new Date()) {
       contactName: line.booking.contactName,
       startsAt: line.booking.startsAt,
       description: line.description,
-      amountSen: unbilled?.get(line.booking.id) ?? line.amountSen,
-      ticked: line.ticked,
+      amountSen: line.amountSen,
+      /** This booking's share: what it nets after credit notes, what came in for it, what is left. */
+      money: shares ? moneyOf(shares, now, line.booking.id) : null,
     })),
-    payments: doc.payments,
+    changes,
+    payments: doc.payments.map(({ booking, ...payment }) => ({
+      ...payment,
+      booking: { id: booking.id, label: bookingLabelOf(booking) },
+    })),
     money,
   };
 }
 
 export type InvoicePage = NonNullable<Awaited<ReturnType<typeof getInvoice>>>;
 
-/** A business's issued and draft documents, newest first, for its page. */
+/** One revision a document bills, as staff read it: what it changed, who made it, the total it left. */
+export type BilledChange = {
+  number: number;
+  kind: string;
+  summary: string;
+  reason: string | null;
+  at: Date;
+  by: string;
+  chargedSen: number;
+  details: RevisionDetail[];
+};
+
+/** One booking on a document: what it is now, at a glance, and the changes the document bills. */
+export type InvoiceBooking = {
+  bookingId: string;
+  booking: string;
+  contactName: string;
+  status: string;
+  chargedSen: number;
+  /** Its trips as the latest revision keeps them. */
+  trips: SnapshotTrip[];
+  revisions: BilledChange[];
+};
+
+/**
+ * Per booking on a document, what it is now (its trips, status and total)
+ * and the revisions the document bills: those after the booking's last
+ * revision billed on an earlier issued document, up to its own line's;
+ * while open, up to the latest. A first bill starts at Rev 1,
+ * the booking as booked. Each revision says what it changed and who made
+ * it.
+ */
+async function changesOf(
+  doc: {
+    id: string;
+    status: string;
+    issuedAt: Date | null;
+    lines: readonly {
+      revision: { number: number } | null;
+      booking: {
+        id: string;
+        number: number | null;
+        contactName: string;
+        status: string;
+        priceTotalSen: number;
+      };
+    }[];
+  },
+  now: Date,
+): Promise<InvoiceBooking[]> {
+  const live = doc.status === "open";
+  const before = doc.issuedAt ?? now;
+  return Promise.all(
+    doc.lines.map(async (line) => {
+      const last = await db.invoiceLine.findFirst({
+        where: {
+          bookingId: line.booking.id,
+          invoiceId: { not: doc.id },
+          revisionId: { not: null },
+          invoice: { status: "issued", issuedAt: { lt: before } },
+        },
+        orderBy: { revision: { number: "desc" } },
+        select: { revision: { select: { number: true } } },
+      });
+      const from = last?.revision?.number ?? 0;
+      const upTo = live ? undefined : line.revision?.number;
+      const [rows, latest] = await Promise.all([
+        // An old system's invoice names no revision: nothing to list.
+        !live && upTo === undefined
+          ? []
+          : db.bookingRevision.findMany({
+              // The one before the first, to say what the first changed.
+              where: {
+                bookingId: line.booking.id,
+                number: { gte: Math.max(1, from), lte: upTo },
+              },
+              orderBy: { number: "asc" },
+              select: {
+                number: true,
+                kind: true,
+                summary: true,
+                reason: true,
+                createdAt: true,
+                createdById: true,
+                chargedSen: true,
+                snapshot: true,
+              },
+            }),
+        db.bookingRevision.findFirst({
+          where: { bookingId: line.booking.id },
+          orderBy: { number: "desc" },
+          select: { snapshot: true },
+        }),
+      ]);
+      const previous = from > 0 ? rows.find((r) => r.number === from) : null;
+      const billed = await withDetails(
+        rows.filter((r) => r.number > from),
+        previous?.snapshot ?? null,
+      );
+      return {
+        bookingId: line.booking.id,
+        booking: bookingLabelOf(line.booking),
+        contactName: line.booking.contactName,
+        status: line.booking.status,
+        chargedSen: line.booking.priceTotalSen,
+        trips: revisionSnapshotOf(latest?.snapshot)?.trips ?? [],
+        revisions: billed.map((r) => ({
+          number: r.number,
+          kind: r.kind,
+          summary: r.summary,
+          reason: r.reason,
+          at: r.createdAt,
+          by: r.by,
+          chargedSen: r.chargedSen,
+          details: r.details,
+        })),
+      };
+    }),
+  );
+}
+
+/** A business's open and issued documents, newest first, for its page. */
 export function listBusinessInvoices(
   businessId: string,
   now: Date = new Date(),
 ) {
   return listInvoices({ businessId }, now);
-}
-
-/** The run's period a business would bill now, by its terms; null without credit. */
-export function businessRunPeriod(
-  paymentTerms: string,
-  now: Date = new Date(),
-): BillingPeriod | null {
-  return isCredit(paymentTerms) ? lastEndedPeriod(now, paymentTerms) : null;
 }

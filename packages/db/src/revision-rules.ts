@@ -1,4 +1,12 @@
+import { formatLocalDateTime } from "./booking-rules";
+import {
+  ITEM_STATUS_LABELS,
+  isItemStatus,
+  isTripMode,
+  TRIP_MODE_LABELS,
+} from "./booking-status";
 import { guardFor } from "./const-enum";
+import { formatMyr } from "./money";
 import { isPlace } from "./place";
 import { itemQuoteSen, stopsOf } from "./stops";
 
@@ -25,7 +33,7 @@ export const REVISION_KINDS = [
 export type RevisionKind = (typeof REVISION_KINDS)[number];
 export const isRevisionKind = guardFor(REVISION_KINDS);
 export const REVISION_KIND_LABELS: Record<RevisionKind, string> = {
-  booked: "Booked",
+  booked: "Original booking",
   change: "Trip changed",
   "add-trip": "Trip added",
   stop: "Stop added",
@@ -247,4 +255,151 @@ export function customerChangesOf(
 /** A summary or a reason as typed, trimmed and cut to `REVISION_TEXT_MAX`. */
 export function revisionText(typed: string): string {
   return typed.trim().replace(/\s+/g, " ").slice(0, REVISION_TEXT_MAX);
+}
+
+/* What a revision changed */
+
+/** One thing a revision changed, for staff: "Trip 1 · Pick-up time", what it was and what it is. */
+export type RevisionDetail = {
+  /** "Trip 1 · Pick-up time"; "Charge added"; "Trip 2 added". */
+  label: string;
+  before: string | null;
+  after: string | null;
+};
+
+/** The fields of a trip a revision may change, each as staff read it. */
+const TRIP_FIELDS: readonly {
+  label: string;
+  of: (trip: SnapshotTrip) => string | null;
+}[] = [
+  {
+    label: "Status",
+    of: (t) =>
+      isItemStatus(t.status) ? ITEM_STATUS_LABELS[t.status] : t.status,
+  },
+  {
+    label: "Pick-up time",
+    of: (t) => formatLocalDateTime(new Date(t.startsAt)),
+  },
+  {
+    label: "Service",
+    of: (t) =>
+      t.mode && isTripMode(t.mode) ? TRIP_MODE_LABELS[t.mode] : t.mode,
+  },
+  {
+    label: "Vehicle",
+    of: (t) =>
+      [t.vehicleClassName, t.vehicleModelName].filter(Boolean).join(", ") ||
+      null,
+  },
+  { label: "Pick-up", of: (t) => t.pickup },
+  {
+    label: "Stops",
+    of: (t) => (t.stops.length > 0 ? t.stops.join(" → ") : null),
+  },
+  { label: "Drop-off", of: (t) => t.dropoff },
+  { label: "Hours", of: (t) => (t.hours === null ? null : `${t.hours} h`) },
+  {
+    label: "Passengers",
+    of: (t) => (t.passengers === null ? null : String(t.passengers)),
+  },
+  { label: "Tour guide", of: (t) => t.guideLanguage },
+  { label: "Price", of: (t) => formatMyr(t.chargedSen) },
+  { label: "Why the price", of: (t) => t.agreedReason },
+];
+
+const chargeKey = (c: SnapshotCharge) =>
+  `${c.position ?? ""}|${c.label}|${c.amountSen}`;
+
+const chargeText = (c: SnapshotCharge) =>
+  `${c.label}${c.position !== null ? ` (Trip ${c.position})` : ""}, ${formatMyr(c.amountSen)}`;
+
+/**
+ * What a revision changed, field by field, from the revision before it:
+ * each trip's status, time, vehicle, places, passengers, guide and price,
+ * a trip added, and each charge added or taken off. Rev 1 changes
+ * nothing: it is the booking as booked.
+ */
+export function revisionDetailsOf(
+  before: RevisionSnapshot | null,
+  after: RevisionSnapshot,
+): RevisionDetail[] {
+  if (!before) return [];
+  const details: RevisionDetail[] = [];
+  for (const trip of after.trips) {
+    const was = before.trips.find((t) => t.position === trip.position);
+    const name = `Trip ${trip.position}`;
+    if (!was) {
+      details.push({
+        label: `${name} added`,
+        before: null,
+        after: [
+          trip.heading,
+          formatLocalDateTime(new Date(trip.startsAt)),
+          formatMyr(trip.chargedSen),
+        ].join(" · "),
+      });
+      continue;
+    }
+    for (const field of TRIP_FIELDS) {
+      const from = field.of(was);
+      const to = field.of(trip);
+      if (from !== to) {
+        details.push({
+          label: `${name} · ${field.label}`,
+          before: from,
+          after: to,
+        });
+      }
+    }
+  }
+  const left = new Map<string, number>();
+  for (const c of before.charges) {
+    left.set(chargeKey(c), (left.get(chargeKey(c)) ?? 0) + 1);
+  }
+  for (const c of after.charges) {
+    const n = left.get(chargeKey(c)) ?? 0;
+    if (n > 0) left.set(chargeKey(c), n - 1);
+    else
+      details.push({
+        label: "Charge added",
+        before: null,
+        after: chargeText(c),
+      });
+  }
+  for (const c of before.charges) {
+    const n = left.get(chargeKey(c)) ?? 0;
+    if (n > 0) {
+      left.set(chargeKey(c), n - 1);
+      details.push({
+        label: "Charge taken off",
+        before: chargeText(c),
+        after: null,
+      });
+    }
+  }
+  return details;
+}
+
+/**
+ * A trip's amend in the customer's words, from what it changed: "Trip 1:
+ * pick-up time and vehicle changed"; "Trip 1 changed" when nothing they
+ * read moved.
+ */
+export function amendSummaryOf(
+  position: number,
+  details: readonly RevisionDetail[],
+): string {
+  const prefix = `Trip ${position} · `;
+  const fields = details
+    .filter((d) => d.label.startsWith(prefix))
+    .map((d) => d.label.slice(prefix.length))
+    .filter((field) => field !== "Why the price" && field !== "Status")
+    .map((field) => field.toLowerCase());
+  if (fields.length === 0) return `Trip ${position} changed`;
+  const list =
+    fields.length === 1
+      ? fields[0]
+      : `${fields.slice(0, -1).join(", ")} and ${fields.at(-1)}`;
+  return `Trip ${position}: ${list} changed`;
 }

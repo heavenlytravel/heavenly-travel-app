@@ -181,18 +181,21 @@ const ACTIONS = {
     entityType: "booking",
     customerVisible: false,
   },
+  /** Split off its agent's month-end invoice (`before.document`) onto its own (`after.document`). */
+  "booking.billed.alone": { entityType: "booking", customerVisible: false },
   /** Its legacy invoice number, before and after; null for none. */
   "booking.legacy.changed": { entityType: "booking", customerVisible: false },
+  /** An open invoice opened, numbered only when issued: a booking's on confirming (`totalSen`), or an agent's month-end one (`period`); `billTo`. Before 2026-11-10 it was numbered then, its `document`. */
+  "invoice.opened": { entityType: "invoice", customerVisible: false },
+  /** An open invoice nothing was paid on dropped, never numbered, with its `reason`. */
+  "invoice.dropped": { entityType: "invoice", customerVisible: false },
   /** An invoice or credit note issued: `document`, `totalSen`, `billTo`. */
   "invoice.issued": { entityType: "invoice", customerVisible: false },
-  /** A month-end draft made: its `business`, `period` and how many `bookings`. */
-  "invoice.drafted": { entityType: "invoice", customerVisible: false },
-  "invoice.draft.deleted": { entityType: "invoice", customerVisible: false },
   /** Voided with its `reason`. */
   "invoice.voided": { entityType: "invoice", customerVisible: false },
-  /** Money in: `document`, `amountSen`, `method`, `paidOn`. */
+  /** Money in: `document`, `amountSen`, `method`, `paidOn`, and the `bookings` it is for, a payment each. */
   "payment.recorded": { entityType: "invoice", customerVisible: false },
-  /** A refund out, `amountSen` below nothing, against a credit note. */
+  /** A refund out, `amountSen` below nothing: on a credit note, or an invoice paid over. */
   "payment.refunded": { entityType: "invoice", customerVisible: false },
   /** A wrong payment entry reversed, with its `reason`. */
   "payment.reversed": { entityType: "invoice", customerVisible: false },
@@ -1335,7 +1338,7 @@ export function describeActivity(entry: DescribableActivity): string {
             ? REVISION_KIND_LABELS[kind]
             : "Changed the booking";
       return [
-        typeof number === "number" ? `Rev ${number}: ${what}` : what,
+        typeof number === "number" ? `Amendment ${number}: ${what}` : what,
         typeof charged === "number" ? `total ${formatMyr(charged)}` : null,
       ]
         .filter(Boolean)
@@ -1365,32 +1368,38 @@ export function describeActivity(entry: DescribableActivity): string {
         ? `Set the agent to ${agent}`
         : "Made the booking direct, through no agent";
     }
+    case "booking.billed.alone": {
+      const own = String(field(entry.after, "document") ?? "its own invoice");
+      const from = field(entry.before, "document");
+      return typeof from === "string"
+        ? `Billed on its own invoice, ${own}, off ${from}`
+        : `Billed on its own invoice, ${own}`;
+    }
     case "booking.legacy.changed": {
       const value = field(entry.after, "legacyInvoiceNumber");
       return typeof value === "string"
         ? `Set the old invoice number to ${value}`
         : "Removed the old invoice number";
     }
+    case "invoice.opened":
     case "invoice.issued": {
-      const document = String(field(entry.after, "document") ?? "");
+      const document = field(entry.after, "document");
       const total = field(entry.after, "totalSen");
       const to = field(entry.after, "billTo");
+      const period = field(entry.after, "period");
       return [
-        `Issued ${document}`,
+        entry.action === "invoice.opened"
+          ? `Opened ${typeof document === "string" ? document : "an invoice"}`
+          : `Issued ${String(document ?? "")}`,
+        typeof period === "string" ? `for ${period}` : null,
         typeof to === "string" ? `to ${to}` : null,
         typeof total === "number" ? `for ${formatMyr(total)}` : null,
       ]
         .filter(Boolean)
         .join(" ");
     }
-    case "invoice.drafted": {
-      const period = field(entry.after, "period");
-      return typeof period === "string"
-        ? `Made the draft for ${period}`
-        : "Made a month-end draft";
-    }
-    case "invoice.draft.deleted":
-      return "Deleted a month-end draft";
+    case "invoice.dropped":
+      return withReason("Closed the open invoice, never issued", entry.after);
     case "invoice.voided":
       return withReason(
         `Voided ${String(field(entry.after, "document") ?? "the document")}`,
@@ -1405,9 +1414,19 @@ export function describeActivity(entry: DescribableActivity): string {
         : "";
       const money =
         typeof amount === "number" ? formatMyr(Math.abs(amount)) : "a payment";
+      const bookings = field(entry.after, "bookings");
+      const names = Array.isArray(bookings)
+        ? bookings.filter((b): b is string => typeof b === "string")
+        : [];
+      const forWhom =
+        names.length === 0
+          ? ""
+          : names.length <= 3
+            ? ` for ${names.join(", ")}`
+            : ` over ${names.length} bookings`;
       return entry.action === "payment.refunded"
-        ? `Recorded a refund of ${money}${how}`
-        : `Recorded a payment of ${money}${how}`;
+        ? `Recorded a refund of ${money}${how}${forWhom}`
+        : `Recorded a payment of ${money}${how}${forWhom}`;
     }
     case "payment.reversed": {
       const amount = field(entry.after, "amountSen");

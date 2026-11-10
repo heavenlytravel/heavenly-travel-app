@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  amendSummaryOf,
   chargedSenOf,
   customerChangesOf,
+  revisionDetailsOf,
   revisionSnapshotOf,
   revisionText,
   snapshotOf,
+  type RevisionSnapshot,
   type SnapshotSource,
+  type SnapshotTrip,
 } from "./revision-rules";
 import {
   directionsHref,
@@ -178,5 +182,87 @@ describe("the customer's change list", () => {
   it("trims what staff type", () => {
     assert.equal(revisionText("  a   b "), "a b");
     assert.equal(revisionText("x".repeat(300)).length, 200);
+  });
+});
+
+describe("what a revision changed", () => {
+  const trip = (patch: Partial<SnapshotTrip> = {}): SnapshotTrip => ({
+    position: 1,
+    status: "confirmed",
+    startsAt: "2026-11-11T05:00:00.000Z",
+    heading: "Car with driver",
+    mode: "oneway",
+    vehicleClassName: "Standard Van",
+    vehicleModelName: null,
+    pickup: "KLIA",
+    stops: [],
+    dropoff: "KL Sentral",
+    hours: null,
+    distanceKm: 60,
+    passengers: 2,
+    guideLanguage: null,
+    quotedSen: 80000,
+    chargedSen: 80000,
+    agreedReason: null,
+    ...patch,
+  });
+  const snap = (
+    trips: SnapshotTrip[],
+    charges: RevisionSnapshot["charges"] = [],
+  ): RevisionSnapshot => ({
+    status: "confirmed",
+    trips,
+    charges,
+    quotedSen: 0,
+    chargedSen: 0,
+  });
+
+  it("names each field an amend moved, before and after", () => {
+    const details = revisionDetailsOf(
+      snap([trip()]),
+      snap([
+        trip({
+          startsAt: "2026-11-12T01:00:00.000Z",
+          vehicleClassName: "Premium MPV",
+          chargedSen: 120000,
+          distanceKm: 61,
+        }),
+      ]),
+    );
+    assert.deepEqual(
+      details.map((d) => d.label),
+      ["Trip 1 · Pick-up time", "Trip 1 · Vehicle", "Trip 1 · Price"],
+    );
+    assert.deepEqual(details[1], {
+      label: "Trip 1 · Vehicle",
+      before: "Standard Van",
+      after: "Premium MPV",
+    });
+    assert.equal(details[2]!.after, "RM 1,200.00");
+    assert.equal(
+      amendSummaryOf(1, details),
+      "Trip 1: pick-up time, vehicle and price changed",
+    );
+  });
+
+  it("lists a trip added and charges added or taken off", () => {
+    const parking = { label: "Parking", amountSen: 5000, position: 1 };
+    const details = revisionDetailsOf(
+      snap([trip()], [parking]),
+      snap(
+        [trip(), trip({ position: 2 })],
+        [{ label: "Toll", amountSen: 1200, position: null }],
+      ),
+    );
+    assert.deepEqual(
+      details.map((d) => d.label),
+      ["Trip 2 added", "Charge added", "Charge taken off"],
+    );
+    assert.equal(details[2]!.before, "Parking (Trip 1), RM 50.00");
+  });
+
+  it("changes nothing at Rev 1, and says so plainly when no field moved", () => {
+    assert.deepEqual(revisionDetailsOf(null, snap([trip()])), []);
+    assert.equal(amendSummaryOf(1, []), "Trip 1 changed");
   });
 });

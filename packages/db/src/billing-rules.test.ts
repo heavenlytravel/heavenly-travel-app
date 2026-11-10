@@ -6,12 +6,11 @@ import {
   billToOf,
   dueAtOf,
   invoiceMoneyOf,
-  lastEndedPeriod,
   localDayOf,
-  periodEndInstant,
   periodHasEnded,
   periodLabel,
   periodOf,
+  spreadPayment,
   sumMoney,
   suggestedPriceOf,
 } from "./billing-rules";
@@ -41,19 +40,7 @@ describe("periods by Malaysia's calendar", () => {
     });
   });
 
-  it("runs only a period that has ended", () => {
-    assert.deepEqual(lastEndedPeriod(NOW, "month"), {
-      start: "2026-10-01",
-      end: "2026-10-31",
-    });
-    assert.deepEqual(lastEndedPeriod(NOW, "half-month"), {
-      start: "2026-10-16",
-      end: "2026-10-31",
-    });
-    assert.deepEqual(
-      lastEndedPeriod(new Date("2026-11-20T04:00:00Z"), "half-month"),
-      { start: "2026-11-01", end: "2026-11-15" },
-    );
+  it("issues only a period that has ended", () => {
     const november = periodOf("2026-11-01", "month");
     assert.equal(
       periodHasEnded(november, new Date("2026-11-28T04:00:00Z")),
@@ -63,16 +50,6 @@ describe("periods by Malaysia's calendar", () => {
     assert.equal(
       periodHasEnded(november, new Date("2026-11-30T16:10:00Z")),
       true,
-    );
-  });
-
-  it("ends a period at the next Malaysian midnight", () => {
-    assert.equal(
-      periodEndInstant({
-        start: "2026-11-01",
-        end: "2026-11-30",
-      }).toISOString(),
-      "2026-11-30T16:00:00.000Z",
     );
   });
 
@@ -163,13 +140,13 @@ describe("what a change bills", () => {
     );
   });
 
-  it("lets more wait on credit terms, but credits less at once", () => {
-    // Live or ended alike: a credit agent has no open invoice.
+  it("puts more on the agent's month-end invoice, but credits less at once", () => {
+    // Live or ended alike: more goes on the month-end invoice.
     const credit = { ...live, credit: true };
     assert.deepEqual(
       billingPlanOf({ ...credit, chargedSen: 40000, billed: [] }),
       {
-        kind: "waits",
+        kind: "open",
         amountSen: 40000,
       },
     );
@@ -179,7 +156,7 @@ describe("what a change bills", () => {
         chargedSen: 49000,
         billed: [hti("run", 40000)],
       }),
-      { kind: "waits", amountSen: 9000 },
+      { kind: "open", amountSen: 9000 },
     );
     assert.deepEqual(
       billingPlanOf({
@@ -199,7 +176,7 @@ describe("what a change bills", () => {
         chargedSen: 44000,
         billed: [hti("run", 40000)],
       }),
-      { kind: "waits", amountSen: 4000 },
+      { kind: "open", amountSen: 4000 },
     );
   });
 
@@ -265,13 +242,30 @@ describe("what a change bills", () => {
       ),
       "Saving issues credit note HTC-0004 for RM 50.00 against HTI-0010.",
     );
-    assert.match(
-      billingPlanSentence({ kind: "waits", amountSen: 9000 }, next),
-      /month-end/,
+    assert.equal(
+      billingPlanSentence(
+        { kind: "open", amountSen: 9000 },
+        { ...next, period: "Nov 2026" },
+      ),
+      "Saving puts RM 90.00 on the agent's Nov 2026 invoice: numbered and issued when the period ends.",
     );
     assert.match(
+      billingPlanSentence(
+        { kind: "open", amountSen: 9000 },
+        { ...next, period: "" },
+      ),
+      /agent's month-end invoice/,
+    );
+    assert.equal(
       billingPlanSentence({ kind: "open", amountSen: 55000 }, next),
-      /issues nothing: its open invoice comes to RM 550.00/,
+      "Saving opens the booking's invoice for RM 550.00: payments go on it, and it is numbered and issued when the booking is completed.",
+    );
+    assert.equal(
+      billingPlanSentence(
+        { kind: "open", amountSen: 55000 },
+        { ...next, opened: true },
+      ),
+      "Saving moves the booking's open invoice to RM 550.00: the same invoice, numbered and issued when the booking is completed.",
     );
     assert.match(
       billingPlanSentence({ kind: "open", amountSen: -20000 }, next),
@@ -376,5 +370,36 @@ describe("the price rule", () => {
       }),
       0,
     );
+  });
+});
+
+describe("one transfer for a month-end invoice", () => {
+  const owed = [
+    { bookingId: "a", owedSen: 30000 },
+    { bookingId: "b", owedSen: 0 },
+    { bookingId: "c", owedSen: 50000 },
+  ];
+
+  it("pays the oldest pick-up first, skipping one paid already", () => {
+    assert.deepEqual(spreadPayment(60000, owed), [
+      { bookingId: "a", amountSen: 30000 },
+      { bookingId: "c", amountSen: 30000 },
+    ]);
+  });
+
+  it("stops where the money runs out", () => {
+    assert.deepEqual(spreadPayment(10000, owed), [
+      { bookingId: "a", amountSen: 10000 },
+    ]);
+  });
+
+  it("puts what is paid over on the last booking, to refund", () => {
+    assert.deepEqual(spreadPayment(90000, owed), [
+      { bookingId: "a", amountSen: 30000 },
+      { bookingId: "c", amountSen: 60000 },
+    ]);
+    assert.deepEqual(spreadPayment(5000, [{ bookingId: "a", owedSen: 0 }]), [
+      { bookingId: "a", amountSen: 5000 },
+    ]);
   });
 });

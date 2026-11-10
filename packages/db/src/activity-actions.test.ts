@@ -380,6 +380,7 @@ describe("activityActionMeta", () => {
     "booking.payment.updated",
     "booking.revised",
     "booking.billed",
+    "booking.billed.alone",
     "booking.stop.added",
     "booking.charge.added",
     "booking.business.changed",

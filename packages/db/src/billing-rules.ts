@@ -78,13 +78,6 @@ function nextDay(day: string): string {
   return date.toISOString().slice(0, 10);
 }
 
-/** The day before. */
-function previousDay(day: string): string {
-  const date = new Date(`${day}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() - 1);
-  return date.toISOString().slice(0, 10);
-}
-
 type Period = "month" | "half-month";
 
 /** A run's period: its first and last day, inclusive. */
@@ -105,20 +98,9 @@ export function periodOf(day: string, period: Period): BillingPeriod {
     : { start: `${month}-16`, end: lastOfMonth };
 }
 
-/** The last period that has ended by `now`: the one before today's. */
-export function lastEndedPeriod(now: Date, period: Period): BillingPeriod {
-  const current = periodOf(localDayOf(now), period);
-  return periodOf(previousDay(current.start), period);
-}
-
-/** Whether a period is over in Malaysia, so its run may be made. */
+/** Whether a period is over in Malaysia, so its month-end invoice may be issued. */
 export function periodHasEnded(period: BillingPeriod, now: Date) {
   return localDayOf(now) > period.end;
-}
-
-/** The first instant after the period, for a query's `lt`. */
-export function periodEndInstant(period: BillingPeriod): Date {
-  return localDayStart(nextDay(period.end));
 }
 
 const monthFormat = new Intl.DateTimeFormat("en-MY", {
@@ -180,13 +162,36 @@ export const INVOICE_TYPE_LABELS: Record<InvoiceType, string> = {
   credit: "Credit note",
 };
 
-export const INVOICE_STATUSES = ["draft", "issued", "void"] as const;
+export const INVOICE_STATUSES = ["open", "issued", "void"] as const;
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
 export const isInvoiceStatus = guardFor(INVOICE_STATUSES);
 export const INVOICE_STATUS_LABELS: Record<InvoiceStatus, string> = {
-  draft: "Draft",
+  open: "Open",
   issued: "Issued",
   void: "Void",
+};
+
+/** Who an invoice bills, for Finance's list: a customer's booking, an agent's booking, an agent's month-end run. */
+export const INVOICE_BILLED = ["customer", "agent", "month-end"] as const;
+export type InvoiceBilled = (typeof INVOICE_BILLED)[number];
+export const isInvoiceBilled = guardFor(INVOICE_BILLED);
+export const INVOICE_BILLED_LABELS: Record<InvoiceBilled, string> = {
+  customer: "Customer",
+  agent: "Agent, per booking",
+  "month-end": "Agent, month-end",
+};
+
+export const INVOICE_ISSUED_WHEN = [
+  "this-month",
+  "last-month",
+  "this-year",
+] as const;
+export type InvoiceIssuedWhen = (typeof INVOICE_ISSUED_WHEN)[number];
+export const isInvoiceIssuedWhen = guardFor(INVOICE_ISSUED_WHEN);
+export const INVOICE_ISSUED_LABELS: Record<InvoiceIssuedWhen, string> = {
+  "this-month": "This month",
+  "last-month": "Last month",
+  "this-year": "This year",
 };
 
 /** The longest reason a void, a reversal or a terms change may give. */
@@ -330,6 +335,36 @@ export function sumMoney(
   };
 }
 
+/**
+ * One transfer for an agent's month-end invoice, split over its bookings
+ * in the order given (the oldest pick-up first): each booking still owing
+ * gets what it owes until the money runs out. Paid more than all of them
+ * owe, the rest goes on the last booking, to refund. Never a part of
+ * nothing; `owedSen` at or below nothing takes none.
+ */
+export function spreadPayment(
+  amountSen: number,
+  bookings: readonly { bookingId: string; owedSen: number }[],
+): { bookingId: string; amountSen: number }[] {
+  const parts: { bookingId: string; amountSen: number }[] = [];
+  let left = amountSen;
+  for (const booking of bookings) {
+    if (left <= 0) break;
+    const share = Math.min(left, Math.max(0, booking.owedSen));
+    if (share > 0) {
+      parts.push({ bookingId: booking.bookingId, amountSen: share });
+      left -= share;
+    }
+  }
+  const last = bookings.at(-1);
+  if (left > 0 && last) {
+    const own = parts.find((part) => part.bookingId === last.bookingId);
+    if (own) own.amountSen += left;
+    else parts.push({ bookingId: last.bookingId, amountSen: left });
+  }
+  return parts;
+}
+
 /* What a change bills */
 
 /** One issued invoice a booking is on, with what it nets for that booking after its credit notes. */
@@ -341,15 +376,17 @@ export type BilledInvoice = {
 
 /**
  * What saving a booking as it now stands bills. Not confirmed yet: its
- * total changes, nothing is billed. On credit terms, more to pay waits for
- * the run. Otherwise, while the booking is live, the difference goes on
- * its one open invoice, a draft issued when the booking ends or by
- * Finance; once ended (completed or cancelled), it is issued at once: an
- * invoice for more to pay. Less to pay, at once or when the open invoice
- * is issued, is credit notes against its invoices, newest first, each no
- * more than that invoice nets for it, so no invoice goes below nothing.
- * See docs/261108-billing-and-revisions.md, "One open invoice per
- * booking".
+ * total changes, nothing is billed. On credit terms (`credit`), more to
+ * pay goes on the agent's open month-end invoice, issued when its period
+ * ends. Otherwise, while the booking is live, the difference goes on its
+ * own open invoice, numbered when the booking is confirmed, paid against
+ * as the money comes in, and issued in full when the booking ends or by
+ * Finance; once ended (completed or cancelled), it is issued at once: the
+ * open invoice, or a new invoice for more to pay. Less to pay, at once or
+ * when the open invoice is issued, is credit notes against its invoices,
+ * newest first, each no more than that invoice nets for it, so no invoice
+ * goes below nothing. See docs/261108-billing-and-revisions.md, "Open
+ * invoices, month-end too, and amendments".
  */
 export type BillingPlan =
   | { kind: "not-confirmed" }
@@ -357,7 +394,6 @@ export type BillingPlan =
   /** The open invoice's amount after the save: what is not invoiced yet, negative for a credit. */
   | { kind: "open"; amountSen: number }
   | { kind: "invoice"; amountSen: number }
-  | { kind: "waits"; amountSen: number }
   | {
       kind: "credit";
       notes: { invoiceId: string; label: string; amountSen: number }[];
@@ -386,8 +422,9 @@ export function creditNotesFor(
 
 export function billingPlanOf(input: {
   confirmed: boolean;
+  /** On the agent's month-end invoice: more waits on it, ended or not. */
   credit: boolean;
-  /** Completed or cancelled: nothing waits on an open invoice any more. */
+  /** Completed or cancelled: nothing waits on its own open invoice any more. */
   ended: boolean;
   chargedSen: number;
   /** Newest first. */
@@ -398,8 +435,7 @@ export function billingPlanOf(input: {
   const difference = input.chargedSen - billedSen;
   if (difference === 0) return { kind: "none" };
   if (difference > 0) {
-    if (input.credit) return { kind: "waits", amountSen: difference };
-    return input.ended
+    return input.ended && !input.credit
       ? { kind: "invoice", amountSen: difference }
       : { kind: "open", amountSen: difference };
   }
@@ -413,7 +449,18 @@ export function billingPlanOf(input: {
 /** The plan in a sentence for the save dialog: "Saving issues HTI-0012 for RM 90.00." */
 export function billingPlanSentence(
   plan: BillingPlan,
-  next: { invoice: string; credit: (index: number) => string },
+  next: {
+    /** The number an invoice it issues takes: the next one. */
+    invoice: string;
+    credit: (index: number) => string;
+    /** The booking has its open invoice already. */
+    opened?: boolean;
+    /**
+     * It goes on the agent's month-end invoice: the period ("Nov 2026"),
+     * or "" when it is not known yet.
+     */
+    period?: string;
+  },
   /** What the move is called: "Saving", "Confirming". */
   verb = "Saving",
 ): string {
@@ -423,13 +470,19 @@ export function billingPlanSentence(
     case "none":
       return "Nothing to bill: the total billed stays the same.";
     case "open":
+      if (next.period !== undefined && plan.amountSen > 0) {
+        const which = next.period
+          ? `the agent's ${next.period} invoice`
+          : "the agent's month-end invoice";
+        return `${verb} puts ${formatMyr(plan.amountSen)} on ${which}: numbered and issued when the period ends.`;
+      }
       return plan.amountSen > 0
-        ? `${verb} issues nothing: its open invoice comes to ${formatMyr(plan.amountSen)}, issued when the trip is done, or by Finance.`
-        : `${verb} issues nothing: ${formatMyr(-plan.amountSen)} to credit waits on its open invoice, credited when the trip is done, or by Finance.`;
+        ? next.opened
+          ? `${verb} moves the booking's open invoice to ${formatMyr(plan.amountSen)}: the same invoice, numbered and issued when the booking is completed.`
+          : `${verb} opens the booking's invoice for ${formatMyr(plan.amountSen)}: payments go on it, and it is numbered and issued when the booking is completed.`
+        : `${verb} leaves ${formatMyr(-plan.amountSen)} to credit: a credit note is issued when the booking is completed.`;
     case "invoice":
       return `${verb} issues ${next.invoice} for ${formatMyr(plan.amountSen)}.`;
-    case "waits":
-      return `${formatMyr(plan.amountSen)} waits for the agent's next month-end invoice, or Finance issues it now.`;
     case "credit":
       return plan.notes
         .map(

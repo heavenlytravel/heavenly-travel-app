@@ -2,7 +2,16 @@ import type { Actor } from "./activity-actions";
 import { logActivity } from "./activity";
 import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
-import { revisionText, snapshotOf, type RevisionKind } from "./revision-rules";
+import {
+  amendSummaryOf,
+  revisionDetailsOf,
+  revisionSnapshotOf,
+  revisionText,
+  snapshotOf,
+  type RevisionDetail,
+  type RevisionKind,
+} from "./revision-rules";
+import { fullName } from "./names";
 import { itemHeading } from "./trip-view";
 
 type Tx = Prisma.TransactionClient;
@@ -19,6 +28,8 @@ export type RevisionNote = {
   kind: RevisionKind;
   summary: string;
   reason?: string | null;
+  /** An amend's trip: its summary names what changed on it, once the change is made. */
+  trip?: number;
 };
 
 const SNAPSHOT_SELECT = {
@@ -97,8 +108,10 @@ export async function openRevision(
 
 /**
  * Closes a revision: the booking as it now stands, its quote and what it
- * charges. Logged on the booking's history from Rev 2, Rev 1 being the
- * booking's own "created" entry.
+ * charges. An amend's summary names what changed on its trip, from the
+ * revision before ("Trip 1: pick-up time and vehicle changed"). Logged on
+ * the booking's history from Rev 2, Rev 1 being the booking's own
+ * "created" entry.
  */
 export async function closeRevision(
   tx: Tx,
@@ -111,10 +124,24 @@ export async function closeRevision(
     select: SNAPSHOT_SELECT,
   });
   const snapshot = snapshotOf(source, itemHeading);
+  let summary = revisionText(revision.note.summary);
+  if (revision.note.trip !== undefined && revision.number > 1) {
+    const previous = await tx.bookingRevision.findUnique({
+      where: { bookingId_number: { bookingId, number: revision.number - 1 } },
+      select: { snapshot: true },
+    });
+    summary = revisionText(
+      amendSummaryOf(
+        revision.note.trip,
+        revisionDetailsOf(revisionSnapshotOf(previous?.snapshot), snapshot),
+      ),
+    );
+  }
   await tx.bookingRevision.update({
     where: { id: revision.id },
     data: {
       snapshot,
+      summary,
       quotedSen: snapshot.quotedSen,
       chargedSen: snapshot.chargedSen,
     },
@@ -129,7 +156,7 @@ export async function closeRevision(
       after: {
         revision: revision.number,
         kind: revision.note.kind,
-        summary: revisionText(revision.note.summary),
+        summary,
         chargedSen: snapshot.chargedSen,
         ...(reason ? { reason } : {}),
       },
@@ -159,4 +186,49 @@ export function getRevision(bookingId: string, number: number) {
   return db.bookingRevision.findUnique({
     where: { bookingId_number: { bookingId, number } },
   });
+}
+
+/** A revision as staff read it: what it changed from the one before, and who made it. */
+export type StaffRevision<R> = R & {
+  details: RevisionDetail[];
+  /** Who made it; "System" for none, "Former staff" for a deleted account. */
+  by: string;
+};
+
+/**
+ * Revisions in order, each with what it changed from the one before
+ * (`before`: the snapshot of the revision before the first, null when the
+ * first is Rev 1) and who made it, named in one query.
+ */
+export async function withDetails<
+  R extends { snapshot: unknown; createdById: string | null },
+>(rows: readonly R[], before: unknown): Promise<StaffRevision<R>[]> {
+  const ids = [
+    ...new Set(rows.flatMap((r) => (r.createdById ? [r.createdById] : []))),
+  ];
+  const users = ids.length
+    ? await db.user.findMany({
+        where: { id: { in: ids } },
+        select: { id: true, firstName: true, lastName: true, email: true },
+      })
+    : [];
+  const names = new Map(users.map((u) => [u.id, fullName(u) || u.email]));
+  let previous = revisionSnapshotOf(before);
+  return rows.map((row) => {
+    const snapshot = revisionSnapshotOf(row.snapshot);
+    const details = snapshot ? revisionDetailsOf(previous, snapshot) : [];
+    previous = snapshot;
+    return {
+      ...row,
+      details,
+      by: row.createdById
+        ? (names.get(row.createdById) ?? "Former staff")
+        : "System",
+    };
+  });
+}
+
+/** A booking's revisions for staff, oldest first, each with what it changed and who made it. */
+export async function listStaffRevisions(bookingId: string) {
+  return withDetails(await listRevisions(bookingId), null);
 }

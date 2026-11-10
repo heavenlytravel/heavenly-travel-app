@@ -421,6 +421,56 @@ decisions 5, 8 and 13 above and decision 8 of the build.
     kind `reinstate`. Billing follows: a credit note issued already stays; what it charges again
     goes on the open invoice.
 
+## Open invoices, month-end too, and amendments (2026-11-10)
+
+Decided with the developer: a confirmed booking has usually been paid in part or in full
+already, so the payment needs an invoice to go on before the booking ends. Where it differs,
+it replaces points 1, 2, 4 and 5 of "One open invoice per booking", and decision 9 (the
+month-end draft). "An issued invoice never
+changes" (decision 7) stands.
+
+1. **The open invoice takes its HTI number when the booking is confirmed** (status `open`),
+   not when it is issued. Finance records payments on it as they come in. An amend while the
+   booking is live moves its amount and keeps its number: paid in full, then an amend that
+   charges more, reads Partially paid on the same HTI. Its amount is never below nothing; a
+   credit to give waits for the end, as a credit note.
+2. **It is issued in full, its number kept, when the booking is completed or cancelled**, or
+   by Finance with Issue now on the invoice's own page. There is no part issue: a deposit is a
+   payment on the open invoice. Issue now is not on the booking page; issuing is Finance's.
+3. **A numbered open invoice is never deleted.** When it is no longer wanted (the booking ends
+   with nothing left to bill, its agent goes on credit, or it goes on a month-end draft) it is
+   issued as it stands if money was paid on it, else voided with the reason.
+4. **Refunds** go on a credit note, as before, or on an invoice paid more than it comes to (a
+   booking cancelled after it was paid), no more than the overpayment.
+5. **Credit notes keep their own HTC number** and show under the invoice they credit: in
+   Finance's list, on the booking's Money card and on the invoice's page.
+6. **An invoice's page lists the changes it bills**, booking by booking: the revisions since
+   each booking's last bill. A month-end invoice shows every amend of every booking on it.
+7. **Finance's list** shows the booking under the invoice number, and filters by who it bills
+   (customer, agent per booking, agent month-end) and when it was issued.
+8. **The menu**: "Selling" is "Account", and its "Billing" section is "Invoices".
+9. **A credit agent's month-end invoice is open all period** (replaces the draft run and its
+   ticks). It is numbered when the agent's first booking of the period is confirmed; each
+   confirmed booking is a line, by its first pick-up's period, and an amend moves its line.
+   Payments go on it as they come in. A booking whose period is issued already goes on today's
+   period (or the first after it not issued). Finance issues it once the period has ended
+   (Issue, never before); it is due the agent's days to pay from then. A month-end invoice's
+   money is the agent's, so a booking's page shows its line, not its Paid and Balance.
+10. **Bill on its own**: Finance moves a booking off the agent's open month-end invoice onto an
+    invoice of its own, still billed to the agent. It stays on its own after: a credit agent's
+    booking with an invoice of its own (open or issued) is billed as a direct one, so no flag
+    is stored.
+11. **Amendments**: what staff and invoices call a booking's revisions. "#3" in lists,
+    "Amendment 3" as a title, invoice lines "HTB-0042 Amendments 3–5: …"; #1 is the "Original
+    booking". Each shows who made it and what changed, field by field, worked out from the
+    snapshots (`revisionDetailsOf`), so older ones show it too. An amend's own line names
+    what changed ("Trip 1: pick-up time and vehicle changed"). The code keeps "revision".
+12. **Customer details** are still not an amendment (nothing delivered or charged changes);
+    they are in History, and an open invoice's Billed to follows them.
+13. **QuickBooks**: how it is used today is to be asked of Finance. If invoices are re-entered
+    there, they should carry the HTI number.
+14. **Next schema change** drops `InvoiceLine.ticked`, unused since the draft run went.
+
 ### Production order for this PR
 
 1. `pnpm db:push:prod --accept-data-loss`. The warning is the new unique indexes
@@ -444,3 +494,72 @@ nothing. 3. Merge. 4. Next schema change: drop `Booking.reference`, `quoteNumber
 `agentId` and `invoiceNumber`; `Invoice.agentId`, `paymentStatus` and the old relation;
 `Vendor.invoicePeriod`, `agentBookings` and `agentInvoices`; and `VehicleClass.imageUrl`.
 Make `Booking.number` required.
+
+## Numbered when issued, payments on the booking, sorting (2026-11-10, later)
+
+Decided with the developer the same day. Replaces points 1, 2, 3 and 9 above where they
+speak of the number; the rest stands.
+
+1. **An invoice takes its HTI number when it is issued**, not when it opens: at completion
+   or cancellation, by Issue now, or when Finance issues a month-end one. Numbers run in
+   issue order and none is lost to an invoice that was never issued. Until then it is
+   called "Open invoice" (`documentLabelOf`), and a search by HTI number does not find it.
+2. **An open invoice nothing was paid on, no longer wanted, is dropped** (deleted), not
+   voided: it has no number to keep. The log keeps it (`invoice.dropped`). Void is for
+   issued documents only.
+3. **Payments on the booking page**: a Payments card lists the payments and refunds on the
+   booking's own invoices and credit notes, each with its document. Finance records a
+   payment there on its open invoice (else the latest issued one with something left), a
+   refund on one paid over, and reverses one entered wrong. A booking on an agent's
+   month-end invoice points to that invoice: the agent pays it.
+4. **Sorting by when made**: Invoices (Number heading), the Order List (Booking heading,
+   newest made first, no longer by pick-up) and Agents (an Added column) sort newest or
+   oldest first (`list-order.ts`). Bookings already did: Booking ID sorts by when it was
+   made, Pick-up by the trip. Assign stays by nearest pick-up.
+5. **Customers** (who pays us) is dropped from the menu and the code; Agents moves to
+   Account.
+6. Dev data was renumbered to match: open invoices lost their numbers and issued ones run
+   HTI-0001 to 0007 in issue order. Production has no open invoices yet: `db:set-billing`
+   opens them unnumbered under this code. `db:set-vendor-service` must run on production
+   too, after `db:set-billing` and before the merge.
+
+## Every payment is one booking's (2026-11-11)
+
+Decided with the developer. Replaces point 3 above where it speaks of month-end invoices.
+
+1. **`Payment.bookingId` is required**: the booking a payment or refund is for. On a
+   document of one booking (its own invoice, any credit note) it is that booking; on an
+   agent's month-end invoice, one of its bookings.
+2. **A booking reads its own share** (`moneyOf(doc, now, bookingId)`): its lines, its
+   credit notes' lines and the payments for it. Its page, the Order List and the payment
+   state never show another booking's amount or payments, month-end or not.
+3. **Recording from the booking page** pays that booking, on the oldest invoice it still
+   owes on, the open one last; the button hides once nothing is owed. A refund goes where
+   it paid over.
+4. **Recording on a month-end invoice's page** asks For: one booking, or every booking,
+   one transfer spread the oldest pick-up first (`spreadPayment`), a payment row per
+   booking it pays; paid over all of them, the rest goes on the last booking. A refund
+   names its booking.
+5. **The month-end invoice page reads by booking too**: its lines show each booking's
+   paid and balance; its payments show their booking, filter by booking and by how paid,
+   and sort by day, the oldest first by default.
+6. **Paying more than is due still saves**, with a warning in the form ("RM X more than
+   is due: it will show Refund due"): money that came in is recorded as it came.
+7. **The booking page's Money card is Pricing**, payments inside it, no separate card.
+8. Production has no payments yet: the column is simply added by the push. Dev's 10 were
+   given their booking first (one split over HTI-0004's two bookings).
+
+## Next: the Finance workflow (payouts)
+
+Not in this PR; the next feature. Assign today only records what we owe: each part's
+cost (`TripPart.costSen`), a coach driver's tip (`tipSen`), pay lines, and the bank
+details and `paidToVendor` on drivers and guides. Nothing marks it paid, and nothing adds
+up what we owe a vendor. To settle there:
+
+- **One payment per vendor**, covering every part it supplies (a driver and vehicle from
+  the same vendor are one payment, not two), a driver or guide paid directly only when
+  not paid through a vendor (`paidToVendor`).
+- Who is paid by default (the vendor, or the driver unless `paidToVendor`): the earlier
+  docs disagree; Finance decides.
+- A payout record, marked paid with a reference, reversible like a payment; a list by
+  vendor and period.

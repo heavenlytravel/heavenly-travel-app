@@ -32,9 +32,9 @@ export function formatDocumentNumber(kind: DocumentKind, number: number) {
   return `${PREFIX[kind]}-${String(number).padStart(DIGITS, "0")}`;
 }
 
-/** An invoice's or a credit note's number as read: HTI-0012, HTC-0003; "Draft" while it has none. */
+/** An invoice's or a credit note's number as read: HTI-0012, HTC-0003; "Open invoice" until it is issued. */
 export function documentLabelOf(doc: { type: string; number: number | null }) {
-  if (doc.number === null) return "Draft";
+  if (doc.number === null) return "Open invoice";
   return formatDocumentNumber(
     doc.type === "credit" ? "credit" : "invoice",
     doc.number,

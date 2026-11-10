@@ -33,6 +33,7 @@ export * from "./guide-rates-input";
 export * from "./bank-input";
 export * from "./booking-number";
 export * from "./booking-order";
+export * from "./list-order";
 export * from "./offering-input";
 export * from "./vehicle-class-input";
 export * from "./vehicle-model-input";

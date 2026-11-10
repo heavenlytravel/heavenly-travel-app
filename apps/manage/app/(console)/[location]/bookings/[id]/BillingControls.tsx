@@ -1,12 +1,16 @@
 "use client";
 
-import { LEGACY_INVOICE_MAX } from "@repo/db";
+import { LEGACY_INVOICE_MAX, localDayOf } from "@repo/db";
 import { Field, Input } from "@repo/ui/field";
 import { Select } from "@repo/ui/select";
 import { useState } from "react";
 import { ActionDialog } from "../../../../_components/ActionDialog";
 import { LEGACY_INVOICE_FIELD } from "../_lib/trip-form";
-import { setBookingAgentAction, setLegacyAction } from "./actions";
+import {
+  setBookingAgentAction,
+  setLegacyAction,
+  setPayLaterAction,
+} from "./actions";
 
 /**
  * The booking's old invoice number, the old system's, set or cleared: a
@@ -81,5 +85,58 @@ export function BookingAgentControl({
         />
       </Field>
     </ActionDialog>
+  );
+}
+
+/**
+ * Pay later on a booking nothing is paid for yet: agreed, by the day it is
+ * due (for reference, it marks nothing overdue). Set again to change the
+ * day; `dueOn` given, "Back to pending" undoes it. The first payment
+ * ends it.
+ */
+export function PayLaterControl({
+  bookingId,
+  dueOn,
+}: {
+  bookingId: string;
+  /** "2026-11-30" while set. */
+  dueOn: string | null;
+}) {
+  return (
+    <span className="flex flex-wrap gap-2">
+      <ActionDialog
+        action={setPayLaterAction}
+        label={dueOn ? "Change day" : "Pay later"}
+        title="Pay later"
+        description="Agreed that it is paid later, so it reads Pay later, not Pending. The day is for reference: nothing is blocked or marked overdue. The first payment recorded ends it."
+        done="Set to Pay later."
+        submit="Save"
+        hidden={{ bookingId }}
+        variant={dueOn ? "ghost" : "secondary"}
+      >
+        <Field label="To be paid by">
+          <Input
+            name="dueOn"
+            type="date"
+            required
+            defaultValue={dueOn ?? localDayOf(new Date())}
+          />
+        </Field>
+      </ActionDialog>
+      {dueOn ? (
+        <ActionDialog
+          action={setPayLaterAction}
+          label="Back to pending"
+          title="Back to Pending?"
+          description="It reads Pending again: no payment yet, and none agreed for later."
+          done="Back to Pending."
+          submit="Back to pending"
+          hidden={{ bookingId, clear: "true" }}
+          variant="ghost"
+        >
+          <p className="text-sm text-muted">Nothing else changes.</p>
+        </ActionDialog>
+      ) : null}
+    </span>
   );
 }

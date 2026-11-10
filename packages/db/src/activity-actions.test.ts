@@ -385,6 +385,8 @@ describe("activityActionMeta", () => {
     "booking.charge.added",
     "booking.business.changed",
     "booking.legacy.changed",
+    "booking.pay-later.set",
+    "booking.pay-later.cleared",
   ];
 
   it("keeps staff, settings and internal booking actions from customers", () => {

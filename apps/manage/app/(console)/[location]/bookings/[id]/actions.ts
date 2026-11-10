@@ -32,6 +32,7 @@ import {
   reinstateItem,
   setBookingBusiness,
   setLegacyInvoiceNumber,
+  setPayLater,
   updateBookingContact,
   type BookingChange,
   type CancelFee,
@@ -462,6 +463,33 @@ export async function setLegacyAction(
     actorOf(admin),
     bookingId,
     legacy.value,
+  );
+  if (!result.ok) return refusalOf(result);
+  revalidateLocation();
+  return null;
+}
+
+/**
+ * Pay later on the booking, with the day it is due by, or back to Pending
+ * when `clear` is posted.
+ */
+export async function setPayLaterAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await getAdmin("bookings.manage");
+  if (!admin) return FORBIDDEN;
+  const bookingId = textOf(formData.get("bookingId"));
+  if (!bookingId) return STALE;
+  const clear = textOf(formData.get("clear")) === "true";
+  const dueOn = textOf(formData.get("dueOn"));
+  if (!clear && !/^\d{4}-\d{2}-\d{2}$/.test(dueOn)) {
+    return { error: "Choose the day it is to be paid by.", field: "dueOn" };
+  }
+  const result = await setPayLater(
+    actorOf(admin),
+    bookingId,
+    clear ? null : dueOn,
   );
   if (!result.ok) return refusalOf(result);
   revalidateLocation();

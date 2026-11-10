@@ -160,6 +160,7 @@ export function sampleBooking(
     businessId: null,
     business: null,
     legacyInvoiceNumber: null,
+    payLaterDueOn: null,
     charges: [],
     invoiceLines: [],
     userId: "u1",

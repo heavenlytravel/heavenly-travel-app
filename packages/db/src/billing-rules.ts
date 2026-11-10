@@ -249,9 +249,14 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   other: "Other",
 };
 
-/** Where an invoice's money stands, worked out from its payments, never set by hand. */
+/**
+ * Where an invoice's money stands, worked out from its payments, never set
+ * by hand. A booking's alone may read Pay later instead of Pending or
+ * Overdue (`withPayLater`): nothing paid yet, and that agreed.
+ */
 export const PAYMENT_STATES = [
   "unpaid",
+  "pay-later",
   "overdue",
   "partially-paid",
   "paid",
@@ -261,7 +266,8 @@ export const PAYMENT_STATES = [
 export type PaymentState = (typeof PAYMENT_STATES)[number];
 export const isPaymentState = guardFor(PAYMENT_STATES);
 export const PAYMENT_STATE_LABELS: Record<PaymentState, string> = {
-  unpaid: "Unpaid",
+  unpaid: "Pending",
+  "pay-later": "Pay later",
   overdue: "Overdue",
   "partially-paid": "Partially paid",
   paid: "Paid",
@@ -310,6 +316,37 @@ export function invoiceMoneyOf(input: {
             ? "overdue"
             : "unpaid";
   return { netSen, paidSen: input.paidSen, balanceSen, state, overdue };
+}
+
+/**
+ * Whether a booking is agreed to be paid later: a credit agent's booking
+ * on its month-end invoice always is, and staff say so of any other
+ * (`Booking.payLaterDueOn`) while nothing is paid.
+ */
+export function paysLater(input: {
+  /** The day staff agreed it is paid by; null when they have not. */
+  payLaterDueOn: Date | null;
+  /** On its agent's month-end invoice, credit terms. */
+  monthly: boolean;
+}): boolean {
+  return input.monthly || input.payLaterDueOn !== null;
+}
+
+/**
+ * A booking's money, Pay later in place of Pending or Overdue while
+ * nothing is paid: its due date is for reference and marks nothing
+ * overdue. The first payment ends it, and from then on it follows the
+ * payments; one reversed back to nothing paid brings it back.
+ */
+export function withPayLater(
+  money: InvoiceMoney,
+  payLater: boolean,
+): InvoiceMoney {
+  return payLater &&
+    money.paidSen === 0 &&
+    (money.state === "unpaid" || money.state === "overdue")
+    ? { ...money, state: "pay-later", overdue: false }
+    : money;
 }
 
 /** Many invoices' money as one: a booking's, or a business's. */

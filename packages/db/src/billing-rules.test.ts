@@ -10,7 +10,9 @@ import {
   periodHasEnded,
   periodLabel,
   periodOf,
+  paysLater,
   spreadPayment,
+  withPayLater,
   sumMoney,
   suggestedPriceOf,
 } from "./billing-rules";
@@ -401,5 +403,39 @@ describe("one transfer for a month-end invoice", () => {
     assert.deepEqual(spreadPayment(5000, [{ bookingId: "a", owedSen: 0 }]), [
       { bookingId: "a", amountSen: 5000 },
     ]);
+  });
+});
+
+describe("pay later", () => {
+  const money = (
+    totalSen: number,
+    paidSen: number,
+    dueAt: Date | null = null,
+  ) => invoiceMoneyOf({ totalSen, creditSen: 0, paidSen, dueAt, now: NOW });
+
+  it("is a credit agent's month-end booking, or one staff agreed", () => {
+    assert.equal(paysLater({ payLaterDueOn: null, monthly: true }), true);
+    assert.equal(
+      paysLater({ payLaterDueOn: new Date("2026-11-30"), monthly: false }),
+      true,
+    );
+    assert.equal(paysLater({ payLaterDueOn: null, monthly: false }), false);
+  });
+
+  it("reads Pay later while nothing is paid, never overdue", () => {
+    assert.equal(withPayLater(money(30000, 0), true).state, "pay-later");
+    const late = withPayLater(money(30000, 0, new Date("2026-11-01")), true);
+    assert.equal(late.state, "pay-later");
+    assert.equal(late.overdue, false);
+    assert.equal(withPayLater(money(30000, 0), false).state, "unpaid");
+  });
+
+  it("follows the payments from the first one", () => {
+    assert.equal(
+      withPayLater(money(30000, 10000), true).state,
+      "partially-paid",
+    );
+    assert.equal(withPayLater(money(30000, 30000), true).state, "paid");
+    assert.equal(withPayLater(money(0, 0), true).state, "nothing-due");
   });
 });

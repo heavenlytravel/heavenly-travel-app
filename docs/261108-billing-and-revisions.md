@@ -563,3 +563,24 @@ up what we owe a vendor. To settle there:
   docs disagree; Finance decides.
 - A payout record, marked paid with a reference, reversible like a payment; a list by
   vendor and period.
+
+## Pay later (2026-11-11)
+
+Decided with the developer in the Assign-upgrade thread, built here. Changes decision 4,
+which removed "Pay later".
+
+- **Pending** (the Unpaid state, renamed): nothing paid, none agreed for later.
+  **Pay later**: nothing paid, and that is agreed. Assign never checks either: Ops assign
+  once the trip is confirmed, paid or not.
+- **A credit agent's booking on its month-end invoice is Pay later on its own**, due when
+  that invoice is (shown once it is issued). No one sets it.
+- **Staff set it on any other booking** (`bookings.manage`), with the day it is to be paid
+  by (`Booking.payLaterDueOn`). The day is for reference: nothing is blocked, sent or
+  marked overdue. "Back to pending" undoes it while nothing is paid.
+- **The first payment ends it** (`withPayLater`): from then the state follows the
+  payments, and it cannot be set again. A payment reversed back to nothing paid brings it
+  back.
+- It reads on the booking page (its Pricing card and its invoices there) and the Order
+  List, whose filter has it. The Invoices list does not: an invoice is not a booking.
+- Logged as `booking.pay-later.set` and `booking.pay-later.cleared`, staff only.
+- Open: whether Finance should set it too; what the customer's booking page shows.

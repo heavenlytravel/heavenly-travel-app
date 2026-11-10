@@ -19,8 +19,10 @@ import {
   periodHasEnded,
   periodLabel,
   periodOf,
+  paysLater,
   spreadPayment,
   sumMoney,
+  withPayLater,
   type BilledInvoice,
   type BillingPeriod,
   type BillingPlan,
@@ -1126,6 +1128,12 @@ export type BookingBilling = {
   payTo: { id: string; label: string; balanceSen: number } | null;
   /** An invoice it paid over on, with what is to refund. */
   refundFrom: { id: string; label: string; refundSen: number } | null;
+  /**
+   * Agreed to be paid later: by staff, with the day it is due by, or on a
+   * credit agent's terms, due when its month-end invoice is (null while
+   * open). Null when not, and once a payment is in.
+   */
+  payLater: { dueOn: Date | null; byTerms: boolean } | null;
 };
 
 /** One payment in or refund out for a booking. */
@@ -1166,6 +1174,7 @@ export async function bookingBillingOf(
       confirmedAt: true,
       status: true,
       legacyInvoiceNumber: true,
+      payLaterDueOn: true,
       business: { select: { paymentTerms: true } },
       invoiceLines: {
         select: {
@@ -1235,21 +1244,36 @@ export async function bookingBillingOf(
   );
   const payTo = invoices.find((d) => d.money.balanceSen > 0);
   const overpaid = invoices.find((d) => d.money.balanceSen < 0);
+  const monthly =
+    !alone &&
+    (booking.business ? isCredit(booking.business.paymentTerms) : false);
+  const summed = sumMoney(
+    invoices.map((d) => d.money),
+    now,
+  );
+  const money = summed
+    ? withPayLater(
+        summed,
+        paysLater({ payLaterDueOn: booking.payLaterDueOn, monthly }),
+      )
+    : null;
   return {
-    documents,
+    // Pay later on the booking reads on each invoice it is on, too.
+    documents:
+      money?.state === "pay-later"
+        ? documents.map((d) => ({
+            ...d,
+            money: d.money ? withPayLater(d.money, true) : null,
+          }))
+        : documents,
     oldInvoiceNumber: booking.legacyInvoiceNumber,
-    monthly:
-      !alone &&
-      (booking.business ? isCredit(booking.business.paymentTerms) : false),
+    monthly,
     ended: hasEnded(booking.status),
     billedSen,
     unbilledSen:
       booking.confirmedAt === null ? 0 : booking.priceTotalSen - billedSen,
     open: open ? { id: open.id, label: open.label, period: open.period } : null,
-    money: sumMoney(
-      invoices.map((d) => d.money),
-      now,
-    ),
+    money,
     payments: payments.map(({ invoiceId, ...payment }) => ({
       ...payment,
       documentId: invoiceId,
@@ -1269,7 +1293,82 @@ export async function bookingBillingOf(
           refundSen: -overpaid.money.balanceSen,
         }
       : null,
+    payLater:
+      money?.state === "pay-later" ||
+      (!money && paysLater({ payLaterDueOn: booking.payLaterDueOn, monthly }))
+        ? {
+            dueOn: monthly
+              ? (invoices.find((d) => d.period !== null)?.dueAt ?? null)
+              : booking.payLaterDueOn,
+            byTerms: monthly,
+          }
+        : null,
   };
+}
+
+/**
+ * Staff's Pay later on a booking: agreed to be paid by `dueOn` (the day,
+ * "2026-11-30", for reference only), or back to Pending with null. Only
+ * while nothing is paid for it: from the first payment its state follows
+ * the payments. A credit agent's booking on its month-end invoice pays
+ * later on its terms, set by no one.
+ */
+export async function setPayLater(
+  actor: Actor,
+  bookingId: string,
+  dueOn: string | null,
+): Promise<Change> {
+  return db.$transaction(async (tx) => {
+    const booking = await tx.booking.findUnique({
+      where: { id: bookingId },
+      select: {
+        status: true,
+        payLaterDueOn: true,
+        business: { select: { paymentTerms: true } },
+        invoiceLines: {
+          where: { invoice: { type: "invoice", status: { not: "void" } } },
+          select: { invoice: { select: { periodStart: true } } },
+        },
+        payments: { where: { reversedAt: null }, select: { amountSen: true } },
+      },
+    });
+    if (!booking) return refuse("This booking is gone. Reload the list.");
+    if (booking.status === "cancelled") {
+      return refuse("The booking is cancelled: nothing is owed on it.");
+    }
+    const alone = booking.invoiceLines.some(
+      (l) => l.invoice.periodStart === null,
+    );
+    if (!alone && booking.business && isCredit(booking.business.paymentTerms)) {
+      return refuse(
+        "A credit agent's booking pays later on its terms already: nothing to set.",
+      );
+    }
+    if (booking.payments.reduce((sum, p) => sum + p.amountSen, 0) !== 0) {
+      return refuse(
+        "A payment is recorded for it: its status follows the payments now.",
+      );
+    }
+    const next = dueOn ? new Date(`${dueOn}T00:00:00Z`) : null;
+    if (
+      (booking.payLaterDueOn?.getTime() ?? null) === (next?.getTime() ?? null)
+    ) {
+      return { ok: true };
+    }
+    await tx.booking.update({
+      where: { id: bookingId },
+      data: { payLaterDueOn: next },
+    });
+    await logActivity(tx, actor, {
+      action: next ? "booking.pay-later.set" : "booking.pay-later.cleared",
+      entityId: bookingId,
+      before: {
+        dueOn: booking.payLaterDueOn?.toISOString().slice(0, 10) ?? null,
+      },
+      after: { dueOn },
+    });
+    return { ok: true };
+  });
 }
 
 /* Finance's own billing */

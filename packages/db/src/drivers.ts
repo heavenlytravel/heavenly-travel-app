@@ -19,6 +19,7 @@ import {
 } from "./driver-input";
 import { documentDates, dueByDate } from "./expiry";
 import type { Prisma } from "./generated/prisma/client";
+import { madeOrderBy } from "./list-order";
 import type { FleetFilter } from "./vehicles";
 import { isUniqueViolation } from "./prisma-errors";
 import { phoneDigitsOf } from "./search";
@@ -65,7 +66,7 @@ export function driverSearchWhere(search: string): Prisma.DriverWhereInput {
   };
 }
 
-/** Every driver, or those the filter leaves, active first, by name. */
+/** Every driver, or those the filter leaves, active first, by name, or by when each was added (`order`). */
 export function listDrivers(
   filter: FleetFilter = {},
 ): Promise<DriverWithClasses[]> {
@@ -76,7 +77,9 @@ export function listDrivers(
   if (filter.search) where.push(driverSearchWhere(filter.search));
   return db.driver.findMany({
     where: { AND: where },
-    orderBy: [{ isActive: "desc" }, { name: "asc" }],
+    orderBy: filter.order
+      ? madeOrderBy(filter.order)
+      : [{ isActive: "desc" }, { name: "asc" }],
     ...withClasses,
   });
 }
@@ -224,7 +227,7 @@ function createDriverIn(
       tx,
       fields.vendorId,
       fields.locationId,
-      { kind: "driver" },
+      "driver",
     );
     if (!vendor.ok) return vendor;
     const { vehicleClassIds, ...rest } = fields;
@@ -352,7 +355,7 @@ function updateDriverIn(
         tx,
         after.vendorId ?? current.vendorId,
         after.locationId ?? current.locationId,
-        { kind: "driver" },
+        "driver",
       );
       if (!vendor.ok) return vendor;
       if (after.vendorId !== undefined) vendorName = vendor.name;

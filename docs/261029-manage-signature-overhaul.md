@@ -134,10 +134,16 @@ Every query already filters by location ids, so later this is one function, not 
 
 One menu. It does not change when the location changes:
 
-- **Operations:** Dashboard, Bookings, Fleet (Vehicles, Drivers, Classes)
-- **Selling:** Coverage, Rates (Classes and hourly, Rate grid, Trip rules, Try a trip)
+- **Operations:** Dashboard, Bookings, Assign
+- **Account:** Order List (by booking), Invoices, Agents
+- **Settings:** Coverage, Rates (Classes, Rate grid, Hourly, Tour guides, Trip rules, Try a
+  trip), Vendors, Fleet (Classes, Vehicles, Drivers), Tour Guides, Location Settings
 - **Website:** Pages, Media
-- **Admin:** Team (Staff, Customers), Activity, Settings
+- **Admin:** Users (All Users, Admin), Activity
+
+Regrouped on 2026-11-10 (the developer's structure), then again the same day: Vehicle
+Classes into Fleet, Agents into Account, Customers dropped, User renamed Admin. The pages
+kept their addresses.
 
 How it behaves:
 

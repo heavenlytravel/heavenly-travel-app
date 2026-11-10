@@ -138,7 +138,7 @@ async function userScreen(id: string) {
                     ) : null}
                     {!managesAdmins ? null : profile ? (
                       <Button asChild variant="secondary" size="sm">
-                        <Link href={adminsHref(user.email)}>
+                        <Link href={adminsHref({ q: user.email })}>
                           Change on Admin
                         </Link>
                       </Button>

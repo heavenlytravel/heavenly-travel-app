@@ -2,13 +2,16 @@ import Link from "next/link";
 import {
   isVendorKind,
   isVendorService,
+  isMadeOrder,
   isVendorStatus,
   searchTermOf,
+  textOf,
   VENDOR_KIND_LABELS,
   VENDOR_SERVICES,
   VENDOR_SERVICE_LABELS,
   VENDOR_STATUSES,
   VENDOR_STATUS_LABELS,
+  type MadeOrder,
 } from "@repo/db";
 import { listVendors } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
@@ -31,12 +34,14 @@ import {
   ListFilters,
   type FilterGroup,
 } from "../../../../_components/ListFilters";
+import { AddedTd, AddedTh } from "../../../../_components/AddedColumn";
 import { ListToolbar } from "../../../../_components/ListToolbar";
 import { SearchBox } from "../../../../_components/SearchBox";
 import { requireAdmin } from "../../../../_lib/access";
 import {
   newVendorHref,
   SEARCH_PARAM,
+  SORT_PARAM,
   vendorHref,
   vendorsHref,
 } from "../../../../_lib/routes";
@@ -44,8 +49,8 @@ import { scopeOf, type ConsoleScope } from "../../../../_lib/scope";
 import { VendorStatusBadge } from "@repo/console/StatusBadges";
 
 /**
- * Route: /[location]/fleet/vendors?status=…&service=…&q=…. The vendors,
- * ours first, narrowed by the Filters button to a status or what they
+ * Route: /[location]/fleet/vendors?status=…&service=…&sort=…&q=…. The
+ * vendors, ours first or by when each was added, narrowed by the Filters button to a status or what they
  * supply, and by a search:
  * every one under `~`, with the locations each serves, or those serving
  * the location under its slug; how many vehicles and drivers each has in
@@ -61,6 +66,8 @@ export default async function VendorsPage({
   const status = isVendorStatus(query.status) ? query.status : undefined;
   const q = searchTermOf(query[SEARCH_PARAM]) ?? undefined;
   const service = isVendorService(query.service) ? query.service : undefined;
+  const sort = textOf(query[SORT_PARAM]);
+  const order = isMadeOrder(sort) ? sort : undefined;
   const groups: FilterGroup[] = [
     {
       param: "status",
@@ -82,7 +89,7 @@ export default async function VendorsPage({
     },
   ];
   // The list as filtered: what each control changes a field of.
-  const listed = vendorsHref(scope.slug, { status, service, q });
+  const listed = vendorsHref(scope.slug, { status, service, sort: order, q });
 
   return (
     <>
@@ -100,7 +107,7 @@ export default async function VendorsPage({
       <Card flush>
         <ListToolbar>
           <SearchBox
-            href={vendorsHref(scope.slug, { status, service })}
+            href={vendorsHref(scope.slug, { status, service, sort: order })}
             value={q ?? ""}
             label="Search vendors"
             placeholder="Name, contact, phone or SSM"
@@ -111,9 +118,9 @@ export default async function VendorsPage({
         {/* Keyed by the filters, so another filter shows the skeleton, not the old rows. */}
         <Streamed
           key={listed}
-          fallback={<TableSkeleton bare rows={4} columns={4} />}
+          fallback={<TableSkeleton bare rows={4} columns={5} />}
         >
-          {() => vendorRows(scope, { status, service, q })}
+          {() => vendorRows(scope, { status, service, order, q })}
         </Streamed>
       </Card>
     </>
@@ -125,6 +132,8 @@ async function vendorRows(
   filter: {
     status?: (typeof VENDOR_STATUSES)[number];
     service?: (typeof VENDOR_SERVICES)[number];
+    /** By when each was added; none for ours first, then by name. */
+    order?: MadeOrder;
     q?: string;
   },
 ) {
@@ -133,15 +142,28 @@ async function vendorRows(
     service: filter.service,
     search: filter.q,
     locationId: scope.location?.id,
+    order: filter.order,
   });
   const showLocations = scope.location === null;
-  const columns = showLocations ? 4 : 3;
+  const columns = showLocations ? 5 : 4;
   return (
     <Table bare>
       <THead>
         <Th>Vendor</Th>
         {showLocations ? <Th>Serves</Th> : null}
         <Th>In service</Th>
+        <AddedTh
+          sort={{
+            order: filter.order,
+            hrefOf: (next) =>
+              vendorsHref(scope.slug, {
+                status: filter.status,
+                service: filter.service,
+                sort: next,
+                q: filter.q,
+              }),
+          }}
+        />
         <Th>Status</Th>
       </THead>
       <TBody>
@@ -182,6 +204,7 @@ async function vendorRows(
                 {vendor._count.vehicles} vehicles · {vendor._count.drivers}{" "}
                 drivers
               </Td>
+              <AddedTd at={vendor.createdAt} />
               <Td className="whitespace-nowrap">
                 <span className="inline-flex gap-1.5">
                   {vendor.isOurs ? <Badge tone="brand">Ours</Badge> : null}

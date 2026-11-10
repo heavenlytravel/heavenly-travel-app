@@ -1,5 +1,13 @@
 import Link from "next/link";
-import { formatLocalDate, fullName, plural, searchTermOf } from "@repo/db";
+import {
+  formatLocalDate,
+  fullName,
+  isMadeOrder,
+  plural,
+  searchTermOf,
+  textOf,
+  type MadeOrder,
+} from "@repo/db";
 import { listUsers } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { notFound } from "next/navigation";
@@ -15,12 +23,14 @@ import {
   THead,
   TwoLines,
 } from "@repo/console/Table";
+import { AddedTh } from "../../../_components/AddedColumn";
 import { Pager, pageOf } from "../../../_components/Pager";
 import { SearchBox } from "../../../_components/SearchBox";
 import { getPermissions, requireAdmin } from "../../../_lib/access";
 import {
   PAGE_PARAM,
   SEARCH_PARAM,
+  SORT_PARAM,
   userHref,
   usersHref,
 } from "../../../_lib/routes";
@@ -31,8 +41,9 @@ import { CreateUserForm } from "./CreateUserForm";
 const PAGE_SIZE = 50;
 
 /**
- * Route: /~/users?q=…&page=2. All Users: every account in the system,
- * made on the website, in Connect or created here, the newest first,
+ * Route: /~/users?q=…&sort=…&page=2. All Users: every account in the
+ * system, made on the website, in Connect or created here, the newest
+ * first or, sorted by Joined, the oldest,
  * narrowed by a search of names and emails. Each row says where the
  * account has access beyond the website, Manage and Connect, and opens
  * its page, where its profile, email and password are changed. An account
@@ -49,6 +60,8 @@ export default async function AllUsersPage({
   const query = await searchParams;
   const q = searchTermOf(query[SEARCH_PARAM]) ?? undefined;
   const page = pageOf(query[PAGE_PARAM]);
+  const sort = textOf(query[SORT_PARAM]);
+  const order = isMadeOrder(sort) ? sort : undefined;
   const permissions = await getPermissions();
 
   return (
@@ -62,16 +75,26 @@ export default async function AllUsersPage({
         }
       />
       <Streamed fallback={<TableSkeleton columns={6} rows={8} />}>
-        {() => usersList({ q, page })}
+        {() => usersList({ q, order, page })}
       </Streamed>
     </>
   );
 }
 
 /** One page of the accounts, or of those the search finds. */
-async function usersList({ q, page }: { q?: string; page: number }) {
+async function usersList({
+  q,
+  order,
+  page,
+}: {
+  q?: string;
+  /** None for the newest first. */
+  order?: MadeOrder;
+  page: number;
+}) {
   const { users, total } = await listUsers({
     search: q,
+    order,
     take: PAGE_SIZE,
     skip: (page - 1) * PAGE_SIZE,
   });
@@ -83,7 +106,7 @@ async function usersList({ q, page }: { q?: string; page: number }) {
         meta={plural(total, "account")}
         action={
           <SearchBox
-            href={usersHref()}
+            href={usersHref({ sort: order })}
             value={q ?? ""}
             label="Search users"
             placeholder="Name or email"
@@ -98,7 +121,15 @@ async function usersList({ q, page }: { q?: string; page: number }) {
           <Th>Phone</Th>
           <Th>Admin</Th>
           <Th>Connect</Th>
-          <Th>Joined</Th>
+          <AddedTh
+            sort={{
+              order,
+              fallback: "newest",
+              hrefOf: (next) => usersHref({ q, sort: next }),
+            }}
+          >
+            Joined
+          </AddedTh>
           <Th />
         </THead>
         <TBody>
@@ -141,7 +172,7 @@ async function usersList({ q, page }: { q?: string; page: number }) {
         page={page}
         pageSize={PAGE_SIZE}
         total={total}
-        hrefOf={(next) => usersHref({ q, page: next })}
+        hrefOf={(next) => usersHref({ q, sort: order, page: next })}
       />
     </Card>
   );

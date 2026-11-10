@@ -85,7 +85,7 @@ export default async function SettingsPage({
   if (location) {
     return (
       <>
-        <PageHeader title="Settings" meta={location.name} />
+        <PageHeader title="Location Settings" meta={location.name} />
         <Streamed
           fallback={
             <div className="grid max-w-3xl gap-5">
@@ -103,7 +103,7 @@ export default async function SettingsPage({
   return (
     <>
       <PageHeader
-        title="Settings"
+        title="Location Settings"
         action={
           permissions.includes("locations.create") ? (
             <Button asChild>

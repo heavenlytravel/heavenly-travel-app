@@ -4,6 +4,7 @@ import { refuse, type Change, type Created } from "./change";
 import { db } from "./client";
 import type { Prisma, VehicleClass } from "./generated/prisma/client";
 import { slugify } from "./slug";
+import { madeOrderBy, type MadeOrder } from "./list-order";
 import { byCategory } from "./offering-input";
 import {
   checkVehicleClassFields,
@@ -69,13 +70,22 @@ function catalogueClass({ models, ...row }: CatalogueRow): CatalogueClass {
   return { ...row, inServiceAt };
 }
 
-/** Every class, active or not, with where it is sold: car with driver first, then by sort order and name. */
-export async function listVehicleClasses(): Promise<CatalogueClass[]> {
+/**
+ * Every class, active or not, with where it is sold: car with driver
+ * first, then by sort order and name, or by when each was added
+ * (`order`).
+ */
+export async function listVehicleClasses(
+  order?: MadeOrder,
+): Promise<CatalogueClass[]> {
   const rows = await db.vehicleClass.findMany({
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    orderBy: order
+      ? madeOrderBy(order)
+      : [{ sortOrder: "asc" }, { name: "asc" }],
     ...withOfferings,
   });
-  return rows.map(catalogueClass).sort(byCategory);
+  const classes = rows.map(catalogueClass);
+  return order ? classes : classes.sort(byCategory);
 }
 
 /** A class as a form picks it: what it is called, its category and whether it is on. */

@@ -20,7 +20,8 @@ import {
 /** The menu's groups, in order. */
 export const CONSOLE_GROUPS = [
   { key: "operations", label: "Operations" },
-  { key: "selling", label: "Selling" },
+  { key: "account", label: "Account" },
+  { key: "settings", label: "Settings" },
   { key: "website", label: "Website" },
   { key: "admin", label: "Admin" },
 ] as const;
@@ -78,64 +79,120 @@ const RATES_WORDS: Record<(typeof RATES_PAGES)[number], string> = {
   try: "quote price check",
 };
 
+/** A section of one page: a row of its own. */
+const single = (group: ConsoleGroup, page: ConsolePage): ConsoleSection => ({
+  key: page.key,
+  label: page.label,
+  icon: page.icon,
+  group,
+  pages: [page],
+});
+
 export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
-  {
+  // Operations: the day's work.
+  single("operations", {
     key: "dashboard",
     label: "Dashboard",
+    path: "",
     icon: "dashboard",
-    group: "operations",
-    pages: [
-      {
-        key: "dashboard",
-        label: "Dashboard",
-        path: "",
-        icon: "dashboard",
-        permission: "dashboard.view",
-        words: "home overview today",
-      },
-    ],
-  },
-  {
+    permission: "dashboard.view",
+    words: "home overview today",
+  }),
+  single("operations", {
     key: "bookings",
     label: "Bookings",
+    path: "bookings",
     icon: "bookings",
-    group: "operations",
-    pages: [
-      {
-        key: "bookings",
-        label: "Bookings",
-        path: "bookings",
-        icon: "bookings",
-        permission: "bookings.view",
-        live: true,
-        shared: true,
-        words: "queue reservations received",
-      },
-    ],
-  },
-  {
+    permission: "bookings.view",
+    live: true,
+    shared: true,
+    words: "queue reservations received",
+  }),
+  single("operations", {
     key: "assign",
     label: "Assign",
+    path: "assign",
     icon: "assign",
-    group: "operations",
-    pages: [
-      {
-        key: "assign",
-        label: "Assign",
-        path: "assign",
-        icon: "assign",
-        permission: "bookings.fulfil",
-        live: true,
-        words: "dispatch board trips drivers vehicles vendors pay vendor",
-      },
-    ],
+    permission: "bookings.fulfil",
+    live: true,
+    words: "dispatch board trips drivers vehicles vendors pay vendor",
+  }),
+  // Account: the money, by booking and by invoice, and the agents billed on terms.
+  single("account", {
+    key: "orders",
+    label: "Order List",
+    path: "orders",
+    icon: "orders",
+    permission: "invoices.manage",
+    wide: true,
+    words: "bookings billed invoiced paid balance money",
+  }),
+  single("account", {
+    key: "invoices",
+    label: "Invoices",
+    path: "invoices",
+    icon: "invoices",
+    permission: "invoices.manage",
+    wide: true,
+    words: "finance credit notes payments refunds month-end overdue",
+  }),
+  single("account", {
+    key: "agents",
+    label: "Agents",
+    path: "agents",
+    icon: "agents",
+    permission: "bookings.view",
+    wide: true,
+    words: "travel agents business credit terms payment terms month-end",
+  }),
+  // Settings: what is sold, where, for how much, and who delivers it.
+  single("settings", {
+    key: "coverage",
+    label: "Coverage",
+    path: "coverage",
+    icon: "coverage",
+    permission: "coverage.view",
+    step: "coverage",
+    words: "zones map test an address",
+  }),
+  {
+    key: "rates",
+    label: "Rates",
+    icon: "rates",
+    group: "settings",
+    pages: RATES_PAGES.map((page) => ({
+      key: `rates-${page}`,
+      label: RATES_PAGE_LABELS[page],
+      path: `rates/${page}`,
+      icon: RATES_ICONS[page],
+      permission: "coverage.view" as const,
+      words: RATES_WORDS[page],
+    })),
   },
+  single("settings", {
+    key: "vendors",
+    label: "Vendors",
+    path: "fleet/vendors",
+    icon: "vendors",
+    permission: "fleet.manage",
+    shared: true,
+    words: "fleet partners suppliers transport companies connect approve",
+  }),
   {
     key: "fleet",
     label: "Fleet",
     icon: "fleet",
-    group: "operations",
+    group: "settings",
     pages: [
+      {
+        key: "classes",
+        label: "Classes",
+        path: "fleet/classes",
+        icon: "classes",
+        permission: "coverage.view",
+        step: "vehicle-classes",
+        words: "fleet vehicle classes catalogue on sale",
+      },
       {
         key: "vehicles",
         label: "Vehicles",
@@ -154,92 +211,27 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
         shared: true,
         words: "fleet licence",
       },
-      {
-        key: "guides",
-        label: "Tour Guides",
-        path: "fleet/guides",
-        icon: "guides",
-        permission: "fleet.manage",
-        shared: true,
-        words: "fleet tour guide motac languages",
-      },
-      {
-        key: "vendors",
-        label: "Vendors",
-        path: "fleet/vendors",
-        icon: "vendors",
-        permission: "fleet.manage",
-        shared: true,
-        words: "fleet partners suppliers transport companies connect approve",
-      },
-      {
-        key: "classes",
-        label: "Classes",
-        path: "fleet/classes",
-        icon: "classes",
-        permission: "coverage.view",
-        step: "vehicle-classes",
-        words: "fleet vehicle classes catalogue on sale",
-      },
     ],
   },
-  {
-    key: "billing",
-    label: "Billing",
-    icon: "billing",
-    group: "selling",
-    pages: [
-      {
-        key: "agents",
-        label: "Agents",
-        path: "agents",
-        icon: "agents",
-        permission: "bookings.view",
-        wide: true,
-        words: "travel agents business credit terms payment terms",
-      },
-      {
-        key: "invoices",
-        label: "Invoices",
-        path: "invoices",
-        icon: "invoices",
-        permission: "invoices.manage",
-        wide: true,
-        words: "finance credit notes payments refunds month-end run overdue",
-      },
-    ],
-  },
-  {
-    key: "coverage",
-    label: "Coverage",
-    icon: "coverage",
-    group: "selling",
-    pages: [
-      {
-        key: "coverage",
-        label: "Coverage",
-        path: "coverage",
-        icon: "coverage",
-        permission: "coverage.view",
-        step: "coverage",
-        words: "zones map test an address",
-      },
-    ],
-  },
-  {
-    key: "rates",
-    label: "Rates",
-    icon: "rates",
-    group: "selling",
-    pages: RATES_PAGES.map((page) => ({
-      key: `rates-${page}`,
-      label: RATES_PAGE_LABELS[page],
-      path: `rates/${page}`,
-      icon: RATES_ICONS[page],
-      permission: "coverage.view" as const,
-      words: RATES_WORDS[page],
-    })),
-  },
+  single("settings", {
+    key: "guides",
+    label: "Tour Guides",
+    path: "fleet/guides",
+    icon: "guides",
+    permission: "fleet.manage",
+    shared: true,
+    words: "fleet tour guide motac languages",
+  }),
+  single("settings", {
+    key: "settings",
+    label: "Location Settings",
+    path: "settings",
+    icon: "settings",
+    permission: "settings.view",
+    step: "details",
+    words: "settings locations details state go live pause delete",
+  }),
+  // Website: what customers and vendors read.
   {
     key: "pages",
     label: "Pages",
@@ -279,38 +271,22 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
       },
     ],
   },
-  {
+  single("website", {
     key: "media",
     label: "Media",
+    path: "media",
     icon: "media",
-    group: "website",
-    pages: [
-      {
-        key: "media",
-        label: "Media",
-        path: "media",
-        icon: "media",
-        permission: "media.manage",
-        wide: true,
-        words: "images uploads photos",
-      },
-    ],
-  },
+    permission: "media.manage",
+    wide: true,
+    words: "images uploads photos",
+  }),
+  // Admin: who uses it, and what they did.
   {
     key: "users",
     label: "Users",
     icon: "users",
     group: "admin",
     pages: [
-      {
-        key: "admin",
-        label: "Admin",
-        path: "users/admin",
-        icon: "admin",
-        permission: "admins.manage",
-        wide: true,
-        words: "staff admins teams access wall super regular",
-      },
       {
         key: "all-users",
         label: "All Users",
@@ -320,41 +296,25 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
         wide: true,
         words: "accounts customers vendors drivers connect password email",
       },
+      {
+        key: "admin",
+        label: "Admin",
+        path: "users/admin",
+        icon: "admin",
+        permission: "admins.manage",
+        wide: true,
+        words: "staff admins teams access wall super regular",
+      },
     ],
   },
-  {
+  single("admin", {
     key: "activity",
     label: "Activity",
+    path: "activity",
     icon: "activity",
-    group: "admin",
-    pages: [
-      {
-        key: "activity",
-        label: "Activity",
-        path: "activity",
-        icon: "activity",
-        permission: "activity.view",
-        words: "log history changes",
-      },
-    ],
-  },
-  {
-    key: "settings",
-    label: "Settings",
-    icon: "settings",
-    group: "admin",
-    pages: [
-      {
-        key: "settings",
-        label: "Settings",
-        path: "settings",
-        icon: "settings",
-        permission: "settings.view",
-        step: "details",
-        words: "locations details state go live pause delete",
-      },
-    ],
-  },
+    permission: "activity.view",
+    words: "log history changes",
+  }),
 ];
 
 /** Every page, in the menu's order. */

@@ -2,6 +2,7 @@ import { DRIVER_DOCUMENTS, driverDocumentsDue } from "@repo/db";
 import type { DriverWithClasses } from "@repo/db/server";
 import { driverHref, type ScopeSlug } from "../_lib/routes";
 import { DocumentsDue } from "@repo/console/DocumentsDue";
+import type { MadeSort } from "./AddedColumn";
 import { PeopleTable } from "./PeopleTable";
 
 /**
@@ -14,6 +15,7 @@ export function DriversTable({
 }: {
   drivers: readonly DriverWithClasses[];
   scope: ScopeSlug;
+  sort?: MadeSort;
   bare?: boolean;
   emptyMessage: string;
 }) {

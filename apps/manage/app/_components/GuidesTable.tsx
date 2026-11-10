@@ -1,5 +1,6 @@
 import type { GuideWithVendor } from "@repo/db/server";
 import { guideHref, type ScopeSlug } from "../_lib/routes";
+import type { MadeSort } from "./AddedColumn";
 import { PeopleTable } from "./PeopleTable";
 
 /**
@@ -12,6 +13,7 @@ export function GuidesTable({
 }: {
   guides: readonly GuideWithVendor[];
   scope: ScopeSlug;
+  sort?: MadeSort;
   bare?: boolean;
   emptyMessage: string;
 }) {

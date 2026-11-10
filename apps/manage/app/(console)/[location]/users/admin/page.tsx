@@ -3,9 +3,12 @@ import {
   adminTeamsOf,
   formatLocalDate,
   fullName,
+  isMadeOrder,
   needsTeam,
   plural,
   searchTermOf,
+  textOf,
+  type MadeOrder,
 } from "@repo/db";
 import { getAccessPolicy, listAdmins } from "@repo/db/server";
 import { Badge } from "@repo/ui/badge";
@@ -23,9 +26,10 @@ import {
   THead,
   TwoLines,
 } from "@repo/console/Table";
+import { AddedTh } from "../../../../_components/AddedColumn";
 import { SearchBox } from "../../../../_components/SearchBox";
 import { requireAdmin } from "../../../../_lib/access";
-import { SEARCH_PARAM, adminsHref } from "../../../../_lib/routes";
+import { SEARCH_PARAM, SORT_PARAM, adminsHref } from "../../../../_lib/routes";
 import { scopeOf } from "../../../../_lib/scope";
 import { AddStaffButton } from "./AddStaffButton";
 import { AdminRowControls } from "./AdminRowControls";
@@ -33,10 +37,11 @@ import { TeamAccessCard } from "./TeamAccessCard";
 import { WallSwitch } from "./WallSwitch";
 
 /**
- * Route: /~/users/admin?q=…. Admin: who has access to Manage, their level and teams,
- * each to edit or revoke, the list narrowed by a search of names and
- * emails; "Add admin", which promotes an account or makes one; the wall
- * between the teams; and what each team can do, which SUPER may change.
+ * Route: /~/users/admin?q=…&sort=…. Admin: who has access to Manage,
+ * their level and teams, each to edit or revoke, in the order they were
+ * made admins or the newest first, the list narrowed by a search of
+ * names and emails; "Add admin", which promotes an account or makes one;
+ * the wall between the teams; and what each team can do, which SUPER may change.
  * Console-wide: under a slug it is not found. SUPER only.
  */
 export default async function AdminPage({
@@ -45,7 +50,10 @@ export default async function AdminPage({
 }: PageProps<"/[location]/users/admin">) {
   const admin = await requireAdmin("admins.manage");
   if ((await scopeOf(params)).slug !== null) notFound();
-  const q = searchTermOf((await searchParams)[SEARCH_PARAM]) ?? undefined;
+  const query = await searchParams;
+  const q = searchTermOf(query[SEARCH_PARAM]) ?? undefined;
+  const sort = textOf(query[SORT_PARAM]);
+  const order = isMadeOrder(sort) ? sort : undefined;
 
   return (
     <>
@@ -59,17 +67,26 @@ export default async function AdminPage({
           </div>
         }
       >
-        {() => staffList({ selfId: admin.id, q })}
+        {() => staffList({ selfId: admin.id, q, order })}
       </Streamed>
     </>
   );
 }
 
 /** The wall between teams, then every member of staff, or those the search finds, then what each team can do. */
-async function staffList({ selfId, q }: { selfId: string; q?: string }) {
+async function staffList({
+  selfId,
+  q,
+  order,
+}: {
+  selfId: string;
+  q?: string;
+  /** None for the order they were made admins. */
+  order?: MadeOrder;
+}) {
   const [admins, found, { wallActive, overrides }] = await Promise.all([
-    listAdmins(),
-    q ? listAdmins(q) : null,
+    listAdmins(undefined, order),
+    q ? listAdmins(q, order) : null,
     getAccessPolicy(),
   ]);
   // The warning counts every member, whatever the search shows.
@@ -111,7 +128,7 @@ async function staffList({ selfId, q }: { selfId: string; q?: string }) {
           meta={plural(shown.length, "person", "people")}
           action={
             <SearchBox
-              href={adminsHref()}
+              href={adminsHref({ sort: order })}
               value={q ?? ""}
               label="Search admins"
               placeholder="Name or email"
@@ -125,7 +142,15 @@ async function staffList({ selfId, q }: { selfId: string; q?: string }) {
             <Th>Name</Th>
             <Th>Level</Th>
             <Th>Teams</Th>
-            <Th>Since</Th>
+            <AddedTh
+              sort={{
+                order,
+                fallback: "oldest",
+                hrefOf: (next) => adminsHref({ q, sort: next }),
+              }}
+            >
+              Since
+            </AddedTh>
             <Th />
           </THead>
           <TBody>

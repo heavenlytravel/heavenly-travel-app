@@ -1,9 +1,11 @@
 import {
   driverDocumentsDue,
+  isMadeOrder,
   plural,
   searchTermOf,
   textOf,
   vehicleDocumentsDue,
+  type MadeOrder,
 } from "@repo/db";
 import {
   listClassOptions,
@@ -24,6 +26,7 @@ import {
   DUE_PARAM,
   isFleetService,
   SEARCH_PARAM,
+  SORT_PARAM,
   driversHref,
   guidesHref,
   vehiclesHref,
@@ -100,7 +103,14 @@ export function fleetListFilterOf(
     vendor: textOf(query.vendor) || undefined,
     vehicleClass: textOf(query.class) || undefined,
     q: searchTermOf(query[SEARCH_PARAM]) ?? undefined,
+    sort: madeOrderOf(query[SORT_PARAM]),
   };
+}
+
+/** The order by when each was added the address holds; none for an unknown one. */
+function madeOrderOf(value: unknown) {
+  const sort = textOf(value);
+  return isMadeOrder(sort) ? sort : undefined;
 }
 
 async function read(
@@ -195,9 +205,9 @@ function figuresOf(kind: FleetKind, counts: Counts | null): Figure[] {
  * with a column of locations, or those based at one location. Tiles of
  * figures sum up the scope; under it, in one card, the search, the
  * console's Filters button (in service or out, documents due, class,
- * vendor) with a chip for each in force, and the table, with how many it
- * shows at its foot. The figures count the whole scope, whatever the
- * filters.
+ * vendor) with a chip for each in force, and the table, sorted by its
+ * own order or by when each was added, with how many it shows at its
+ * foot. The figures count the whole scope, whatever the filters.
  */
 export async function FleetList({
   kind,
@@ -210,6 +220,7 @@ export async function FleetList({
 }) {
   const names = KINDS[kind];
   const { q, service } = filter;
+  const order = madeOrderOf(filter.sort);
   const due = names.due !== null && (filter.due ?? false);
   const across = scope.slug === null;
   const locationId = scope.location?.id;
@@ -231,10 +242,11 @@ export async function FleetList({
     vendor,
     vehicleClass,
     q,
+    sort: order,
   };
   // One read serves the figures and, unfiltered, the table.
   const everyOne = read(kind, { locationId });
-  const inDb = Boolean(due || q || vendor || vehicleClass);
+  const inDb = Boolean(due || q || vendor || vehicleClass || order);
   const shown = (
     inDb
       ? read(kind, {
@@ -243,6 +255,7 @@ export async function FleetList({
           search: q,
           vendorId: vendor,
           vehicleClassId: vehicleClass,
+          order,
         })
       : everyOne
   ).then((listed) => inService(listed, service));
@@ -294,6 +307,10 @@ export async function FleetList({
     },
   ];
   const listed = hrefOf(live);
+  const sort = {
+    order,
+    hrefOf: (next: MadeOrder) => hrefOf({ ...live, sort: next }),
+  };
   const where = scope.location ? ` at ${scope.location.name}` : "";
 
   return (
@@ -327,7 +344,7 @@ export async function FleetList({
         <Streamed
           key={listed}
           fallback={
-            <TableSkeleton bare columns={names.columns + Number(across)} />
+            <TableSkeleton bare columns={names.columns + 1 + Number(across)} />
           }
         >
           {async () => {
@@ -339,6 +356,7 @@ export async function FleetList({
                   <VehiclesTable
                     vehicles={listed.rows}
                     scope={scope.slug}
+                    sort={sort}
                     bare
                     emptyMessage={empty}
                   />
@@ -346,6 +364,7 @@ export async function FleetList({
                   <DriversTable
                     drivers={listed.rows}
                     scope={scope.slug}
+                    sort={sort}
                     bare
                     emptyMessage={empty}
                   />
@@ -353,6 +372,7 @@ export async function FleetList({
                   <GuidesTable
                     guides={listed.rows}
                     scope={scope.slug}
+                    sort={sort}
                     bare
                     emptyMessage={empty}
                   />

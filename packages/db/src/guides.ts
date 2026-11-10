@@ -16,6 +16,7 @@ import {
 } from "./guide-input";
 import { isUniqueViolation } from "./prisma-errors";
 import { phoneDigitsOf } from "./search";
+import { madeOrderBy } from "./list-order";
 import type { FleetFilter } from "./vehicles";
 import { checkVendorServes, locationNameOf } from "./vendors";
 
@@ -61,7 +62,7 @@ export function guideSearchWhere(search: string): Prisma.GuideWhereInput {
   };
 }
 
-/** Every guide, or those the filter leaves, active first, by name. A guide's licence is not watched: `due` is not read. */
+/** Every guide, or those the filter leaves, active first, by name, or by when each was added (`order`). A guide's licence is not watched: `due` is not read. */
 export function listGuides(
   filter: FleetFilter = {},
 ): Promise<GuideWithVendor[]> {
@@ -71,7 +72,9 @@ export function listGuides(
   if (filter.search) where.push(guideSearchWhere(filter.search));
   return db.guide.findMany({
     where: { AND: where },
-    orderBy: [{ isActive: "desc" }, { name: "asc" }],
+    orderBy: filter.order
+      ? madeOrderBy(filter.order)
+      : [{ isActive: "desc" }, { name: "asc" }],
     ...withVendor,
   });
 }
@@ -123,7 +126,7 @@ function createGuideIn(actor: Actor, fields: GuideFields): Promise<Created> {
       tx,
       fields.vendorId,
       fields.locationId,
-      { kind: "guide" },
+      "guide",
     );
     if (!vendor.ok) return vendor;
     const guide = await tx.guide.create({
@@ -186,7 +189,7 @@ function updateGuideIn(
         tx,
         after.vendorId ?? current.vendorId,
         after.locationId ?? current.locationId,
-        { kind: "guide" },
+        "guide",
       );
       if (!vendor.ok) return vendor;
       if (after.vendorId !== undefined) vendorName = vendor.name;

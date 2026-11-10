@@ -45,62 +45,55 @@ export const VENDOR_STATUS_LABELS: Record<VendorStatus, string> = {
 };
 
 /**
- * What a vendor may supply, asked of every kind at sign-up. Transport and
- * tour guides are worked in Connect; the rest is a supplier list for
- * Reservation. Agents, who sell our trips, are businesses
- * (./businesses), not vendors.
+ * What a vendor offers: one of these, chosen at sign-up and changed by
+ * staff alone, so the work it is offered stays what was checked when it
+ * was approved. Vehicles, drivers and tour guides are worked in Connect;
+ * attractions and accommodation are a supplier list for Reservation.
+ * Agents, who sell our trips, are businesses (./businesses), not vendors.
+ * Kept as the one value of `Vendor.services`.
  */
 export const VENDOR_SERVICES = [
-  "car-with-driver",
-  "coach-charter",
+  "vehicle",
   "driver",
+  "vehicle-driver",
   "tour-guide",
-  "self-drive",
-  "accommodation",
   "attraction",
+  "accommodation",
 ] as const;
 export type VendorService = (typeof VENDOR_SERVICES)[number];
 export const isVendorService = guardFor(VENDOR_SERVICES);
 export const VENDOR_SERVICE_LABELS: Record<VendorService, string> = {
-  "car-with-driver": "Car with driver",
-  "coach-charter": "Coach charter",
+  vehicle: "Vehicle only",
   driver: "Driver only",
+  "vehicle-driver": "Vehicle and driver",
   "tour-guide": "Tour guide",
-  "self-drive": "Self-drive rental",
-  accommodation: "Accommodation",
   attraction: "Attraction",
+  accommodation: "Accommodation",
 };
 
+/** What a vendor adds and is offered work for. */
+export type VendorSupply = "vehicle" | "driver" | "guide";
+
 /**
- * What a vendor adds and is offered work for, and the services that allow
- * it: a vehicle of a class needs the class's category, car with driver or
- * coach charter; a driver any of those or "driver only"; a guide "tour
- * guide". Ours supplies anything.
+ * The services that supply each: a vehicle of any class needs "vehicle
+ * only" or "vehicle and driver", a driver "driver only" or "vehicle and
+ * driver", a guide "tour guide". So a vehicle-only vendor is never asked
+ * for a driver, nor a driver-only one for a vehicle.
  */
-export type VendorSupply =
-  | { kind: "vehicle"; category: string }
-  | { kind: "driver" }
-  | { kind: "guide" };
+const SERVICES_FOR: Record<VendorSupply, readonly VendorService[]> = {
+  vehicle: ["vehicle", "vehicle-driver"],
+  driver: ["driver", "vehicle-driver"],
+  guide: ["tour-guide"],
+};
 
-function servicesFor(supply: VendorSupply): readonly string[] {
-  switch (supply.kind) {
-    case "vehicle":
-      return [supply.category];
-    case "driver":
-      return ["car-with-driver", "coach-charter", "driver"];
-    case "guide":
-      return ["tour-guide"];
-  }
-}
-
-/** Whether a vendor supplies it, by the services it ticked. */
+/** Whether a vendor supplies it, by what it offers. Ours supplies anything. */
 export function suppliesIt(
   vendor: { isOurs: boolean; services: readonly string[] },
   supply: VendorSupply,
 ): boolean {
   return (
     vendor.isOurs ||
-    servicesFor(supply).some((service) => vendor.services.includes(service))
+    SERVICES_FOR[supply].some((service) => vendor.services.includes(service))
   );
 }
 
@@ -111,39 +104,69 @@ export type VendorAdds = {
   guides: boolean;
 };
 
-/**
- * What a vendor may add, by the services it ticked (`suppliesIt`): a
- * vehicle with car with driver or coach charter, a driver with those or
- * driver only, a guide with tour guide.
- */
+/** What a vendor may add, by what it offers (`suppliesIt`). */
 export function vendorAddsOf(vendor: {
   isOurs: boolean;
   services: readonly string[];
 }): VendorAdds {
   return {
-    vehicles:
-      suppliesIt(vendor, { kind: "vehicle", category: "car-with-driver" }) ||
-      suppliesIt(vendor, { kind: "vehicle", category: "coach-charter" }),
-    drivers: suppliesIt(vendor, { kind: "driver" }),
-    guides: suppliesIt(vendor, { kind: "guide" }),
+    vehicles: suppliesIt(vendor, "vehicle"),
+    drivers: suppliesIt(vendor, "driver"),
+    guides: suppliesIt(vendor, "guide"),
   };
 }
 
-/** Why a vendor cannot have it, naming the services to tick. */
+const SUPPLY_NOUNS: Record<VendorSupply, string> = {
+  vehicle: "vehicles",
+  driver: "drivers",
+  guide: "tour guides",
+};
+
+/** Why a vendor cannot have it, naming what it would have to offer. */
 export function supplyRefusalOf(vendorName: string, supply: VendorSupply) {
-  const what =
-    supply.kind === "vehicle"
-      ? "vehicles of this class"
-      : supply.kind === "driver"
-        ? "drivers"
-        : "tour guides";
-  const services = servicesFor(supply).map((service) =>
-    isVendorService(service) ? VENDOR_SERVICE_LABELS[service] : service,
+  const services = SERVICES_FOR[supply].map(
+    (service) => VENDOR_SERVICE_LABELS[service],
   );
-  return `${vendorName} does not offer ${what}. Tick ${services.join(" or ")} in its services first.`;
+  return `${vendorName} does not offer ${SUPPLY_NOUNS[supply]}. Change what it offers to ${services.join(" or ")} first.`;
 }
 
-/** The form's field that carries each service; one value per service. */
+const SUPPLY_NOUN: Record<VendorSupply, string> = {
+  vehicle: "vehicle",
+  driver: "driver",
+  guide: "tour guide",
+};
+
+/** How many vehicles, drivers and tour guides a vendor has. */
+export type VendorHas = Record<VendorSupply, number>;
+
+const AND = new Intl.ListFormat("en-GB", { type: "conjunction" });
+const OR = new Intl.ListFormat("en-GB", { type: "disjunction" });
+
+/**
+ * Why a vendor may not change to offering `service`: it still has
+ * vehicles, drivers or tour guides the new choice does not cover, which
+ * staff remove first, so no vendor keeps what it no longer offers. Null
+ * when the change may go ahead. Ours supplies anything.
+ */
+export function serviceChangeRefusalOf(
+  vendor: { isOurs: boolean },
+  service: VendorService,
+  has: VendorHas,
+): string | null {
+  const offers = { isOurs: vendor.isOurs, services: [service] };
+  const left = (Object.keys(SUPPLY_NOUNS) as VendorSupply[]).filter(
+    (supply) => has[supply] > 0 && !suppliesIt(offers, supply),
+  );
+  if (left.length === 0) return null;
+  const counts = left.map(
+    (supply) =>
+      `${has[supply]} ${has[supply] === 1 ? SUPPLY_NOUN[supply] : SUPPLY_NOUNS[supply]}`,
+  );
+  const nouns = left.map((supply) => SUPPLY_NOUNS[supply]);
+  return `Remove its ${AND.format(counts)} first: ${VENDOR_SERVICE_LABELS[service]} does not cover ${OR.format(nouns)}.`;
+}
+
+/** The form's field that carries the one service chosen. */
 export const VENDOR_SERVICES_FIELD = "services";
 /** The form's field that carries each location served; one value per location. */
 export const VENDOR_LOCATIONS_FIELD = "locationIds";
@@ -177,7 +200,10 @@ export type VendorFields = {
   /** Lowercase. */
   contactEmail: string;
   address: string;
-  /** What it supplies, each once, in `VENDOR_SERVICES` order. */
+  /**
+   * What it offers: exactly one once saved. One stored before the single
+   * choice, with none left after the old services went, reads empty.
+   */
   services: VendorService[];
   /** The locations it serves, each once, sorted. */
   locationIds: string[];
@@ -284,8 +310,8 @@ export function checkVendorFields(fields: Partial<VendorFields>): Change {
       "address",
     );
   }
-  if (fields.services !== undefined && fields.services.length === 0) {
-    return refuse("Tick at least one thing it offers.", VENDOR_SERVICES_FIELD);
+  if (fields.services !== undefined && fields.services.length !== 1) {
+    return refuse("Choose what it offers.", VENDOR_SERVICES_FIELD);
   }
   if (fields.locationIds !== undefined && fields.locationIds.length === 0) {
     return refuse(
@@ -297,8 +323,9 @@ export function checkVendorFields(fields: Partial<VendorFields>): Change {
 }
 
 /**
- * A vendor form's values, read and checked. The services and the
- * locations come as one value each under their fields.
+ * A vendor form's values, read and checked. The service comes as one
+ * value under its field, the locations as one value each under theirs;
+ * more than one service is refused, as none is.
  */
 export function parseVendorFields(
   values: Record<string, unknown>,

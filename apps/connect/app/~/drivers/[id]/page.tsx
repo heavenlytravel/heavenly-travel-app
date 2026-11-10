@@ -27,7 +27,7 @@ export default async function DriverPage({
     isNew ? [] : heldBookingsOf({ driverId: id }),
   ]);
   if (!isNew && driver?.vendorId !== member.vendor.id) notFound();
-  // A new one only of what it offers, by the services it ticked.
+  // A new one only of what it offers, by the one service it chose.
   if (isNew && !vendorAddsOf(member.vendor).drivers) notFound();
   const [only] = choices.locations.length === 1 ? choices.locations : [];
 

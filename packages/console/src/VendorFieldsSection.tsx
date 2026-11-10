@@ -47,7 +47,7 @@ export function VendorFieldsSection({
   applicant?: boolean;
 }) {
   const fields = vendor ? vendorFieldsOf(vendor) : null;
-  const services = new Set<string>(fields?.services ?? []);
+  const service = fields?.services[0];
   const served = new Set(fields?.locationIds ?? []);
 
   return (
@@ -61,21 +61,32 @@ export function VendorFieldsSection({
         <CardTitle>
           <span className="inline-flex items-center gap-1.5">
             {VENDOR_FIELD_LABELS.services}
-            <InfoTip text="Only transport is assigned for now; the rest keeps a list of suppliers for Reservation." />
+            <InfoTip text="One choice. Vehicles, drivers and tour guides are assigned work; attractions and accommodation keep a list of suppliers for Reservation." />
           </span>
         </CardTitle>
         <FieldGroup className="grid gap-2 sm:grid-cols-3">
-          {VENDOR_SERVICES.map((service) => (
-            <label key={service} className="flex items-center gap-2 text-sm">
-              <Checkbox
+          {VENDOR_SERVICES.map((value) => (
+            <label key={value} className="flex items-center gap-2 text-sm">
+              <Radio
                 name={VENDOR_SERVICES_FIELD}
-                value={service}
-                defaultChecked={services.has(service)}
+                value={value}
+                required
+                defaultChecked={service === value}
               />
-              {VENDOR_SERVICE_LABELS[service]}
+              {VENDOR_SERVICE_LABELS[value]}
             </label>
           ))}
         </FieldGroup>
+        {applicant ? (
+          <p className="mt-3 text-xs text-muted">
+            Once you are approved, only the team changes it.
+          </p>
+        ) : vendor ? (
+          <p className="mt-3 text-xs text-muted">
+            To change it, first remove the vehicles, drivers or tour guides the
+            new choice does not cover.
+          </p>
+        ) : null}
       </Card>
 
       <Card>

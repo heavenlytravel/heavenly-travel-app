@@ -62,36 +62,60 @@ export function TripReports({
         On the day
       </CardTitle>
       <div className="grid gap-6">
-        {shown.map((trip) => {
-          const own = events.filter((e) => e.itemId === trip.id);
-          const next = nextTripStep(own);
-          const open =
-            next !== null &&
-            trip.status !== "cancelled" &&
-            trip.status !== "completed";
-          const waited = waitingMinutes(own);
-          return (
-            <div key={trip.id} className="grid gap-4">
-              {trips.length > 1 ? (
-                <p className="text-sm font-medium text-ink">
-                  Trip {trip.position}
-                </p>
-              ) : null}
-              <StepLine events={own} next={open ? next : null} />
-              <Extras events={own} />
-              {waited !== null ? (
-                <p className="text-sm text-muted">
-                  Waited {waited} min for the passenger.
-                </p>
-              ) : null}
-              {canFulfil && open ? (
-                <ReportFor bookingId={bookingId} itemId={trip.id} next={next} />
-              ) : null}
-            </div>
-          );
-        })}
+        {shown.map((trip) => (
+          <div key={trip.id} className="grid gap-4">
+            {trips.length > 1 ? (
+              <p className="text-sm font-medium text-ink">
+                Trip {trip.position}
+              </p>
+            ) : null}
+            <TripDay
+              bookingId={bookingId}
+              trip={trip}
+              events={events.filter((e) => e.itemId === trip.id)}
+              canFulfil={canFulfil}
+            />
+          </div>
+        ))}
       </div>
     </Card>
+  );
+}
+
+/**
+ * One trip's day: its four steps, a no-show or a problem, the waiting,
+ * and for Operation the way to report for the driver. Inside a card of
+ * its own (`TripReports`) or the trip's card on the booking.
+ */
+export function TripDay({
+  bookingId,
+  trip,
+  events,
+  canFulfil,
+}: {
+  bookingId: string;
+  trip: Pick<FulfilmentTrip, "id" | "status">;
+  /** The trip's own events. */
+  events: Event[];
+  canFulfil: boolean;
+}) {
+  const next = nextTripStep(events);
+  const open =
+    next !== null && trip.status !== "cancelled" && trip.status !== "completed";
+  const waited = waitingMinutes(events);
+  return (
+    <div className="grid gap-4">
+      <StepLine events={events} next={open ? next : null} />
+      <Extras events={events} />
+      {waited !== null ? (
+        <p className="text-sm text-muted">
+          Waited {waited} min for the passenger.
+        </p>
+      ) : null}
+      {canFulfil && open ? (
+        <ReportFor bookingId={bookingId} itemId={trip.id} next={next} />
+      ) : null}
+    </div>
   );
 }
 

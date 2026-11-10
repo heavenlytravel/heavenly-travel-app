@@ -26,6 +26,8 @@
     "db:migrate-vendors:prod": "node --import tsx scripts/with-production-db.ts --protect node --import tsx scripts/migrate-vendors.ts",
     "db:set-billing": "node --env-file=.env --import tsx scripts/set-billing.ts",
     "db:set-billing:prod": "node --import tsx scripts/with-production-db.ts --protect node --import tsx scripts/set-billing.ts",
+    "db:set-vendor-service": "node --env-file=.env --import tsx scripts/set-vendor-service.ts",
+    "db:set-vendor-service:prod": "node --import tsx scripts/with-production-db.ts --protect node --import tsx scripts/set-vendor-service.ts",
     "db:set-class-list": "node --env-file=.env --import tsx scripts/set-class-list.ts",
     "db:set-class-list:prod": "node --import tsx scripts/with-production-db.ts --protect node --import tsx scripts/set-class-list.ts",
     "db:set-class-pictures": "node --env-file=.env --import tsx scripts/set-class-pictures.ts",

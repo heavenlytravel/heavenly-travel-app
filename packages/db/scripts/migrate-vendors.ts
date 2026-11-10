@@ -33,7 +33,7 @@ const summary = await db.$transaction(async (tx) => {
         ...HEAVENLY,
         isOurs: true,
         status: "active",
-        services: ["car-with-driver", "coach-charter", "driver"],
+        services: ["vehicle-driver"],
       },
       select: { id: true, name: true },
     });

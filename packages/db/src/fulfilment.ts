@@ -29,6 +29,7 @@ import {
 import type { Prisma } from "./generated/prisma/client";
 import { isPlace } from "./place";
 import { VEHICLE_DOCUMENTS, VEHICLE_DOCUMENT_LABELS } from "./vehicle-input";
+import { suppliesIt, supplyRefusalOf } from "./vendor-input";
 import { modelName } from "./vehicle-model-input";
 
 /**
@@ -732,13 +733,23 @@ export async function assignBooking(
       }
       const vendor = await tx.vendor.findUnique({
         where: { id: ask.vendorId },
-        select: { id: true, name: true, isOurs: true, status: true },
+        select: {
+          id: true,
+          name: true,
+          isOurs: true,
+          status: true,
+          services: true,
+        },
       });
       if (!vendor || vendor.status !== "active") {
         return refuse(
           `That vendor cannot take jobs now. Choose another.`,
           role,
         );
+      }
+      // The screen offers each role only to the vendors that supply it.
+      if (!suppliesIt(vendor, role)) {
+        return refuse(supplyRefusalOf(vendor.name, role), role);
       }
       const first = firstOf.get(vendor.id)!;
       const given = input.respondBy[vendor.id];

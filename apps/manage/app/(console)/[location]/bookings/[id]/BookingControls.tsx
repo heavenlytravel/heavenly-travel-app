@@ -22,7 +22,7 @@ const ADVANCE_LABELS: Record<NextItemStatus, string> = {
 /**
  * The foot of one trip's card: its next step, for an admin who may take
  * it. Every change to the trip (amend, stop, charge, price, cancel) is
- * under "Change booking", where each says what it bills. The next status
+ * under "Change trip" on its card, where each says what it bills. The next status
  * travels with the form, so a stale page that still shows "Confirm" on a
  * trip already confirmed fails instead of skipping a step. Nothing when
  * there is no step to take.

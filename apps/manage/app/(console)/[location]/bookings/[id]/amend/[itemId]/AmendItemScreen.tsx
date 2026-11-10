@@ -129,6 +129,11 @@ export async function amendItemScreen({
       <TripItemForm
         action={amendItemAction}
         target={{ name: "itemId", value: item.id }}
+        booking={{
+          id: booking.id,
+          chargedSen: booking.priceTotalSen,
+          tripSen: item.priceTotalSen,
+        }}
         done="Trip amended. The customer gets a “Booking updated” email."
         ask={
           item.status === "assigned"

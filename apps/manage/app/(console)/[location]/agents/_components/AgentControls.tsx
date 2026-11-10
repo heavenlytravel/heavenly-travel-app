@@ -17,7 +17,6 @@ import { ActionDialog } from "../../../../_components/ActionDialog";
 import {
   addAgentAction,
   changeTermsAction,
-  createRunAction,
   setAgentStatusAction,
   updateAgentAction,
 } from "../actions";
@@ -167,31 +166,6 @@ export function AgentStatusControl({
       </Button>
       <FormError error={error} size="xs" />
       {dialog}
-    </form>
-  );
-}
-
-/** Finance's "Create invoice for October 2026": the month-end draft, to check and issue. */
-export function CreateRunControl({
-  id,
-  period,
-  disabled,
-}: {
-  id: string;
-  /** "October 2026". */
-  period: string;
-  disabled: boolean;
-}) {
-  const { pending, error, formProps } = useActionForm(createRunAction, {
-    done: `Draft for ${period} made. Check it, then issue it.`,
-  });
-  return (
-    <form {...formProps} className="grid justify-items-start gap-1.5">
-      <input type="hidden" name="id" value={id} />
-      <Button type="submit" size="sm" disabled={disabled} pending={pending}>
-        {pending ? "Making the draft…" : `Create invoice for ${period}`}
-      </Button>
-      <FormError error={error} size="xs" />
     </form>
   );
 }

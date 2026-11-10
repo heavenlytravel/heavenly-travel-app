@@ -95,7 +95,7 @@ async function revisionScreen(id: string, number: number, scope: ConsoleScope) {
   if (before) {
     const difference = revision.chargedSen - before.chargedSen;
     facts.push([
-      "Against Rev " + before.number,
+      "Against #" + before.number,
       difference === 0
         ? "No change"
         : `${difference > 0 ? "+" : "−"}${formatMyr(Math.abs(difference))}`,
@@ -105,7 +105,7 @@ async function revisionScreen(id: string, number: number, scope: ConsoleScope) {
   return (
     <>
       <PageHeader
-        title={`Rev ${number}`}
+        title={`Amendment ${number}`}
         meta={
           <RecordLink href={bookingHref(scope.slug, id)}>{label}</RecordLink>
         }
@@ -114,15 +114,14 @@ async function revisionScreen(id: string, number: number, scope: ConsoleScope) {
             {before ? (
               <Button asChild variant="secondary" size="sm">
                 <Link href={revisionHref(scope.slug, id, before.number)}>
-                  <ArrowLeftIcon className="size-4" />
-                  Rev {before.number}
+                  <ArrowLeftIcon className="size-4" />#{before.number}
                 </Link>
               </Button>
             ) : null}
             {after ? (
               <Button asChild variant="secondary" size="sm">
                 <Link href={revisionHref(scope.slug, id, after.number)}>
-                  Rev {after.number}
+                  #{after.number}
                   <ArrowRightIcon className="size-4" />
                 </Link>
               </Button>
@@ -168,7 +167,7 @@ async function revisionScreen(id: string, number: number, scope: ConsoleScope) {
         }
         side={
           <Card>
-            <CardTitle>This revision</CardTitle>
+            <CardTitle>This amendment</CardTitle>
             <Rows rows={facts} className="text-sm" />
           </Card>
         }

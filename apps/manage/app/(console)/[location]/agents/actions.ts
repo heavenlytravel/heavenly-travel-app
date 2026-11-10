@@ -12,7 +12,6 @@ import {
 import {
   changeBusinessTerms,
   createBusiness,
-  createPeriodDraft,
   setBusinessStatus,
   updateBusiness,
 } from "@repo/db/server";
@@ -26,7 +25,7 @@ import {
 } from "@repo/console/action-state";
 import { actorOf, getAdmin } from "../../../_lib/access";
 import { revalidateLocation } from "../../../_lib/revalidate";
-import { agentHref, invoiceHref } from "../../../_lib/routes";
+import { agentHref } from "../../../_lib/routes";
 
 /**
  * The agents' actions. Reservation, Sales and Finance add an agent and
@@ -120,19 +119,4 @@ export async function setAgentStatusAction(
   const result = await setBusinessStatus(actorOf(admin), id, status);
   if (result.ok) revalidateLocation();
   return stateOf(result);
-}
-
-/** Makes the month-end draft for the agent's last ended period, and opens it. Finance's. */
-export async function createRunAction(
-  _previous: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  const admin = await getAdmin("invoices.manage");
-  if (!admin) return FORBIDDEN;
-  const id = textOf(formData.get("id"));
-  if (!id) return STALE;
-  const result = await createPeriodDraft(actorOf(admin), id);
-  if (!result.ok) return refusalOf(result);
-  revalidateLocation();
-  return { href: invoiceHref(result.id) };
 }

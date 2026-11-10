@@ -1,15 +1,15 @@
 "use client";
 
-import { formatMyr, ringgitInputValue } from "@repo/db";
-import { Field, Input } from "@repo/ui/field";
+import { formatMyr } from "@repo/db";
 import { ActionDialog } from "../../../../_components/ActionDialog";
 import { billNowAction } from "../actions";
 
 /**
- * Finance's Issue now on one booking: what it has not been billed yet,
- * issued at once. More to pay is an invoice, for all of it or a part (a
- * deposit), the rest left not invoiced yet; less to pay is credit notes,
- * in full. Never an amount the booking does not hold.
+ * Finance's Issue now on one booking, in full: what it has not been billed
+ * yet, issued at once. More to pay issues its open invoice, its number
+ * kept, or for a credit agent's booking a new invoice; less to pay is
+ * credit notes. On an open invoice's page and an agent's, never the
+ * booking's: issuing is Finance's.
  */
 export function BillNowControl({
   bookingId,
@@ -18,7 +18,7 @@ export function BillNowControl({
   variant = "secondary",
 }: {
   bookingId: string;
-  /** "HTB-0042". */
+  /** What is issued: "HTI-0012", or the booking for a new invoice, "HTB-0042". */
   label: string;
   /** What it has not been billed yet; negative for a credit to give. */
   unbilledSen: number;
@@ -45,25 +45,14 @@ export function BillNowControl({
     <ActionDialog
       action={billNowAction}
       label="Issue now"
-      title={`Issue ${label}'s invoice now?`}
-      description={`It takes its number now and never changes after. ${formatMyr(unbilledSen)} is due.`}
+      title={`Issue ${label} now?`}
+      description={`It is issued for ${formatMyr(unbilledSen)}, in full, and never changes after: a later change to the booking is billed on a new invoice or a credit note. Its payments stay on it.`}
       done="Invoice issued."
       submit="Issue invoice"
       hidden={{ bookingId }}
       variant={variant}
     >
-      <Field
-        label="Amount (RM)"
-        hint="Less bills part of it, such as a deposit. The rest stays not invoiced yet."
-      >
-        <Input
-          name="amount"
-          inputMode="decimal"
-          autoComplete="off"
-          defaultValue={ringgitInputValue(unbilledSen)}
-          required
-        />
-      </Field>
+      {null}
     </ActionDialog>
   );
 }

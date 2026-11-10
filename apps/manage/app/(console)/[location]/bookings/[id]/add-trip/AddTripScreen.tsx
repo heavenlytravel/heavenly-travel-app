@@ -77,6 +77,11 @@ export async function addTripScreen({
       <TripItemForm
         action={addTripAction}
         target={{ name: "bookingId", value: booking.id }}
+        booking={{
+          id: booking.id,
+          chargedSen: booking.priceTotalSen,
+          tripSen: 0,
+        }}
         done="Trip added. The customer gets a “Booking updated” email."
         bookingHref={back}
         scope={scope.slug}

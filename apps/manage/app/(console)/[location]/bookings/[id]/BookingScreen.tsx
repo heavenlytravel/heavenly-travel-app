@@ -15,6 +15,7 @@ import {
   ITEM_STATUS_LABELS,
   nextItemStatusOf,
   phoneHrefOf,
+  plural,
   priceBreakdownOf,
   priceRows,
   REVISION_KIND_LABELS,
@@ -37,17 +38,23 @@ import {
   listActivityFor,
   listAgents,
   listBookingNotes,
-  listRevisions,
+  listStaffRevisions,
   listTripEvents,
   type ActivityEntry,
   type BookingBilling,
   type BookingItemWithDetails,
   type BookingWithItems,
+  type FulfilmentTrip,
 } from "@repo/db/server";
-import { Badge } from "@repo/ui/badge";
+import { Badge, type BadgeTone } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
-import { CheckIcon, MessageCircleIcon, PhoneIcon } from "@repo/ui/icons";
+import {
+  CheckIcon,
+  ChevronRightIcon,
+  MessageCircleIcon,
+  PhoneIcon,
+} from "@repo/ui/icons";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Card, CardRow, CardRows, CardTitle } from "@repo/console/Card";
@@ -62,7 +69,6 @@ import {
 } from "@repo/console/Skeleton";
 import {
   BookingStatusBadge,
-  ItemStatusBadge,
   PaymentStateBadge,
 } from "@repo/console/StatusBadges";
 import { DocumentStateBadge } from "../../../../_components/InvoiceTable";
@@ -84,21 +90,25 @@ import {
 } from "../../../../_lib/routes";
 import type { ConsoleScope } from "../../../../_lib/scope";
 import { scopedBooking } from "../_lib/scoped-booking";
-import { BillNowControl } from "../../invoices/_components/BillNowControl";
+import { TripDay } from "../../assign/TripReports";
 import { ItemActions } from "./BookingControls";
 import {
   BookingAgentControl,
   OldInvoiceNumberControl,
 } from "./BillingControls";
 import {
-  ChangeBookingMenu,
+  BookingChangeMenu,
+  ChangeBooking,
   ReinstateBookingButton,
+  TripChangeMenu,
   type ChangeTrip,
 } from "./ChangeBooking";
 import { Notes } from "./Notes";
-import { TripReports } from "../../assign/TripReports";
-import { WhoDoesIt } from "./WhoDoesIt";
+import { TripCrew } from "./TripCrew";
+import { RevisionDetails } from "../_components/RevisionDetails";
 import { EditContactControl } from "./EditContact";
+import { RecordPaymentControl } from "../../invoices/_components/PaymentControls";
+import { PaymentsTable } from "../../invoices/_components/PaymentsTable";
 
 /** What stands where the booking is loading: its header and its two columns of cards. */
 export function BookingSkeleton() {
@@ -106,10 +116,15 @@ export function BookingSkeleton() {
     <>
       <HeaderSkeleton />
       <DetailSkeleton
-        main={<CardSkeleton rows={9} />}
+        main={
+          <>
+            <CardSkeleton rows={9} />
+            <CardSkeleton rows={9} />
+          </>
+        }
         side={
           <>
-            <CardSkeleton rows={4} />
+            <CardSkeleton rows={6} />
             <CardSkeleton rows={4} />
             <CardSkeleton rows={3} />
           </>
@@ -146,17 +161,61 @@ function bookedLine(
 }
 
 /**
+ * What the booking waits for, under its header, one chip each: trips to
+ * confirm, trips to assign, money not invoiced yet, a balance to collect
+ * or refund. "All done" once nothing does.
+ */
+function waitingOn(
+  booking: BookingWithItems,
+  billing: BookingBilling | null,
+): { tone: BadgeTone; text: string }[] {
+  const count = (status: ItemStatus) =>
+    booking.items.filter((item) => item.status === status).length;
+  const chips: { tone: BadgeTone; text: string }[] = [];
+  const received = count("received");
+  const confirmed = count("confirmed");
+  if (received > 0) {
+    chips.push({
+      tone: "amber",
+      text: `${plural(received, "trip")} to confirm`,
+    });
+  }
+  if (confirmed > 0) {
+    chips.push({
+      tone: "amber",
+      text: `${plural(confirmed, "trip")} to assign`,
+    });
+  }
+  // On its open invoice, it is in the balance already.
+  if (billing && billing.unbilledSen > 0 && !billing.open) {
+    chips.push({
+      tone: "neutral",
+      text: `${formatMyr(billing.unbilledSen)} not invoiced yet`,
+    });
+  }
+  const balance = billing?.money?.balanceSen ?? 0;
+  if (balance > 0) {
+    chips.push({ tone: "amber", text: `${formatMyr(balance)} to collect` });
+  } else if (balance < 0) {
+    chips.push({ tone: "red", text: `${formatMyr(-balance)} to refund` });
+  }
+  return chips;
+}
+
+/**
  * One booking for ops, under its number (HTB-1042): who made it, when and
- * where, then who does its trips and what its drivers reported, then a
- * card per trip with its steps, its stops and details and its price, and
- * the booking's revisions; beside them the booking's summary, its
- * billing, the customer, the staff's notes and the last of its history.
- * "History" and "Change booking" stand in the header; every change is
- * made there, and says what it bills before it is saved. After an amend
- * that no longer fits what is assigned, the page says so (`warn`). Every
- * team opens it; the controls follow what the admin may do. It opens
- * under `~` and under any location a trip picks up in; under another
- * location it is not found.
+ * where, and what it waits for. Then a card per trip holding all of it:
+ * its steps, its stops and details, who does it and what the driver
+ * reported, its price and its own changes ("Change trip"), and the
+ * booking's revisions with what each billed. Beside them its money in
+ * one place (what it charges, its invoices, what is paid and the
+ * balance), the customer, the staff's notes and the last of its history.
+ * "History" and "Change booking" (add a trip, a booking charge, cancel)
+ * stand in the header. Every change says what it bills before it is
+ * saved. After an amend that no longer fits what is assigned, the page
+ * says so (`warn`). Every team opens it; the controls follow what the
+ * admin may do. It opens under `~` and under any location a trip picks up
+ * in; under another location it is not found.
  */
 export async function bookingScreen({
   id,
@@ -175,7 +234,7 @@ export async function bookingScreen({
       listActivityFor("booking", id),
       getBookingFulfilment(id),
       bookingBillingOf(id),
-      listRevisions(id),
+      listStaffRevisions(id),
     ]);
   const [events, agents, confirming] = await Promise.all([
     listTripEvents(fulfilment.map((trip) => trip.id)),
@@ -191,54 +250,6 @@ export async function bookingScreen({
   const label = bookingLabelOf(booking);
   const manage = permissions.includes("bookings.manage");
   const cancelled = booking.status === "cancelled";
-
-  const summary: [string, ReactNode][] = [
-    ["Status", <BookingStatusBadge key="s" status={booking.status} />],
-    ["Trips", String(booking.items.length)],
-    ["Booked", formatLocalDateTime(booking.createdAt)],
-    [
-      "Agent",
-      <span key="a" className="flex flex-wrap items-center justify-end gap-x-2">
-        {booking.business ? (
-          <Link
-            href={agentHref(booking.business.id)}
-            className="hover:underline"
-          >
-            {booking.business.name}
-          </Link>
-        ) : (
-          <span className="font-normal text-muted">None</span>
-        )}
-        {manage && !cancelled ? (
-          <BookingAgentControl
-            bookingId={booking.id}
-            agentId={booking.business?.id ?? null}
-            agents={agents}
-          />
-        ) : null}
-      </span>,
-    ],
-  ];
-  if (booking.confirmedAt) {
-    summary.push(["Confirmed", formatLocalDateTime(booking.confirmedAt)]);
-  }
-  if (booking.cancelledAt) {
-    summary.push([
-      "Cancelled",
-      `${formatLocalDateTime(booking.cancelledAt)}${
-        booking.cancelledBy ? ` by ${booking.cancelledBy}` : ""
-      }`,
-    ]);
-  }
-  for (const charge of booking.charges.filter((c) => c.itemId === null)) {
-    summary.push([charge.label, formatMyr(charge.amountSen)]);
-  }
-  summary.push([
-    "Total",
-    <strong key="t" className="font-bold text-ink">
-      {formatMyr(booking.priceTotalSen)}
-    </strong>,
-  ]);
 
   const trips: ChangeTrip[] = booking.items.map((item) => {
     const view = tripViewOfItem(item);
@@ -261,13 +272,42 @@ export async function bookingScreen({
       .filter((item) => item.status === "completed")
       .reduce((sum, item) => sum + item.priceTotalSen, 0) +
     booking.charges.reduce((sum, c) => sum + c.amountSen, 0);
+  // A cancelled booking takes no change but its reinstating, in the header.
+  const rights = cancelled
+    ? { manage: false, price: false, extras: false }
+    : {
+        manage,
+        price: permissions.includes("bookings.create"),
+        extras: manage || canFulfil,
+      };
+  const chips = cancelled ? [] : waitingOn(booking, billing);
 
   return (
-    <>
+    <ChangeBooking
+      bookingId={booking.id}
+      label={label}
+      chargedSen={booking.priceTotalSen}
+      keptOnCancelSen={keptOnCancelSen}
+      trips={trips}
+      rights={rights}
+    >
       <PageHeader
         title={label}
         badge={<BookingStatusBadge status={booking.status} />}
-        meta={bookedLine(booking, entries)}
+        meta={
+          <>
+            <span className="block">{bookedLine(booking, entries)}</span>
+            {chips.length > 0 ? (
+              <span className="mt-2.5 flex flex-wrap gap-1.5">
+                {chips.map((chip) => (
+                  <Badge key={chip.text} tone={chip.tone} dot>
+                    {chip.text}
+                  </Badge>
+                ))}
+              </span>
+            ) : null}
+          </>
+        }
         action={
           <>
             <HistoryLink href={recordHistoryHref(href)} />
@@ -276,29 +316,29 @@ export async function bookingScreen({
                 <ReinstateBookingButton bookingId={booking.id} label={label} />
               ) : null
             ) : (
-              <ChangeBookingMenu
-                bookingId={booking.id}
-                label={label}
-                chargedSen={booking.priceTotalSen}
-                keptOnCancelSen={keptOnCancelSen}
-                trips={trips}
+              <BookingChangeMenu
                 addTripHref={
                   manage &&
                   booking.items.length < BOOKING_RULES.maxTripsPerBooking
                     ? addTripHref(scope.slug, booking.id)
                     : null
                 }
-                rights={{
-                  manage,
-                  price: permissions.includes("bookings.create"),
-                  extras: manage || canFulfil,
-                }}
                 cancellable={booking.status !== "completed"}
               />
             )}
           </>
         }
       />
+
+      {cancelled ? (
+        <Notice tone="danger" className="mb-5">
+          Cancelled
+          {booking.cancelledAt
+            ? ` ${formatLocalDateTime(booking.cancelledAt)}`
+            : ""}
+          {booking.cancelledBy ? ` by ${booking.cancelledBy}` : ""}.
+        </Notice>
+      ) : null}
 
       {warn.length > 0 ? (
         <Notice className="mb-5">
@@ -316,23 +356,13 @@ export async function bookingScreen({
       <DetailColumns
         main={
           <>
-            <WhoDoesIt
-              bookingId={booking.id}
-              trips={fulfilment}
-              canFulfil={canFulfil}
-              scope={scope.slug}
-            />
-            {/* To read here: Operation reports for a driver under Assign. */}
-            <TripReports
-              bookingId={booking.id}
-              trips={fulfilment}
-              events={events}
-              canFulfil={false}
-            />
             {booking.items.map((item) => (
               <TripCard
                 key={item.id}
+                bookingId={booking.id}
                 item={item}
+                fulfilment={fulfilment.find((t) => t.id === item.id) ?? null}
+                events={events.filter((e) => e.itemId === item.id)}
                 charges={booking.charges.filter((c) => c.itemId === item.id)}
                 permissions={permissions}
                 scope={scope.slug}
@@ -343,24 +373,23 @@ export async function bookingScreen({
               scope={scope.slug}
               bookingId={booking.id}
               revisions={revisions}
+              documents={billing?.documents ?? []}
             />
           </>
         }
         side={
           <>
-            <Card>
-              <CardTitle>Booking</CardTitle>
-              <Rows rows={summary} className="text-sm" />
-            </Card>
-            {billing ? (
-              <BillingCard
-                booking={booking}
-                billing={billing}
-                finance={permissions.includes("invoices.manage")}
-                manage={manage}
-              />
-            ) : null}
-            <CustomerCard booking={booking} editable={manage} />
+            <MoneyCard
+              booking={booking}
+              billing={billing}
+              finance={permissions.includes("invoices.manage")}
+              manage={manage}
+            />
+            <CustomerCard
+              booking={booking}
+              editable={manage && !cancelled}
+              agents={agents}
+            />
             {permissions.includes("bookings.notes") ? (
               <Card>
                 <CardTitle meta="Staff only">Notes</CardTitle>
@@ -374,54 +403,276 @@ export async function bookingScreen({
           </>
         }
       />
-    </>
+    </ChangeBooking>
   );
 }
 
 /**
- * The booking's billing: its invoices and credit notes, each with what it
- * bills this booking and where it stands, what it charges against what is
- * billed, and what is not invoiced yet: its open invoice, which is issued
- * when the booking ends or by Finance now, in full or a part; or what
- * waits for an agent's month-end invoice. One not confirmed yet says its
- * invoice opens when confirmed. The old system's invoice number is a note.
+ * One invoice or credit note on the Pricing card: its number (a link for
+ * Finance), what it is (open and following the booking, issued and when,
+ * a month-end run, a credit note), what it bills this booking, and where
+ * it stands.
  */
-function BillingCard({
+function DocumentLine({
+  doc,
+  finance,
+}: {
+  doc: BookingBilling["documents"][number];
+  finance: boolean;
+}) {
+  const what =
+    doc.type === "credit"
+      ? "Credit note"
+      : doc.period
+        ? doc.status === "open"
+          ? `Agent's ${doc.period} invoice: numbered and issued when the period ends`
+          : `Agent's ${doc.period} invoice`
+        : doc.status === "open"
+          ? "Follows the booking; numbered and issued when it is completed"
+          : null;
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="min-w-0">
+        <span className="block font-semibold text-ink">
+          {finance ? (
+            <Link href={invoiceHref(doc.id)} className="hover:underline">
+              {doc.label}
+            </Link>
+          ) : (
+            doc.label
+          )}
+        </span>
+        <span className="block text-caption text-muted">
+          {[
+            what,
+            doc.status !== "open" && doc.revisionNumber !== null
+              ? `up to #${doc.revisionNumber}`
+              : null,
+            doc.issuedAt ? formatLocalDate(doc.issuedAt) : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </span>
+      </span>
+      <span className="grid shrink-0 justify-items-end gap-1">
+        <span className="tabular-nums">{formatMyr(doc.amountSen)}</span>
+        <DocumentStateBadge status={doc.status} money={doc.money} />
+      </span>
+    </div>
+  );
+}
+
+/**
+ * The booking's pricing and payments in one place, read top to bottom:
+ * what each trip and charge comes to and the total; then its invoices,
+ * the open one first while the booking is live (opened at confirming, it
+ * follows every change and is numbered and issued when the booking is
+ * completed), each with its credit notes under it; then what is paid and
+ * the balance; then what waits to be billed elsewhere (a month-end run, a
+ * credit to give); then its payments and refunds. On an agent's month-end
+ * invoice it reads this booking's share only: its amount and the payments
+ * for it, never the other bookings'. Finance records a payment for it on
+ * the oldest invoice it still owes on (hidden once nothing is owed), a
+ * refund where it paid over, and reverses one entered wrong; issuing is
+ * on the invoice's own page. One not confirmed yet says its invoice opens
+ * when confirmed. The old system's invoice number is a note at the foot.
+ */
+function MoneyCard({
   booking,
   billing,
   finance,
   manage,
 }: {
   booking: BookingWithItems;
-  billing: BookingBilling;
+  billing: BookingBilling | null;
   finance: boolean;
   manage: boolean;
 }) {
-  const label = bookingLabelOf(booking);
-  const unbilled = billing.unbilledSen;
-  const waitsOn = billing.draft?.open
-    ? unbilled > 0
-      ? "On its open invoice: issued when the trip is done, or now."
-      : "A credit to give, on its open invoice: credited when the trip is done, or now."
-    : billing.draft
-      ? `On the month-end draft${billing.draft.period ? ` for ${billing.draft.period}` : ""}.`
-      : billing.credit && unbilled > 0
-        ? "Waits for the agent's month-end invoice, or Finance issues it now."
-        : "Its invoice was voided, or it waits to be issued.";
+  const charges: [string, ReactNode][] = booking.items.map((item) => {
+    const own = booking.charges
+      .filter((c) => c.itemId === item.id)
+      .reduce((sum, c) => sum + c.amountSen, 0);
+    const price = item.status === "cancelled" ? 0 : item.priceTotalSen;
+    return [
+      `Trip ${item.position}${item.status === "cancelled" ? " (cancelled)" : ""}`,
+      formatMyr(price + own),
+    ];
+  });
+  for (const charge of booking.charges.filter((c) => c.itemId === null)) {
+    charges.push([charge.label, formatMyr(charge.amountSen)]);
+  }
+  charges.push([
+    "Total",
+    <strong key="t" className="font-bold text-ink">
+      {formatMyr(booking.priceTotalSen)}
+    </strong>,
+  ]);
+
+  const unbilled = billing?.unbilledSen ?? 0;
+  // What is not billed and not on its open invoice either.
+  const waiting = !billing
+    ? null
+    : unbilled < 0
+      ? {
+          title: `To credit: ${formatMyr(-unbilled)}`,
+          note: billing.ended
+            ? "Credited on its invoices' credit notes."
+            : "A credit note is issued when the booking is completed.",
+        }
+      : unbilled > 0 && !billing.open
+        ? {
+            title: `Not invoiced yet: ${formatMyr(unbilled)}`,
+            note: billing.monthly
+              ? "Goes on the agent's month-end invoice when it is saved next."
+              : "Its invoice was voided: Finance reissues it.",
+          }
+        : null;
+  const invoices = billing?.documents.filter((d) => d.type === "invoice") ?? [];
+  const notesOf = (invoiceId: string) =>
+    billing?.documents.filter(
+      (d) => d.type === "credit" && d.creditsId === invoiceId,
+    ) ?? [];
+  // Credit notes whose invoice this booking is not on: listed on their own.
+  const loose =
+    billing?.documents.filter(
+      (d) => d.type === "credit" && !invoices.some((i) => i.id === d.creditsId),
+    ) ?? [];
+  const notYet = booking.confirmedAt === null && !billing?.documents.length;
+
   return (
     <Card flush>
       <CardTitle
         inset
         meta={
-          billing.money ? (
+          billing?.money ? (
             <PaymentStateBadge state={billing.money.state} />
           ) : null
         }
       >
-        Billing
+        Pricing
       </CardTitle>
-      {billing.oldInvoiceNumber !== null || manage ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 px-5 pb-3 text-sm">
+      <div className="px-5 pb-2">
+        <Rows rows={charges} className="text-sm" />
+      </div>
+
+      {!billing ? null : notYet ? (
+        <p className="border-t border-hairline px-5 py-4 text-sm text-muted">
+          {booking.status === "cancelled"
+            ? "Cancelled before it was confirmed: nothing was billed."
+            : "Not invoiced yet: its invoice opens when it is confirmed."}
+        </p>
+      ) : (
+        <>
+          {billing.documents.length > 0 ? (
+            <>
+              <h3 className="border-t border-hairline px-5 pt-4 pb-1 text-caption font-semibold tracking-wide text-muted uppercase">
+                {invoices.length === 1 ? "Invoice" : "Invoices"}
+              </h3>
+              <CardRows>
+                {[...invoices]
+                  .sort((a, b) =>
+                    a.status === "open" ? -1 : b.status === "open" ? 1 : 0,
+                  )
+                  .map((doc) => (
+                    <CardRow key={doc.id} className="grid gap-2 text-sm">
+                      <DocumentLine doc={doc} finance={finance} />
+                      {notesOf(doc.id).map((note) => (
+                        <div
+                          key={note.id}
+                          className="border-l-2 border-hairline pl-3"
+                        >
+                          <DocumentLine doc={note} finance={finance} />
+                        </div>
+                      ))}
+                    </CardRow>
+                  ))}
+                {loose.map((note) => (
+                  <CardRow key={note.id} className="text-sm">
+                    <DocumentLine doc={note} finance={finance} />
+                  </CardRow>
+                ))}
+              </CardRows>
+            </>
+          ) : null}
+          <div className="grid gap-3 border-t border-hairline px-5 py-4">
+            {billing.money ? (
+              <Rows
+                className="text-sm"
+                rows={[
+                  ["Paid", formatMyr(billing.money.paidSen)],
+                  [
+                    billing.money.balanceSen < 0 ? "To refund" : "Balance",
+                    <strong key="b" className="font-bold text-ink">
+                      {formatMyr(Math.abs(billing.money.balanceSen))}
+                    </strong>,
+                  ],
+                ]}
+              />
+            ) : null}
+            {waiting ? (
+              <div className="rounded-control bg-warning-tint px-3 py-2 text-sm text-warning-strong">
+                <span className="block font-semibold">{waiting.title}</span>
+                <span className="block text-caption">{waiting.note}</span>
+              </div>
+            ) : null}
+            {billing.open && finance ? (
+              <p className="text-caption text-muted">
+                {billing.open.period
+                  ? "Issue it, or bill this booking on its own, on "
+                  : "Issue it early on "}
+                <Link
+                  href={invoiceHref(billing.open.id)}
+                  className="text-link hover:underline"
+                >
+                  {billing.open.period
+                    ? `the agent's ${billing.open.period} invoice`
+                    : "its invoice page"}
+                </Link>
+                .
+              </p>
+            ) : null}
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-hairline px-5 pt-4 pb-1">
+            <h3 className="text-caption font-semibold tracking-wide text-muted uppercase">
+              Payments
+            </h3>
+            {finance && (billing.payTo || billing.refundFrom) ? (
+              <span className="flex flex-wrap gap-2">
+                {billing.payTo ? (
+                  <RecordPaymentControl
+                    invoiceId={billing.payTo.id}
+                    label={billing.payTo.label}
+                    balanceSen={billing.payTo.balanceSen}
+                    refund={false}
+                    bookingId={booking.id}
+                  />
+                ) : null}
+                {billing.refundFrom ? (
+                  <RecordPaymentControl
+                    invoiceId={billing.refundFrom.id}
+                    label={billing.refundFrom.label}
+                    balanceSen={billing.refundFrom.refundSen}
+                    refund
+                    bookingId={booking.id}
+                  />
+                ) : null}
+              </span>
+            ) : null}
+          </div>
+          <PaymentsTable
+            payments={billing.payments.map((payment) => ({
+              ...payment,
+              document: { id: payment.documentId, label: payment.document },
+            }))}
+            reversible={finance}
+            empty="Nothing paid yet."
+            compact
+          />
+        </>
+      )}
+
+      {billing && (billing.oldInvoiceNumber !== null || manage) ? (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-hairline px-5 py-3 text-caption">
           <span>
             <span className="text-muted">Old invoice number </span>
             <span className="text-ink">
@@ -436,124 +687,39 @@ function BillingCard({
           ) : null}
         </div>
       ) : null}
-      {booking.confirmedAt === null && billing.documents.length === 0 ? (
-        <p className="px-5 pb-4 text-sm text-muted">
-          {booking.status === "cancelled"
-            ? "Cancelled before it was confirmed: nothing was billed."
-            : "Its invoice opens when it is confirmed."}
-        </p>
-      ) : (
-        <>
-          {billing.documents.length > 0 ? (
-            <CardRows>
-              {billing.documents.map((doc) => (
-                <CardRow
-                  key={doc.id}
-                  className="items-start justify-between gap-3 text-sm"
-                >
-                  <span className="min-w-0">
-                    <span className="block font-semibold text-ink">
-                      {finance ? (
-                        <Link
-                          href={invoiceHref(doc.id)}
-                          className="hover:underline"
-                        >
-                          {doc.label}
-                        </Link>
-                      ) : (
-                        doc.label
-                      )}
-                    </span>
-                    <span className="block text-caption text-muted">
-                      {[
-                        doc.type === "credit"
-                          ? `Credit note${doc.credits ? ` on ${doc.credits}` : ""}`
-                          : (doc.period ?? null),
-                        doc.issuedAt ? formatLocalDate(doc.issuedAt) : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </span>
-                  </span>
-                  <span className="grid shrink-0 justify-items-end gap-1">
-                    <span className="tabular-nums">
-                      {formatMyr(doc.amountSen)}
-                    </span>
-                    {doc.type === "invoice" ? (
-                      <DocumentStateBadge
-                        status={doc.status}
-                        money={doc.money}
-                      />
-                    ) : null}
-                  </span>
-                </CardRow>
-              ))}
-            </CardRows>
-          ) : null}
-          <div className="grid gap-3 border-t border-hairline px-5 py-4">
-            <Rows
-              className="text-sm"
-              rows={[
-                ["Charged", formatMyr(booking.priceTotalSen)],
-                ["Billed", formatMyr(billing.billedSen)],
-                ...(billing.money
-                  ? ([
-                      ["Paid", formatMyr(billing.money.paidSen)],
-                      [
-                        billing.money.balanceSen < 0 ? "To refund" : "Balance",
-                        <strong key="b" className="font-bold text-ink">
-                          {formatMyr(Math.abs(billing.money.balanceSen))}
-                        </strong>,
-                      ],
-                    ] as [string, ReactNode][])
-                  : []),
-              ]}
-            />
-            {unbilled !== 0 ? (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-warning-tint px-3 py-2 text-sm text-warning-strong">
-                <span>
-                  <span className="font-semibold">
-                    {unbilled > 0
-                      ? `Not invoiced yet: ${formatMyr(unbilled)}`
-                      : `To credit: ${formatMyr(-unbilled)}`}
-                  </span>
-                  <span className="block text-caption">{waitsOn}</span>
-                </span>
-                {finance && !(billing.draft && !billing.draft.open) ? (
-                  <BillNowControl
-                    bookingId={booking.id}
-                    label={label}
-                    unbilledSen={unbilled}
-                  />
-                ) : null}
-              </div>
-            ) : null}
-          </div>
-        </>
-      )}
     </Card>
   );
 }
 
 /**
- * Every state the booking went through, oldest first: Rev 1 as booked,
- * then each change with its kind, the customer's line, the total after it,
- * who made it and when. Each opens the booking as it stood, read only.
+ * Its amendments, every state the booking went through, newest first:
+ * #1 the original booking,
+ * then each change with its kind, the customer's line, what it changed
+ * field by field, the total after it and what it moved, who made it and
+ * when, and the invoice or credit
+ * note that billed up to it. Each opens the booking as it stood, read
+ * only.
  */
 function RevisionsCard({
   scope,
   bookingId,
   revisions,
+  documents,
 }: {
   scope: ScopeSlug;
   bookingId: string;
-  revisions: Awaited<ReturnType<typeof listRevisions>>;
+  revisions: Awaited<ReturnType<typeof listStaffRevisions>>;
+  documents: BookingBilling["documents"];
 }) {
   if (revisions.length === 0) return null;
   return (
     <Card flush>
-      <CardTitle inset meta={`${revisions.length}`}>
-        Revisions
+      <CardTitle
+        inset
+        meta={`${revisions.length}`}
+        description="Every change to the booking, and what billed it."
+      >
+        Amendments
       </CardTitle>
       <ol>
         {[...revisions].reverse().map((revision, index, list) => {
@@ -561,6 +727,18 @@ function RevisionsCard({
           const difference = before
             ? revision.chargedSen - before.chargedSen
             : null;
+          const billed = documents
+            .filter(
+              (doc) =>
+                doc.revisionNumber === revision.number && doc.status !== "void",
+            )
+            .map((doc) =>
+              doc.status === "open"
+                ? doc.period
+                  ? `the agent's ${doc.period} invoice`
+                  : "its open invoice"
+                : doc.label,
+            );
           return (
             <li
               key={revision.id}
@@ -571,7 +749,7 @@ function RevisionsCard({
                 className="grid grid-cols-[3.25rem_1fr_auto] items-start gap-3 px-5 py-3 text-sm hover:bg-hover focus-ring"
               >
                 <span className="font-semibold text-ink tabular-nums">
-                  Rev {revision.number}
+                  #{revision.number}
                 </span>
                 <span className="min-w-0">
                   <span className="flex flex-wrap items-center gap-1.5">
@@ -580,12 +758,23 @@ function RevisionsCard({
                         ? REVISION_KIND_LABELS[revision.kind]
                         : revision.kind}
                     </Badge>
-                    <span className="text-body">{revision.summary}</span>
+                    {revision.kind === "booked" ? null : (
+                      <span className="text-body">{revision.summary}</span>
+                    )}
                   </span>
                   <span className="mt-0.5 block text-caption text-muted">
-                    {formatLocalDateTime(revision.createdAt)}
-                    {revision.reason ? ` · ${revision.reason}` : ""}
+                    {[
+                      formatLocalDateTime(revision.createdAt),
+                      revision.by,
+                      revision.reason,
+                      billed.length > 0
+                        ? `Billed on ${billed.join(", ")}`
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </span>
+                  <RevisionDetails details={revision.details} />
                 </span>
                 <span className="text-right tabular-nums">
                   <span className="block font-semibold text-ink">
@@ -612,22 +801,55 @@ function RevisionsCard({
   );
 }
 
+/**
+ * Who the booking is for: the agent it came through, when one, then the
+ * customer's name, phone, email and account, with Call and WhatsApp.
+ * Reservation corrects the details and the agent here (`editable`).
+ */
 export function CustomerCard({
   booking,
   editable = false,
+  agents = [],
 }: {
   booking: BookingWithItems;
-  /** Reservation's (`bookings.manage`): the details may be corrected here. */
+  /** Reservation's (`bookings.manage`): the details and the agent may be corrected here. */
   editable?: boolean;
+  /** The agents to choose from when `editable`. */
+  agents?: readonly { id: string; name: string }[];
 }) {
   const email = customerEmailOf(booking);
   const phone = booking.contactPhone;
   const call = phoneHrefOf(phone) ?? `tel:${phone}`;
   const whatsapp = whatsappHrefOf(phone);
+  const rows: [string, ReactNode][] = [];
+  if (booking.business || editable) {
+    rows.push([
+      "Agent",
+      <span key="a" className="flex flex-wrap items-center justify-end gap-x-2">
+        {booking.business ? (
+          <Link
+            href={agentHref(booking.business.id)}
+            className="hover:underline"
+          >
+            {booking.business.name}
+          </Link>
+        ) : (
+          <span className="font-normal text-muted">None, our own customer</span>
+        )}
+        {editable ? (
+          <BookingAgentControl
+            bookingId={booking.id}
+            agentId={booking.business?.id ?? null}
+            agents={agents}
+          />
+        ) : null}
+      </span>,
+    ]);
+  }
   // The account the booking shows under, when there is one. A guest has
   // none, whether they booked on the website or staff entered it; the
   // activity log says which.
-  const rows: [string, ReactNode][] = [
+  rows.push(
     ["Name", booking.contactName],
     [
       "Phone",
@@ -664,7 +886,7 @@ export function CustomerCard({
         </span>
       ),
     ],
-  ];
+  );
   return (
     <Card>
       <CardTitle meta={booking.user ? "Account" : "Guest"}>Customer</CardTitle>
@@ -699,15 +921,28 @@ export function CustomerCard({
   );
 }
 
-/** One trip of a booking: its title and status, its steps, its stops and details, its price and its next step. */
+/**
+ * One trip of a booking, everything about it in one card: its title and
+ * "Change trip", its steps, its stops, its details, who does it and what
+ * the driver reported on the day, its price (folded to its total, opened
+ * for what it is made of) and its next step.
+ */
 function TripCard({
+  bookingId,
   item,
+  fulfilment,
+  events,
   charges,
   permissions,
   scope,
   confirmBills,
 }: {
+  bookingId: string;
   item: BookingItemWithDetails;
+  /** Who does it; null for a trip the fulfilment does not list. */
+  fulfilment: FulfilmentTrip | null;
+  /** What its driver reported. */
+  events: Awaited<ReturnType<typeof listTripEvents>>;
   /** The trip's charges besides its price. */
   charges: readonly { id: string; label: string; amountSen: number }[];
   permissions: readonly Permission[];
@@ -719,20 +954,23 @@ function TripCard({
   const trip = tripViewOfItem(item);
   const details = item.tripDetails;
   const stops = stopsOf(details?.stops);
+  const cancelled = item.status === "cancelled";
 
-  const rows: [string, ReactNode][] = details
+  // Short facts side by side; a long one (the notes) takes the row.
+  const facts: [string, ReactNode][] = details
     ? tripDetailRows(details).filter(([label]) => label !== "Vehicle")
     : [];
-  if (!trip) rows.unshift(["Pick-up time", formatLocalDateTime(item.startsAt)]);
+  if (!trip)
+    facts.unshift(["Pick-up time", formatLocalDateTime(item.startsAt)]);
   if (item.district) {
-    rows.push([
+    facts.push([
       "District",
       `${item.district.name}, ${item.district.state.name}`,
     ]);
   }
   if (item.location) {
     // Under every location, the way to the same booking inside its location.
-    rows.push([
+    facts.push([
       "Location",
       scope ? (
         item.location.name
@@ -780,14 +1018,7 @@ function TripCard({
     price.push([charge.label, formatMyr(charge.amountSen)]);
   }
   const chargesSen = charges.reduce((sum, c) => sum + c.amountSen, 0);
-  price.push([
-    "Total",
-    <strong key="t" className="font-bold text-ink">
-      {formatMyr(
-        (item.status === "cancelled" ? 0 : item.priceTotalSen) + chargesSen,
-      )}
-    </strong>,
-  ]);
+  const totalSen = (cancelled ? 0 : item.priceTotalSen) + chargesSen;
 
   return (
     <Card flush>
@@ -796,12 +1027,12 @@ function TripCard({
         meta={[itemHeading(item), details?.vehicleClassName]
           .filter(Boolean)
           .join(" · ")}
-        action={<ItemStatusBadge status={item.status} />}
+        action={<TripChangeMenu tripId={item.id} />}
       >
         {`Trip ${item.position}${trip ? ` · ${TRIP_MODE_LABELS[trip.mode]}` : ""}`}
       </CardTitle>
       <TripSteps item={item} />
-      <div className="grid gap-5 p-5">
+      <div className={cx("grid gap-5 p-5", cancelled && "opacity-70")}>
         {/* The customer paid for this model: kept by people until assignment checks it. */}
         {details?.vehicleModelName &&
         (item.status === "received" || item.status === "confirmed") ? (
@@ -847,10 +1078,60 @@ function TripCard({
             ) : null}
           </ol>
         ) : null}
-        {rows.length > 0 ? <Rows rows={rows} className="text-sm" /> : null}
-        <div className="border-t border-hairline pt-2">
-          <Rows rows={price} className="text-sm" />
-        </div>
+        {facts.length > 0 ? (
+          <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
+            {facts.map(([label, value]) => (
+              <div
+                key={label}
+                className={cx(
+                  "grid min-w-0 gap-0.5",
+                  label === "Notes" && "col-span-full",
+                )}
+              >
+                <dt className="text-caption text-muted">{label}</dt>
+                <dd className="font-medium text-body [overflow-wrap:anywhere]">
+                  {value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        ) : null}
+        {fulfilment ? (
+          <div className="border-t border-hairline pt-4 empty:hidden">
+            <TripCrew
+              bookingId={bookingId}
+              trip={fulfilment}
+              canFulfil={permissions.includes("bookings.fulfil")}
+              scope={scope}
+            />
+          </div>
+        ) : null}
+        {fulfilment && events.length > 0 ? (
+          <section className="grid gap-3 border-t border-hairline pt-4">
+            <h3 className="text-sm font-semibold text-ink">On the day</h3>
+            <TripDay
+              bookingId={bookingId}
+              trip={fulfilment}
+              events={events}
+              canFulfil={false}
+            />
+          </section>
+        ) : null}
+        <details className="group/price border-t border-hairline pt-3">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-sm text-sm focus-ring [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center gap-1.5 text-muted">
+              <ChevronRightIcon className="size-3.5 transition-transform group-open/price:rotate-90" />
+              Price
+              {cancelled ? " (cancelled)" : ""}
+            </span>
+            <strong className="font-bold text-ink tabular-nums">
+              {formatMyr(totalSen)}
+            </strong>
+          </summary>
+          {price.length > 0 ? (
+            <Rows rows={price} className="mt-2 text-sm" />
+          ) : null}
+        </details>
       </div>
       <ItemActions
         itemId={item.id}
@@ -919,7 +1200,7 @@ const TRIP_STEPS = [
 function TripSteps({ item }: { item: BookingItemWithDetails }) {
   if (item.status === "cancelled") {
     return (
-      <p className="border-b border-hairline px-5 py-3 text-sm text-muted">
+      <p className="border-b border-hairline bg-danger-tint px-5 py-3 text-sm font-semibold text-danger-strong">
         {ITEM_STATUS_LABELS.cancelled}
         {item.cancelledAt ? ` ${formatLocalDateTime(item.cancelledAt)}` : ""}
       </p>
@@ -967,7 +1248,11 @@ function TripSteps({ item }: { item: BookingItemWithDetails }) {
               <span
                 className={cx(
                   "text-caption whitespace-nowrap",
-                  done ? "font-semibold text-ink" : "text-muted",
+                  done
+                    ? "font-semibold text-ink"
+                    : nextUp
+                      ? "font-semibold text-warning"
+                      : "text-muted",
                 )}
               >
                 {ITEM_STATUS_LABELS[step]}
@@ -976,6 +1261,8 @@ function TripSteps({ item }: { item: BookingItemWithDetails }) {
                 <span className="text-2xs text-muted">
                   {formatLocalDateTime(at)}
                 </span>
+              ) : nextUp ? (
+                <span className="text-2xs text-muted">Next</span>
               ) : null}
             </span>
             {index < TRIP_STEPS.length - 1 ? (

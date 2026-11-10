@@ -1,143 +1,15 @@
 "use client";
 
-import {
-  BILLING_REASON_MAX,
-  localDayOf,
-  PAYMENT_METHODS,
-  PAYMENT_METHOD_LABELS,
-  ringgitInputValue,
-} from "@repo/db";
-import { useActionForm } from "@repo/console/use-action-form";
-import { useConfirm } from "@repo/ui/alert-dialog";
+import { BILLING_REASON_MAX } from "@repo/db";
 import { Button } from "@repo/ui/button";
-import { Checkbox, Field, Input, Textarea } from "@repo/ui/field";
-import { FormError } from "@repo/ui/form-error";
-import { Select } from "@repo/ui/select";
+import { Checkbox, Field, Textarea } from "@repo/ui/field";
 import { useState } from "react";
 import { ActionDialog } from "../../../../_components/ActionDialog";
 import {
-  deleteDraftAction,
-  issueDraftAction,
-  recordPaymentAction,
-  reversePaymentAction,
-  setDraftLineAction,
+  billAloneAction,
+  issueMonthEndAction,
   voidInvoiceAction,
 } from "../actions";
-
-/** The method chosen, posted under `method`. */
-function MethodField({ initial }: { initial: string }) {
-  const [method, setMethod] = useState(initial);
-  return (
-    <Field label="How">
-      <input type="hidden" name="method" value={method} />
-      <Select
-        value={method}
-        onValueChange={setMethod}
-        options={PAYMENT_METHODS.map((value) => ({
-          value,
-          label: PAYMENT_METHOD_LABELS[value],
-        }))}
-      />
-    </Field>
-  );
-}
-
-/**
- * "Record payment" on an invoice, or "Record refund" on a credit note:
- * the amount, how, the day, and a note (the bank's reference, who handed
- * the cash in). It starts at what is left, which Finance changes for a
- * part payment. One transfer for three invoices is recorded on each.
- */
-export function RecordPaymentControl({
-  invoiceId,
-  label,
-  balanceSen,
-  refund,
-}: {
-  invoiceId: string;
-  label: string;
-  /** What is left: to pay on an invoice, to give back on a credit note. */
-  balanceSen: number;
-  refund: boolean;
-}) {
-  return (
-    <ActionDialog
-      action={recordPaymentAction}
-      label={refund ? "Record refund" : "Record payment"}
-      title={refund ? `Refund on ${label}` : `Payment on ${label}`}
-      description={
-        refund
-          ? "Money paid back to the customer, against this credit note."
-          : "Money in against this invoice. A part payment leaves the rest owed."
-      }
-      done={refund ? "Refund recorded." : "Payment recorded."}
-      submit={refund ? "Record refund" : "Record payment"}
-      hidden={{ invoiceId, ...(refund ? { refund: "true" } : {}) }}
-      variant={refund ? "secondary" : "primary"}
-      width="md"
-    >
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Amount (RM)">
-          <Input
-            name="amount"
-            inputMode="decimal"
-            required
-            autoComplete="off"
-            defaultValue={balanceSen > 0 ? ringgitInputValue(balanceSen) : ""}
-          />
-        </Field>
-        <Field label="Day it came in">
-          <Input
-            name="paidOn"
-            type="date"
-            required
-            defaultValue={localDayOf(new Date())}
-          />
-        </Field>
-      </div>
-      <MethodField initial="transfer" />
-      <Field
-        label="Note"
-        hint="Optional: the bank reference, or who handed it in."
-      >
-        <Input name="note" maxLength={200} autoComplete="off" />
-      </Field>
-    </ActionDialog>
-  );
-}
-
-/** "Reverse" on a payment entered wrong: struck out with why, never deleted. The right one is recorded anew. */
-export function ReversePaymentControl({
-  paymentId,
-  amount,
-}: {
-  paymentId: string;
-  /** "RM 350.00". */
-  amount: string;
-}) {
-  return (
-    <ActionDialog
-      action={reversePaymentAction}
-      label="Reverse"
-      title={`Reverse the payment of ${amount}?`}
-      description="It stays listed, struck out, with your reason. Record the right one after."
-      done="Payment reversed."
-      submit="Reverse payment"
-      hidden={{ paymentId }}
-      danger
-      variant="ghost"
-    >
-      <Field label="Reason">
-        <Textarea
-          name="reason"
-          rows={2}
-          required
-          maxLength={BILLING_REASON_MAX}
-        />
-      </Field>
-    </ActionDialog>
-  );
-}
 
 /**
  * "Void" on an issued document, with why. With payments or credit notes
@@ -204,115 +76,77 @@ export function VoidControl({
   );
 }
 
-/** A draft's line ticked or not, saved as it is clicked. */
-export function DraftTick({
+/**
+ * Finance's Issue on an agent's open month-end invoice: once its period
+ * has ended, each booking's line is frozen at what it has not been billed
+ * yet, and it is due the agent's days to pay from now. Before then, the
+ * button says when.
+ */
+export function IssueMonthEndControl({
   invoiceId,
-  bookingId,
   label,
-  ticked,
+  total,
+  ready,
+  period,
 }: {
   invoiceId: string;
-  bookingId: string;
+  /** "HTI-0012". */
   label: string;
-  ticked: boolean;
+  /** "RM 1,240.00". */
+  total: string;
+  /** Its period has ended. */
+  ready: boolean;
+  /** "1–15 Nov 2026". */
+  period: string;
 }) {
-  const { pending, error, formProps } = useActionForm(setDraftLineAction);
+  if (!ready) {
+    return (
+      <Button variant="secondary" disabled>
+        Issue after {period}
+      </Button>
+    );
+  }
   return (
-    <form {...formProps} className="grid gap-1">
-      <input type="hidden" name="invoiceId" value={invoiceId} />
-      <input type="hidden" name="bookingId" value={bookingId} />
-      <input type="hidden" name="ticked" value={ticked ? "false" : "true"} />
-      <Checkbox
-        aria-label={`Bill ${label} on this invoice`}
-        checked={ticked}
-        disabled={pending}
-        onChange={(event) => event.currentTarget.form?.requestSubmit()}
-      />
-      <FormError error={error} size="xs" />
-    </form>
+    <ActionDialog
+      action={issueMonthEndAction}
+      label="Issue invoice"
+      title={`Issue ${label} for ${total}?`}
+      description="Each booking on it is billed what it has not been billed yet, as it stands now. It never changes after: a later change to a booking goes on the agent's next month-end invoice, or a credit note."
+      done="Invoice issued."
+      submit="Issue invoice"
+      hidden={{ invoiceId }}
+      variant="primary"
+    >
+      {null}
+    </ActionDialog>
   );
 }
 
 /**
- * A draft's Issue and Delete. Issuing numbers it and freezes its amounts.
- * A booking's open invoice is not deleted: it follows its booking, and a
- * credit on it issues as a credit note.
+ * "Bill on its own" on a booking of an agent's open month-end invoice:
+ * it leaves for an invoice of its own, still billed to the agent, and
+ * stays on its own after.
  */
-export function DraftActions({
-  invoiceId,
-  total,
-  ticked,
-  open = false,
-  credit = false,
+export function BillAloneControl({
+  bookingId,
+  label,
 }: {
-  invoiceId: string;
-  /** "RM 1,240.00". */
-  total: string;
-  ticked: number;
-  /** A booking's open invoice. */
-  open?: boolean;
-  /** Its amount is below nothing: a credit to give. */
-  credit?: boolean;
+  bookingId: string;
+  /** "HTB-0042". */
+  label: string;
 }) {
-  const [dialog, confirm] = useConfirm();
-  const issue = useActionForm(issueDraftAction, {
-    ask: () =>
-      confirm(
-        open
-          ? {
-              title: credit
-                ? "Issue a credit note now?"
-                : `Issue this invoice for ${total}?`,
-              description: credit
-                ? "The credit is issued now, against the booking's invoices, newest first."
-                : "It takes its number now and never changes after. Later changes to the booking open a new one.",
-              action: credit ? "Issue credit note" : "Issue invoice",
-            }
-          : {
-              title: `Issue this invoice for ${total}?`,
-              description: `It takes its number now, for the ${ticked} ticked bookings, and never changes after. The unticked ones wait for the next run.`,
-              action: "Issue invoice",
-            },
-      ),
-    done: credit ? "Credit note issued." : "Invoice issued.",
-  });
-  const remove = useActionForm(deleteDraftAction, {
-    ask: () =>
-      confirm({
-        title: "Delete this draft?",
-        description:
-          "Nothing was numbered. Its bookings stay not invoiced yet.",
-        action: "Delete draft",
-        danger: true,
-      }),
-    done: "Draft deleted.",
-  });
   return (
-    <>
-      {open ? null : (
-        <form {...remove.formProps}>
-          <input type="hidden" name="invoiceId" value={invoiceId} />
-          <Button type="submit" variant="ghost-danger" pending={remove.pending}>
-            Delete draft
-          </Button>
-        </form>
-      )}
-      <form {...issue.formProps}>
-        <input type="hidden" name="invoiceId" value={invoiceId} />
-        <Button type="submit" disabled={ticked === 0} pending={issue.pending}>
-          {issue.pending
-            ? "Issuing…"
-            : credit
-              ? "Issue credit note"
-              : "Issue invoice"}
-        </Button>
-      </form>
-      <FormError
-        error={issue.error ?? remove.error}
-        size="xs"
-        className="basis-full text-right"
-      />
-      {dialog}
-    </>
+    <ActionDialog
+      action={billAloneAction}
+      label="Bill on its own"
+      title={`Bill ${label} on its own?`}
+      description="It leaves this invoice for an invoice of its own, still billed to the agent and due by the agent's days to pay. It stays on its own after: later changes are billed on it, not on a month-end invoice."
+      done="Booking moved to its own invoice."
+      submit="Bill on its own"
+      hidden={{ bookingId }}
+      variant="ghost"
+    >
+      {null}
+    </ActionDialog>
   );
 }

@@ -13,6 +13,7 @@ import {
 } from "./business-input";
 import { refuse, type Change, type Created } from "./change";
 import { db } from "./client";
+import { madeOrderBy, type MadeOrder } from "./list-order";
 import type { Prisma } from "./generated/prisma/client";
 
 /**
@@ -40,9 +41,12 @@ export type BusinessSummary = Prisma.BusinessGetPayload<{
   select: typeof SUMMARY;
 }>;
 
-/** Every agent, active first then by name, with a search over its name, contact and email. */
+/**
+ * Every agent, active first then by name, or by when each was added
+ * (`order`), with a search over its name, contact and email.
+ */
 export function listBusinesses(
-  filter: { search?: string; status?: BusinessStatus } = {},
+  filter: { search?: string; status?: BusinessStatus; order?: MadeOrder } = {},
 ): Promise<BusinessSummary[]> {
   const search = filter.search?.trim();
   return db.business.findMany({
@@ -59,7 +63,9 @@ export function listBusinesses(
           }
         : {}),
     },
-    orderBy: [{ status: "asc" }, { name: "asc" }],
+    orderBy: filter.order
+      ? madeOrderBy(filter.order)
+      : [{ status: "asc" }, { name: "asc" }],
     select: SUMMARY,
   });
 }

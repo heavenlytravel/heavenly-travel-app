@@ -4,8 +4,9 @@ import {
   andList,
   BOOKING_RULES,
   CONTACT_NAME_MAX_LENGTH,
-  formatMyr,
+  LEGACY_INVOICE_MAX,
   parseContact,
+  parseLegacyInvoiceNumber,
   TRIP_CATEGORY_LABELS,
   type BBox,
   type TripCategory,
@@ -24,7 +25,7 @@ import { AgentPicker, type Agent } from "../_components/AgentPicker";
 import { BookingSummary } from "../_components/BookingSummary";
 import { BookingTripStep, itemIssue } from "../_components/BookingTripStep";
 import { HiddenFields } from "../_components/HiddenFields";
-import { NewBookingBilling } from "../_components/NewBookingBilling";
+import { NewBookingChoice } from "../_components/NewBookingChoice";
 import { Step, StepFoot } from "../_components/Step";
 import { quoteTripAction } from "../_lib/quote-action";
 import {
@@ -36,6 +37,7 @@ import {
   itemFields,
   itemsByStart,
   itemVehicle,
+  LEGACY_INVOICE_FIELD,
   newItemDraft,
   placesLine,
   SAME_VEHICLE_FIELD,
@@ -73,9 +75,10 @@ const EMPTY_CONTACT: Contact = { name: "", phone: "", email: "" };
  * detail that changes mid-call is one click away and nothing entered is
  * lost. The summary beside the steps keeps the customer, each trip with
  * its price and what it is made of, the total and the button in view; an
- * agreed price is set there, per trip. The booking is made confirmed or
- * saved as received; above the buttons, what confirming it bills, and the
- * old system's invoice number, a note. The server prices every trip again and applies the agreed
+ * agreed price is set there, per trip. The old system's invoice number, a
+ * note, goes with the customer. Above the one button, a choice: confirm
+ * now, with what that bills, or save for later as received. The server
+ * prices every trip again and applies the agreed
  * prices itself. Opened in a location, its place fields suggest that
  * location's places first, and the booking opens there once made. See
  * docs/261027-multi-trip-booking.md.
@@ -97,6 +100,8 @@ export function NewBookingForm({
 }) {
   const [contact, setContact] = useState<Contact>(EMPTY_CONTACT);
   const [agentId, setAgentId] = useState("");
+  const [legacy, setLegacy] = useState("");
+  const [confirmNow, setConfirmNow] = useState(true);
   // Added from the form and not yet in `agents`, until the refresh brings them.
   const [added, setAdded] = useState<Agent[]>([]);
   const allAgents = [
@@ -229,6 +234,12 @@ export function NewBookingForm({
   }
 
   const customer = parseContact(contact);
+  const legacyNumber = parseLegacyInvoiceNumber(legacy);
+  const customerIssue = !customer.ok
+    ? customer.error
+    : !legacyNumber.ok
+      ? legacyNumber.error
+      : null;
   // One vehicle does one trip at a time; trips on their own vehicles may meet.
   const clashes = shared && several ? clashNotes(trips) : new Map();
   const vehicles = items.map((_, index) => itemVehicle(items, index, shared));
@@ -242,13 +253,14 @@ export function NewBookingForm({
       return issue && several ? `Trip ${index + 1}: ${issue}` : issue;
     })
     .find((issue) => issue !== null);
-  const missing = !customer.ok
-    ? "Fill in the customer."
-    : unfinished >= 0
-      ? several
-        ? `Trip ${unfinished + 1}: ${issues[unfinished]}`
-        : issues[unfinished]!
-      : (priceIssue ?? null);
+  const missing =
+    customerIssue !== null
+      ? "Fill in the customer."
+      : unfinished >= 0
+        ? several
+          ? `Trip ${unfinished + 1}: ${issues[unfinished]}`
+          : issues[unfinished]!
+        : (priceIssue ?? null);
   const totalSen = bookingTotalSen(items, shared, true);
   const locations = [
     ...new Set(items.flatMap((item) => item.trip.quote?.location ?? [])),
@@ -277,6 +289,7 @@ export function NewBookingForm({
       <input type="hidden" name={CONTACT_FIELDS.phone} value={contact.phone} />
       <input type="hidden" name={CONTACT_FIELDS.email} value={contact.email} />
       <input type="hidden" name={AGENT_FIELD} value={agentId} />
+      <input type="hidden" name={LEGACY_INVOICE_FIELD} value={legacy} />
       {shared ? (
         <input type="hidden" name={SAME_VEHICLE_FIELD} value="on" />
       ) : null}
@@ -292,10 +305,16 @@ export function NewBookingForm({
           <Step
             number={1}
             title="Customer Info"
-            done={customer.ok}
+            done={customerIssue === null}
             summary={
-              customer.ok
-                ? [agent?.name, contact.name, contact.phone, contact.email]
+              customerIssue === null
+                ? [
+                    agent?.name,
+                    contact.name,
+                    contact.phone,
+                    contact.email,
+                    legacy.trim() ? `Old invoice ${legacy.trim()}` : null,
+                  ]
                     .filter(Boolean)
                     .join(" · ")
                 : "Who the booking is for"
@@ -310,10 +329,31 @@ export function NewBookingForm({
               onAdded={(one) => setAdded((list) => [...list, one])}
             />
             <CustomerFields contact={contact} onChange={setContact} />
+            <Field
+              label="Old invoice number"
+              hint={
+                legacyNumber.ok ? (
+                  "Optional. The old system's number, such as HT1223, as a note for the team. It bills nothing."
+                ) : (
+                  <span className="text-danger">{legacyNumber.error}</span>
+                )
+              }
+              className="mt-4 sm:max-w-80"
+            >
+              <Input
+                maxLength={LEGACY_INVOICE_MAX}
+                autoComplete="off"
+                value={legacy}
+                onChange={(e) => setLegacy(e.target.value)}
+              />
+            </Field>
             <StepFoot
-              disabled={!customer.ok}
+              disabled={customerIssue !== null}
               missing={
-                customer.ok || contact === EMPTY_CONTACT ? null : customer.error
+                customerIssue === null ||
+                (contact === EMPTY_CONTACT && legacyNumber.ok)
+                  ? null
+                  : customerIssue
               }
               onNext={() => openStep(`trip:${items[0]!.trip.id}`)}
             />
@@ -455,40 +495,29 @@ export function NewBookingForm({
             canPrice
             submit={
               <>
-                <NewBookingBilling
+                <NewBookingChoice
                   agentId={agentId}
                   totalSen={totalSen}
-                  className="mb-1"
+                  confirm={confirmNow}
+                  onConfirm={setConfirmNow}
                 />
                 <Button
                   type="submit"
-                  name="confirm"
-                  value="1"
                   disabled={missing !== null}
                   pending={create.pending}
+                  className="mt-1"
                 >
                   {create.pending
                     ? "Creating…"
-                    : [
-                        "Create and confirm",
-                        totalSen !== null ? formatMyr(totalSen) : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                </Button>
-                <Button
-                  type="submit"
-                  variant="secondary"
-                  disabled={missing !== null || create.pending}
-                >
-                  Save as received
+                    : confirmNow
+                      ? "Create and confirm"
+                      : "Save for later"}
                 </Button>
               </>
             }
             missing={missing}
             error={create.error}
             cancelHref={bookingsHref(scope)}
-            foot="Create and confirm: the booking and every trip are confirmed, ready for Assign, and its invoice opens. Save as received: confirm it later on its page; nothing is billed until then."
           />
         </aside>
       </div>

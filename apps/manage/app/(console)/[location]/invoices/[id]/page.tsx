@@ -6,11 +6,16 @@ import {
   formatLocalDateTime,
   formatMyr,
   INVOICE_TYPE_LABELS,
+  isMadeOrder,
   isPaymentMethod,
+  isRevisionKind,
   PAYMENT_METHOD_LABELS,
+  REVISION_KIND_LABELS,
+  textOf,
+  type MadeOrder,
 } from "@repo/db";
 import { getInvoice, listActivityFor, type InvoicePage } from "@repo/db/server";
-import { Card, CardTitle } from "@repo/console/Card";
+import { Card, CardRow, CardRows, CardTitle } from "@repo/console/Card";
 import { DetailColumns } from "@repo/console/PageColumn";
 import { PageHeader } from "@repo/console/PageHeader";
 import {
@@ -28,6 +33,8 @@ import {
   THead,
   TwoLines,
 } from "@repo/console/Table";
+import { Badge } from "@repo/ui/badge";
+import { BookingStatusBadge } from "@repo/console/StatusBadges";
 import { cx } from "@repo/ui/cx";
 import { Notice } from "@repo/ui/notice";
 import { Rows } from "@repo/ui/rows";
@@ -36,6 +43,11 @@ import {
   DocumentStateBadge,
   MoneyCell,
 } from "../../../../_components/InvoiceTable";
+import {
+  FilterChips,
+  ListFilters,
+  type FilterGroup,
+} from "../../../../_components/ListFilters";
 import { HistoryCard } from "../../../../_components/RecordHistory";
 import { getPermissions, requireAdmin } from "../../../../_lib/access";
 import {
@@ -43,30 +55,61 @@ import {
   bookingHref,
   invoiceHref,
   recordHistoryHref,
+  revisionHref,
+  SORT_PARAM,
+  withParams,
 } from "../../../../_lib/routes";
 import { scopeOf } from "../../../../_lib/scope";
+import { RevisionDetails } from "../../bookings/_components/RevisionDetails";
+import { BillNowControl } from "../_components/BillNowControl";
+import { RecordPaymentControl } from "../_components/PaymentControls";
+import { PaymentsTable } from "../_components/PaymentsTable";
 import {
-  DraftActions,
-  DraftTick,
-  RecordPaymentControl,
-  ReversePaymentControl,
+  BillAloneControl,
+  IssueMonthEndControl,
   VoidControl,
 } from "./InvoiceControls";
 
+/** How its payments are shown: for one booking, paid one way, the newest first. */
+type PaymentsView = {
+  booking: string | undefined;
+  method: string | undefined;
+  /** The oldest first when none. */
+  sort: MadeOrder | undefined;
+};
+
 /**
- * Route: /~/invoices/[id]. One invoice, credit note or month-end draft:
+ * Route: /~/invoices/[id]?booking=…&method=…&sort=newest. One invoice,
+ * credit note or month-end draft:
  * who it is billed to, its lines (each a booking's first bill or a
- * revision's difference), its payments and refunds, the credit notes
- * against it, and what is left. Finance records payments, reverses a
- * wrong one, and voids it with its replacement. A draft's lines are
- * ticked and unticked, with what each would bill now, then issued.
+ * revision's difference), the changes it bills, booking by booking, its
+ * payments and refunds, the credit notes against it, and what is left.
+ * Finance records payments, reverses a wrong one, and voids it with its
+ * replacement. A booking's open invoice takes payments as they come in
+ * and follows its booking until it is completed; Finance may issue it
+ * early. A draft's lines are ticked and unticked, with what each would
+ * bill now, then issued. An agent's month-end invoice reads each
+ * booking's share on its lines (what it comes to, what was paid for it,
+ * what is left), and its payments narrow to one booking or one way of
+ * paying, the newest or the oldest first.
  */
 export default async function InvoicePageRoute({
   params,
+  searchParams,
 }: PageProps<"/[location]/invoices/[id]">) {
   await requireAdmin("invoices.manage");
-  const [scope, { id }] = await Promise.all([scopeOf(params), params]);
+  const [scope, { id }, query] = await Promise.all([
+    scopeOf(params),
+    params,
+    searchParams,
+  ]);
   if (scope.slug !== null) notFound();
+  const sort = textOf(query[SORT_PARAM]);
+  const view: PaymentsView = {
+    booking: textOf(query.booking) || undefined,
+    method: textOf(query.method) || undefined,
+    sort: isMadeOrder(sort) && sort !== "oldest" ? sort : undefined,
+  };
   return (
     <Streamed
       fallback={
@@ -79,32 +122,88 @@ export default async function InvoicePageRoute({
         </>
       }
     >
-      {() => invoiceScreen(id)}
+      {() => invoiceScreen(id, view)}
     </Streamed>
   );
 }
 
-async function invoiceScreen(id: string) {
+async function invoiceScreen(id: string, view: PaymentsView) {
   const [doc, entries, permissions] = await Promise.all([
     getInvoice(id),
     listActivityFor("invoice", id),
     getPermissions(),
   ]);
   if (!doc) notFound();
-  const draft = doc.status === "draft";
-  // A booking's open invoice: one booking, nothing to tick.
-  const run = draft && !doc.open;
   const issued = doc.status === "issued";
+  // Payments go on it: issued, or open and following its bookings.
+  const payable = issued || doc.open;
   const credit = doc.type === "credit";
-  const title = doc.open ? "Open invoice" : draft ? "Draft invoice" : doc.label;
-  const ticked = doc.lines.filter((l) => l.ticked);
-  const draftTotal = ticked.reduce(
-    (sum, l) => sum + (doc.open ? l.amountSen : Math.max(0, l.amountSen)),
-    0,
-  );
+  // An agent's month-end invoice, open until its period ends.
+  const monthEnd = doc.open && doc.period !== null;
+  // A booking's own open invoice, issued when the booking ends.
+  const openBooking = doc.open && !monthEnd ? doc.lines[0] : undefined;
   const livePaid = doc.payments
     .filter((p) => !p.reversedAt)
     .reduce((sum, p) => sum + p.amountSen, 0);
+  // An agent's month-end invoice: each booking's share, and its payments by booking.
+  const several = doc.lines.length > 1;
+  const bookings = several
+    ? doc.lines.map((line) => ({
+        id: line.bookingId,
+        label: `${line.booking} · ${line.contactName}`,
+        owedSen: line.money?.balanceSen ?? 0,
+      }))
+    : undefined;
+  const refundDue = several
+    ? doc.lines.some((line) => (line.money?.balanceSen ?? 0) < 0)
+    : Boolean(doc.money && doc.money.balanceSen < 0);
+  const here = withParams(invoiceHref(doc.id), {
+    booking: view.booking,
+    method: view.method,
+    [SORT_PARAM]: view.sort,
+  });
+  const methods = [...new Set(doc.payments.map((p) => p.method))];
+  const groups: FilterGroup[] = [
+    ...(several
+      ? [
+          {
+            param: "booking",
+            label: "Booking",
+            options: doc.lines.map((line) => ({
+              value: line.bookingId,
+              label: line.booking,
+            })),
+            value: view.booking ?? "",
+          },
+        ]
+      : []),
+    ...(methods.length > 1
+      ? [
+          {
+            param: "method",
+            label: "How",
+            options: methods.map((method) => ({
+              value: method,
+              label: isPaymentMethod(method)
+                ? PAYMENT_METHOD_LABELS[method]
+                : method,
+            })),
+            value: view.method ?? "",
+          },
+        ]
+      : []),
+  ];
+  const shown = doc.payments.filter(
+    (p) =>
+      (!view.booking || p.booking.id === view.booking) &&
+      (!view.method || p.method === view.method),
+  );
+  const payments = (view.sort === "newest" ? [...shown].reverse() : shown).map(
+    (payment) => ({
+      ...payment,
+      booking: several ? payment.booking : undefined,
+    }),
+  );
 
   const meta = [
     credit
@@ -113,7 +212,11 @@ async function invoiceScreen(id: string) {
         ? `Month-end · ${doc.period}`
         : "Invoice",
     doc.billTo.name,
-    doc.issuedAt ? `Issued ${formatLocalDate(doc.issuedAt)}` : null,
+    doc.issuedAt
+      ? `Issued ${formatLocalDate(doc.issuedAt)}`
+      : doc.open
+        ? `Opened ${formatLocalDate(doc.createdAt)}`
+        : null,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -121,27 +224,31 @@ async function invoiceScreen(id: string) {
   return (
     <>
       <PageHeader
-        title={title}
+        title={doc.label}
         badge={<DocumentStateBadge status={doc.status} money={doc.money} />}
         meta={meta}
         action={
-          draft ? (
-            <DraftActions
-              invoiceId={doc.id}
-              total={formatMyr(draftTotal)}
-              ticked={ticked.length}
-              open={doc.open}
-              credit={draftTotal < 0}
-            />
-          ) : issued ? (
+          payable ? (
             <>
               {!credit ? (
-                <RecordPaymentControl
-                  invoiceId={doc.id}
-                  label={doc.label}
-                  balanceSen={doc.money?.balanceSen ?? 0}
-                  refund={false}
-                />
+                <>
+                  <RecordPaymentControl
+                    invoiceId={doc.id}
+                    label={doc.label}
+                    balanceSen={doc.money?.balanceSen ?? 0}
+                    refund={false}
+                    bookings={bookings}
+                  />
+                  {refundDue ? (
+                    <RecordPaymentControl
+                      invoiceId={doc.id}
+                      label={doc.label}
+                      balanceSen={-(doc.money?.balanceSen ?? 0)}
+                      refund
+                      bookings={bookings?.filter((b) => b.owedSen < 0)}
+                    />
+                  ) : null}
+                </>
               ) : (
                 <RecordPaymentControl
                   invoiceId={doc.id}
@@ -150,14 +257,30 @@ async function invoiceScreen(id: string) {
                   refund
                 />
               )}
-              <VoidControl
-                invoiceId={doc.id}
-                label={doc.label}
-                mustReissue={
-                  doc.payments.some((p) => !p.reversedAt) ||
-                  doc.creditNotes.some((c) => c.status === "issued")
-                }
-              />
+              {monthEnd ? (
+                <IssueMonthEndControl
+                  invoiceId={doc.id}
+                  label={doc.label}
+                  total={formatMyr(doc.totalSen)}
+                  ready={doc.ready}
+                  period={doc.period ?? ""}
+                />
+              ) : openBooking ? (
+                <BillNowControl
+                  bookingId={openBooking.bookingId}
+                  label={doc.label}
+                  unbilledSen={doc.totalSen}
+                />
+              ) : (
+                <VoidControl
+                  invoiceId={doc.id}
+                  label={doc.label}
+                  mustReissue={
+                    doc.payments.some((p) => !p.reversedAt) ||
+                    doc.creditNotes.some((c) => c.status === "issued")
+                  }
+                />
+              )}
             </>
           ) : null
         }
@@ -182,19 +305,20 @@ async function invoiceScreen(id: string) {
           ) : null}
         </Notice>
       ) : null}
-      {doc.open ? (
+      {monthEnd ? (
         <Notice className="mb-5">
-          The booking's open invoice: it follows the booking, so each change to
-          it moves the amount, and nothing is numbered yet. It is issued when
-          the trip is done or the booking cancelled, or now with Issue. Less
-          than nothing is a credit to give: issued as a credit note.
+          Open: the agent's invoice for {doc.period}. Each booking of the period
+          joins it when confirmed, and an amend moves its line; record payments
+          as they come in, for one booking or spread over them, the oldest
+          pick-up first. Issue it once the period has ended: it takes its HTI
+          number then. Bill on its own moves a booking to an invoice of its own.
         </Notice>
-      ) : null}
-      {run ? (
+      ) : doc.open ? (
         <Notice className="mb-5">
-          Tick the bookings this invoice bills. Each shows what it would bill
-          now; issuing gives the number and freezes the amounts. Unticked
-          bookings wait for the next run, or Finance bills them alone.
+          Open: this is the booking's invoice while it runs. Record payments as
+          they come in, here or on the booking; an amend moves its amount. It is
+          issued in full, and takes its HTI number, when the booking is
+          completed or cancelled, or now with Issue now.
         </Notice>
       ) : null}
 
@@ -204,37 +328,32 @@ async function invoiceScreen(id: string) {
             <Card flush>
               <CardTitle
                 inset
-                meta={
-                  run ? `${ticked.length} of ${doc.lines.length} ticked` : null
-                }
+                meta={monthEnd ? String(doc.lines.length) : null}
               >
-                {draft ? "Bookings" : "Lines"}
+                Lines
               </CardTitle>
               <Table bare>
                 <THead>
-                  {run ? <Th /> : null}
                   <Th>Booking</Th>
                   <Th align="right">Amount</Th>
+                  {several ? (
+                    <>
+                      <Th align="right">Paid</Th>
+                      <Th align="right">Balance</Th>
+                    </>
+                  ) : null}
+                  {monthEnd ? <Th /> : null}
                 </THead>
                 <TBody>
                   {doc.lines.length === 0 ? (
-                    <EmptyRow colSpan={run ? 3 : 2}>No lines.</EmptyRow>
+                    <EmptyRow
+                      colSpan={2 + (several ? 2 : 0) + (monthEnd ? 1 : 0)}
+                    >
+                      No lines.
+                    </EmptyRow>
                   ) : (
                     doc.lines.map((line) => (
-                      <tr
-                        key={line.id}
-                        className={cx(run && !line.ticked && "text-muted")}
-                      >
-                        {run ? (
-                          <Td className="w-10">
-                            <DraftTick
-                              invoiceId={doc.id}
-                              bookingId={line.bookingId}
-                              label={line.booking}
-                              ticked={line.ticked}
-                            />
-                          </Td>
-                        ) : null}
+                      <tr key={line.id}>
                         <Td>
                           <TwoLines
                             top={
@@ -246,7 +365,7 @@ async function invoiceScreen(id: string) {
                               </Link>
                             }
                             bottom={[
-                              draft
+                              doc.open
                                 ? null
                                 : lineNote(line.description, line.booking),
                               line.contactName,
@@ -258,74 +377,78 @@ async function invoiceScreen(id: string) {
                           />
                         </Td>
                         <MoneyCell sen={line.amountSen} />
+                        {several ? (
+                          <>
+                            <MoneyCell sen={line.money?.paidSen ?? null} />
+                            <MoneyCell
+                              sen={line.money?.balanceSen ?? null}
+                              strong
+                            />
+                          </>
+                        ) : null}
+                        {monthEnd ? (
+                          <Td className="text-right">
+                            <BillAloneControl
+                              bookingId={line.bookingId}
+                              label={line.booking}
+                            />
+                          </Td>
+                        ) : null}
                       </tr>
                     ))
                   )}
                   <tr className="border-t border-hairline">
-                    {run ? <Td /> : null}
                     <Td className="font-semibold text-ink">Total</Td>
-                    <MoneyCell sen={draft ? draftTotal : doc.totalSen} strong />
+                    <MoneyCell sen={doc.totalSen} strong />
+                    {several ? (
+                      <>
+                        <MoneyCell sen={doc.money?.paidSen ?? null} />
+                        <MoneyCell sen={doc.money?.balanceSen ?? null} strong />
+                      </>
+                    ) : null}
+                    {monthEnd ? <Td /> : null}
                   </tr>
                 </TBody>
               </Table>
             </Card>
 
-            {!draft ? (
-              <Card flush>
-                <CardTitle inset>{credit ? "Refunds" : "Payments"}</CardTitle>
-                <Table bare>
-                  <THead>
-                    <Th>{credit ? "Refund" : "Payment"}</Th>
-                    <Th align="right">Amount</Th>
-                    <Th />
-                  </THead>
-                  <TBody>
-                    {doc.payments.length === 0 ? (
-                      <EmptyRow colSpan={3}>
-                        {credit ? "Nothing refunded yet." : "Nothing paid yet."}
-                      </EmptyRow>
-                    ) : (
-                      doc.payments.map((payment) => (
-                        <tr
-                          key={payment.id}
-                          className={cx(
-                            payment.reversedAt && "text-muted line-through",
-                          )}
-                        >
-                          <Td>
-                            <TwoLines
-                              top={
-                                isPaymentMethod(payment.method)
-                                  ? PAYMENT_METHOD_LABELS[payment.method]
-                                  : payment.method
-                              }
-                              bottom={[
-                                formatLocalDate(payment.paidAt),
-                                payment.reversedAt
-                                  ? `Reversed: ${payment.reverseReason ?? ""}`
-                                  : payment.note,
-                              ]
-                                .filter(Boolean)
-                                .join(" · ")}
-                              className="[&>span]:whitespace-normal"
-                            />
-                          </Td>
-                          <MoneyCell sen={payment.amountSen} />
-                          <Td className="text-right">
-                            {!payment.reversedAt && issued ? (
-                              <ReversePaymentControl
-                                paymentId={payment.id}
-                                amount={formatMyr(payment.amountSen)}
-                              />
-                            ) : null}
-                          </Td>
-                        </tr>
-                      ))
-                    )}
-                  </TBody>
-                </Table>
-              </Card>
-            ) : null}
+            <BookingsCard doc={doc} />
+
+            <Card flush>
+              <CardTitle
+                inset
+                meta={
+                  groups.length > 0 ? (
+                    <ListFilters href={here} groups={groups} />
+                  ) : null
+                }
+              >
+                {credit ? "Refunds" : "Payments"}
+              </CardTitle>
+              {groups.length > 0 ? (
+                <div className="px-5">
+                  <FilterChips href={here} groups={groups} />
+                </div>
+              ) : null}
+              <PaymentsTable
+                payments={payments}
+                reversible={Boolean(payable)}
+                empty={
+                  shown.length < doc.payments.length
+                    ? "No payment like this."
+                    : credit
+                      ? "Nothing refunded yet."
+                      : "Nothing paid yet."
+                }
+                sort={{
+                  order: view.sort,
+                  hrefOf: (order) =>
+                    withParams(here, {
+                      [SORT_PARAM]: order === "oldest" ? undefined : order,
+                    }),
+                }}
+              />
+            </Card>
 
             {!credit && doc.creditNotes.length > 0 ? (
               <Card flush>
@@ -376,8 +499,11 @@ async function invoiceScreen(id: string) {
               </CardTitle>
               <Rows rows={billToRows(doc)} className="text-sm" />
               <p className="mt-3 text-caption text-muted">
-                As at issue. A wrong name is put right on the booking, then this
-                is voided and reissued.
+                {monthEnd
+                  ? "The agent's details, taken again when it is issued."
+                  : doc.open
+                    ? "Follows the booking until it is issued: a change to its customer or agent shows here."
+                    : "As at issue. A wrong name is put right on the booking, then this is voided and reissued."}
               </p>
             </Card>
             <HistoryCard
@@ -391,7 +517,138 @@ async function invoiceScreen(id: string) {
   );
 }
 
-/** A line's words after its booking's number: "Rev 3: Stop at Pantai Cenang added"; empty for a first bill. */
+/**
+ * Each booking on the document at a glance, then what the document bills
+ * of it: its status, who it is for and its total now, its trips (when,
+ * where, in what, for how much), and each revision since its last bill,
+ * with what it changed field by field, who made it and the total it left.
+ * An agent's month-end invoice reads every booking and every amend on it
+ * here. Each booking and revision opens its page.
+ */
+function BookingsCard({ doc }: { doc: InvoicePage }) {
+  if (doc.changes.length === 0) return null;
+  return (
+    <Card flush>
+      <CardTitle
+        inset
+        meta={String(doc.changes.length)}
+        description={
+          doc.open
+            ? "Each booking now, and the changes it bills so far."
+            : "Each booking now, and the changes it bills."
+        }
+      >
+        {doc.changes.length === 1 ? "Booking" : "Bookings"}
+      </CardTitle>
+      <CardRows>
+        {doc.changes.map((booking) => (
+          <CardRow key={booking.bookingId} className="grid gap-3 text-sm">
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Link
+                    href={bookingHref(null, booking.bookingId)}
+                    className="font-semibold text-ink underline-offset-4 hover:underline"
+                  >
+                    {booking.booking}
+                  </Link>
+                  <BookingStatusBadge status={booking.status} />
+                </div>
+                <p className="text-caption text-muted">{booking.contactName}</p>
+              </div>
+              <span className="font-semibold text-ink tabular-nums">
+                {formatMyr(booking.chargedSen)}
+              </span>
+            </div>
+            {booking.trips.length > 0 ? (
+              <ul className="grid gap-1.5 rounded-control bg-mist px-3 py-2.5 text-caption">
+                {booking.trips.map((trip) => (
+                  <li
+                    key={trip.position}
+                    className={cx(
+                      "flex items-baseline justify-between gap-3",
+                      trip.status === "cancelled" && "text-muted line-through",
+                    )}
+                  >
+                    <span className="min-w-0 text-body">
+                      <span className="font-semibold text-ink">
+                        Trip {trip.position}
+                      </span>{" "}
+                      {[
+                        formatLocalDateTime(new Date(trip.startsAt)),
+                        [trip.pickup, ...trip.stops, trip.dropoff]
+                          .filter(Boolean)
+                          .join(" → "),
+                        trip.vehicleClassName,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </span>
+                    <span className="shrink-0 tabular-nums">
+                      {formatMyr(trip.chargedSen)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {booking.revisions.length > 0 ? (
+              <ol className="grid gap-3">
+                {booking.revisions.map((revision) => (
+                  <li
+                    key={revision.number}
+                    className="grid grid-cols-[3.25rem_minmax(0,1fr)_auto] items-start gap-3"
+                  >
+                    <Link
+                      href={revisionHref(
+                        null,
+                        booking.bookingId,
+                        revision.number,
+                      )}
+                      className="font-semibold text-ink tabular-nums underline-offset-4 hover:underline"
+                    >
+                      #{revision.number}
+                    </Link>
+                    <span className="min-w-0">
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        <Badge>
+                          {isRevisionKind(revision.kind)
+                            ? REVISION_KIND_LABELS[revision.kind]
+                            : revision.kind}
+                        </Badge>
+                        {revision.kind === "booked" ? null : (
+                          <span className="text-body">{revision.summary}</span>
+                        )}
+                      </span>
+                      <span className="mt-0.5 block text-caption text-muted">
+                        {[
+                          formatLocalDateTime(revision.at),
+                          revision.by,
+                          revision.reason,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                      <RevisionDetails details={revision.details} />
+                    </span>
+                    <span className="text-right text-ink tabular-nums">
+                      {formatMyr(revision.chargedSen)}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="text-caption text-muted">
+                No change billed on this one.
+              </p>
+            )}
+          </CardRow>
+        ))}
+      </CardRows>
+    </Card>
+  );
+}
+
+/** A line's words after its booking's number: "Amendment 3: Stop at Pantai Cenang added"; empty for a first bill. */
 function lineNote(description: string, booking: string) {
   return description.startsWith(booking)
     ? description.slice(booking.length).replace(/^[s:]+/, "")
@@ -431,8 +688,9 @@ function billToRows(doc: InvoicePage): [string, ReactNode][] {
 
 /** What the document comes to: its total, its credit notes, what came in and what is left, and when it is due. */
 function MoneyCard({ doc, livePaid }: { doc: InvoicePage; livePaid: number }) {
-  if (doc.status === "draft") return null;
-  const rows: [string, ReactNode][] = [["Total", formatMyr(doc.totalSen)]];
+  const rows: [string, ReactNode][] = [
+    [doc.open ? "Total so far" : "Total", formatMyr(doc.totalSen)],
+  ];
   if (doc.type === "invoice" && doc.money) {
     const credited = doc.money.netSen - doc.totalSen;
     if (credited !== 0) rows.push(["Credit notes", formatMyr(credited)]);

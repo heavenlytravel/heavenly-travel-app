@@ -53,7 +53,6 @@ export function BookingSummary({
   missing,
   error,
   cancelHref,
-  foot,
 }: {
   /** Beside the title: the locations whose rates price the trips. */
   meta?: string;
@@ -71,8 +70,6 @@ export function BookingSummary({
   missing: string | null;
   error: string | null;
   cancelHref: string;
-  /** A line under it all, on a hairline. */
-  foot?: ReactNode;
 }) {
   const charged = trips.map((trip) => {
     const agreed = canPrice ? parseRinggit(trip.agreedPrice) : null;
@@ -177,11 +174,6 @@ export function BookingSummary({
           <CancelLink href={cancelHref} className="justify-self-center" />
         </div>
       </div>
-      {foot ? (
-        <p className="border-t border-hairline px-5 py-3.5 text-xs text-muted">
-          {foot}
-        </p>
-      ) : null}
     </Card>
   );
 }

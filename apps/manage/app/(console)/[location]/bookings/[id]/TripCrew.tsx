@@ -2,9 +2,7 @@
 
 import {
   assignStateOf,
-  formatLocalDateTime,
   formatMyr,
-  isLive,
   isUrgentTrip,
   modelName,
   PART_ROLE_LABELS,
@@ -19,7 +17,6 @@ import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
-import { Card, CardTitle } from "@repo/console/Card";
 import { AssignStateBadge, NotAssignedBadge } from "@repo/console/StatusBadges";
 import { FormError } from "@repo/ui/form-error";
 import { useActionForm } from "@repo/console/use-action-form";
@@ -34,126 +31,111 @@ function namedOf(part: TripPartView) {
   return part.driver?.name ?? part.guide?.name ?? "Any";
 }
 
+/** The vendors accepted on a cancelled trip: we still pay them. */
+function owedParts(trip: FulfilmentTrip) {
+  return trip.status === "cancelled"
+    ? trip.parts.filter((p) => !p.offer.vendor.isOurs && p.vendorAcceptedAt)
+    : [];
+}
+
 /**
- * "Who does it" on a booking, to read: each live trip with where it
- * stands, its vehicle and driver, and its tour guide when it goes with
- * one, their vendor and whose answer they
- * wait for. Assigning is Operation's, on the trip's page under Assign,
- * which "Open in Assign" leads to. A trip cancelled after its vendor
- * accepted shows what we pay that vendor, which Operation can change.
- * See docs/261028-fulfilment-vendors-and-connect.md.
+ * "Who does it", inside the trip's card: where its assignment stands, its
+ * vehicle and driver, and its tour guide when it goes with one, their
+ * vendor and whose answer they wait for. Assigning is Operation's, on the
+ * trip's page under Assign, which "Open in Assign" leads to. A trip
+ * cancelled after its vendor accepted shows what we pay that vendor,
+ * which Operation can change. See
+ * docs/261028-fulfilment-vendors-and-connect.md.
  */
-export function WhoDoesIt({
+export function TripCrew({
   bookingId,
-  trips,
+  trip,
   canFulfil,
   scope,
 }: {
   bookingId: string;
-  trips: FulfilmentTrip[];
+  trip: FulfilmentTrip;
   canFulfil: boolean;
   scope: ScopeSlug;
 }) {
-  const live = trips.filter((t) => isLive(t) && t.status !== "completed");
-  const owed = trips.filter(
-    (t) =>
-      t.status === "cancelled" &&
-      t.parts.some((p) => !p.offer.vendor.isOurs && p.vendorAcceptedAt),
-  );
-  if (live.length === 0 && owed.length === 0) return null;
-
-  return (
-    <Card>
-      <CardTitle description="Operation assigns each trip under Assign.">
-        Who does it
-      </CardTitle>
-      <ul className="grid gap-4">
-        {live.map((trip) => (
-          <li key={trip.id} className="grid gap-1.5">
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="font-medium text-ink">
-                Trip {trip.position}, {formatLocalDateTime(trip.startsAt)}
-              </span>
-              {trip.status === "received" ? (
-                <span className="text-muted">Assigned once confirmed</span>
-              ) : (
-                <AssignStateBadge
-                  state={assignStateOf({ ...trip, reported: false })}
-                />
-              )}
-              {canFulfil && trip.status !== "received" ? (
-                <Link
-                  href={assignTripHref(scope, trip.id)}
-                  className="ml-auto text-sm font-medium text-brand underline-offset-4 hover:underline focus-ring"
-                >
-                  Open in Assign
-                </Link>
-              ) : null}
-            </div>
-            {trip.parts.length > 0 ? (
-              <dl className="grid gap-0.5 text-caption">
-                {rolesOf(trip.withGuide).map((role) => {
-                  const part = trip.parts.find((p) => p.role === role);
-                  const waiting = part
-                    ? partWaitingOf(part, part.offer.vendor.isOurs)
-                    : null;
-                  return (
-                    <div
-                      key={role}
-                      className="flex flex-wrap items-center gap-x-1.5"
-                    >
-                      <dt className="text-muted">{PART_ROLE_LABELS[role]}</dt>
-                      <dd className="text-body">
-                        {part ? (
-                          `${namedOf(part)} · ${part.offer.vendor.name}`
-                        ) : (
-                          <NotAssignedBadge
-                            urgent={isUrgentTrip({
-                              startsAt: trip.startsAt,
-                              state: assignStateOf({
-                                ...trip,
-                                reported: false,
-                              }),
-                            })}
-                          />
-                        )}
-                        {part && waiting ? (
-                          <span className="text-warning">
-                            {" "}
-                            ·{" "}
-                            {partWaitingLabel(waiting, part.offer.vendor.name)}
-                          </span>
-                        ) : null}
-                      </dd>
-                    </div>
-                  );
-                })}
-              </dl>
-            ) : null}
-          </li>
+  const owed = owedParts(trip);
+  if (trip.status === "cancelled") {
+    if (owed.length === 0) return null;
+    return (
+      <section className="grid gap-2">
+        <h3 className="text-sm font-semibold text-ink">
+          Cancelled: pay the vendor
+        </h3>
+        {owed.map((part) => (
+          <CostRow
+            key={part.id}
+            bookingId={bookingId}
+            part={part}
+            canFulfil={canFulfil}
+          />
         ))}
-      </ul>
-      {owed.map((trip) => (
-        <div
-          key={trip.id}
-          className="mt-4 grid gap-2 border-t border-hairline pt-3"
-        >
-          <p className="text-sm font-medium">
-            Trip {trip.position}, cancelled: pay vendor
-          </p>
-          {trip.parts
-            .filter((p) => !p.offer.vendor.isOurs && p.vendorAcceptedAt)
-            .map((part) => (
-              <CostRow
-                key={part.id}
-                bookingId={bookingId}
-                part={part}
-                canFulfil={canFulfil}
-              />
-            ))}
-        </div>
-      ))}
-    </Card>
+      </section>
+    );
+  }
+
+  if (trip.status === "completed" && trip.parts.length === 0) return null;
+  const state = assignStateOf({ ...trip, reported: false });
+  return (
+    <section className="grid gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="text-sm font-semibold text-ink">Who does it</h3>
+        {trip.status === "received" ? (
+          <span className="text-caption text-muted">
+            Assigned once confirmed
+          </span>
+        ) : trip.status === "completed" ? null : (
+          <AssignStateBadge state={state} />
+        )}
+        {canFulfil &&
+        trip.status !== "received" &&
+        trip.status !== "completed" ? (
+          <Link
+            href={assignTripHref(scope, trip.id)}
+            className="ml-auto text-sm font-medium text-brand underline-offset-4 hover:underline focus-ring"
+          >
+            Open in Assign
+          </Link>
+        ) : null}
+      </div>
+      {trip.status !== "received" ? (
+        <dl className="grid gap-1 text-sm">
+          {rolesOf(trip.withGuide).map((role) => {
+            const part = trip.parts.find((p) => p.role === role);
+            const waiting = part
+              ? partWaitingOf(part, part.offer.vendor.isOurs)
+              : null;
+            return (
+              <div
+                key={role}
+                className="grid grid-cols-[7rem_1fr] items-center gap-2"
+              >
+                <dt className="text-muted">{PART_ROLE_LABELS[role]}</dt>
+                <dd className="text-body">
+                  {part ? (
+                    `${namedOf(part)} · ${part.offer.vendor.name}`
+                  ) : (
+                    <NotAssignedBadge
+                      urgent={isUrgentTrip({ startsAt: trip.startsAt, state })}
+                    />
+                  )}
+                  {part && waiting ? (
+                    <span className="text-warning">
+                      {" "}
+                      · {partWaitingLabel(waiting, part.offer.vendor.name)}
+                    </span>
+                  ) : null}
+                </dd>
+              </div>
+            );
+          })}
+        </dl>
+      ) : null}
+    </section>
   );
 }
 

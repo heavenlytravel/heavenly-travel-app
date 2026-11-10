@@ -4,9 +4,12 @@ import {
   BUSINESS_STATUSES,
   BUSINESS_STATUS_LABELS,
   isBusinessStatus,
+  isMadeOrder,
   isPaymentTerms,
   PAYMENT_TERMS_LABELS,
   searchTermOf,
+  textOf,
+  type MadeOrder,
 } from "@repo/db";
 import { listBusinesses } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
@@ -24,6 +27,7 @@ import {
   THead,
   TwoLines,
 } from "@repo/console/Table";
+import { AddedTd, AddedTh } from "../../../_components/AddedColumn";
 import {
   FilterChips,
   ListFilters,
@@ -37,6 +41,7 @@ import {
   agentsHref,
   NEW_AGENT_HREF,
   SEARCH_PARAM,
+  SORT_PARAM,
 } from "../../../_lib/routes";
 import { scopeOf } from "../../../_lib/scope";
 
@@ -60,6 +65,8 @@ export default async function AgentsPage({
   if (scope.slug !== null) notFound();
   const status = isBusinessStatus(query.status) ? query.status : undefined;
   const q = searchTermOf(query[SEARCH_PARAM]) ?? undefined;
+  const sort = textOf(query[SORT_PARAM]);
+  const order = isMadeOrder(sort) ? sort : undefined;
   const groups: FilterGroup[] = [
     {
       param: "status",
@@ -71,7 +78,7 @@ export default async function AgentsPage({
       })),
     },
   ];
-  const listed = agentsHref({ status, q });
+  const listed = agentsHref({ status, sort: order, q });
 
   return (
     <>
@@ -91,7 +98,7 @@ export default async function AgentsPage({
       <Card flush>
         <ListToolbar>
           <SearchBox
-            href={agentsHref({ status })}
+            href={agentsHref({ status, sort: order })}
             value={q ?? ""}
             label="Search agents"
             placeholder="Name, contact or email"
@@ -101,9 +108,9 @@ export default async function AgentsPage({
         <FilterChips href={listed} groups={groups} />
         <Streamed
           key={listed}
-          fallback={<TableSkeleton bare rows={4} columns={3} />}
+          fallback={<TableSkeleton bare rows={4} columns={4} />}
         >
-          {() => agentRows({ status, q })}
+          {() => agentRows({ status, order, q })}
         </Streamed>
       </Card>
     </>
@@ -112,10 +119,13 @@ export default async function AgentsPage({
 
 async function agentRows(filter: {
   status?: (typeof BUSINESS_STATUSES)[number];
+  /** By when each was added; none for active first, then by name. */
+  order?: MadeOrder;
   q?: string;
 }) {
   const agents = await listBusinesses({
     status: filter.status,
+    order: filter.order,
     search: filter.q,
   });
   return (
@@ -123,11 +133,18 @@ async function agentRows(filter: {
       <THead>
         <Th>Agent</Th>
         <Th>Payment terms</Th>
+        <AddedTh
+          sort={{
+            order: filter.order,
+            hrefOf: (sort) =>
+              agentsHref({ status: filter.status, sort, q: filter.q }),
+          }}
+        />
         <Th>Status</Th>
       </THead>
       <TBody>
         {agents.length === 0 ? (
-          <EmptyRow colSpan={3}>
+          <EmptyRow colSpan={4}>
             {filter.q || filter.status
               ? "No agent matches. Clear the filters to see them all."
               : "No agent yet. Add one, or from New booking."}
@@ -158,6 +175,7 @@ async function agentRows(filter: {
                   bottom={`${agent.daysToPay} days to pay`}
                 />
               </Td>
+              <AddedTd at={agent.createdAt} />
               <Td className="whitespace-nowrap">
                 <BusinessStatusBadge status={agent.status} />
               </Td>

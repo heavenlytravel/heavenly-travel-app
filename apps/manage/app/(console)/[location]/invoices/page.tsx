@@ -1,12 +1,19 @@
 import { notFound } from "next/navigation";
 import {
   formatMyr,
+  INVOICE_BILLED,
+  INVOICE_BILLED_LABELS,
+  INVOICE_ISSUED_LABELS,
+  INVOICE_ISSUED_WHEN,
   INVOICE_STATUSES,
   INVOICE_STATUS_LABELS,
   INVOICE_TYPES,
   INVOICE_TYPE_LABELS,
+  isInvoiceBilled,
+  isInvoiceIssuedWhen,
   isInvoiceStatus,
   isInvoiceType,
+  isMadeOrder,
   isPaymentState,
   PAYMENT_STATES,
   PAYMENT_STATE_LABELS,
@@ -37,6 +44,7 @@ import {
   invoicesHref,
   PAGE_PARAM,
   SEARCH_PARAM,
+  SORT_PARAM,
   type InvoicesListFilter,
 } from "../../../_lib/routes";
 import { scopeOf } from "../../../_lib/scope";
@@ -52,12 +60,13 @@ const TILE_STATES = [
 ] as const;
 
 /**
- * Route: /~/invoices?type=…&status=…&state=…&agent=…&overdue=1&q=…&page=2.
- * Finance's list of every invoice, credit note and month-end draft of the
+ * Route: /~/invoices?type=…&status=…&state=…&billed=…&issued=…&agent=…&overdue=1&q=…&page=2.
+ * Finance's list of every invoice and credit note of the
  * new series, newest first: who each is billed to, what it is for, its
  * total, what is left to pay, when it is due and where it stands. Tiles
  * at the head count what Finance works on and narrow the list to it; the
- * Filters narrow it to a type, a step, a payment state or an agent; the
+ * Filters narrow it to a type, a step, a payment state, who it bills,
+ * when it was issued or an agent; a credit note sits under its invoice; the
  * search finds an HTI, HTC or HTB number, or who it is billed to.
  * Finance's (`invoices.manage`). Console-wide.
  */
@@ -79,7 +88,10 @@ export default async function InvoicesPage({
     state: isPaymentState(query.state) ? query.state : undefined,
     agent: agents.some((a) => a.id === agentParam) ? agentParam : undefined,
     overdue: textOf(query.overdue) === "1" ? "1" : undefined,
+    billed: isInvoiceBilled(query.billed) ? query.billed : undefined,
+    issued: isInvoiceIssuedWhen(query.issued) ? query.issued : undefined,
     q: searchTermOf(query[SEARCH_PARAM]) ?? undefined,
+    sort: textOf(query[SORT_PARAM]) === "oldest" ? "oldest" : undefined,
   };
   const page = Math.max(1, Number(textOf(query[PAGE_PARAM])) || 1);
   const groups: FilterGroup[] = [
@@ -108,6 +120,24 @@ export default async function InvoicesPage({
       options: PAYMENT_STATES.map((value) => ({
         value,
         label: PAYMENT_STATE_LABELS[value],
+      })),
+    },
+    {
+      param: "billed",
+      label: "Billed",
+      value: filter.billed ?? "",
+      options: INVOICE_BILLED.map((value) => ({
+        value,
+        label: INVOICE_BILLED_LABELS[value],
+      })),
+    },
+    {
+      param: "issued",
+      label: "Issued",
+      value: filter.issued ?? "",
+      options: INVOICE_ISSUED_WHEN.map((value) => ({
+        value,
+        label: INVOICE_ISSUED_LABELS[value],
       })),
     },
     {
@@ -157,7 +187,10 @@ function filterOf(filter: InvoicesListFilter): InvoiceFilter {
     state: isPaymentState(filter.state) ? filter.state : undefined,
     businessId: filter.agent,
     overdue: filter.overdue === "1",
+    billed: isInvoiceBilled(filter.billed) ? filter.billed : undefined,
+    issued: isInvoiceIssuedWhen(filter.issued) ? filter.issued : undefined,
     search: filter.q,
+    order: isMadeOrder(filter.sort) ? filter.sort : undefined,
   };
 }
 
@@ -191,28 +224,31 @@ async function tiles(filter: InvoicesListFilter) {
       current,
     };
   });
-  const drafts = all.filter((row) => row.status === "draft").length;
+  // Open month-end invoices whose period has ended: Finance issues them.
+  const ready = all.filter((row) => row.ready).length;
+  const readyFilter = filter.status === "open" && filter.billed === "month-end";
   return (
     <FigureTiles
       label="Invoices by payment"
       figures={[
         ...figures,
         {
-          key: "drafts",
-          label: "Drafts to issue",
-          value: String(drafts),
+          key: "ready",
+          label: "Month-end to issue",
+          value: String(ready),
           tone: "amber",
           href: invoicesHref(
-            filter.status === "draft"
-              ? { ...filter, status: undefined }
+            readyFilter
+              ? { ...filter, status: undefined, billed: undefined }
               : {
                   ...filter,
-                  status: "draft",
+                  status: "open",
+                  billed: "month-end",
                   state: undefined,
                   overdue: undefined,
                 },
           ),
-          current: filter.status === "draft",
+          current: readyFilter,
         },
       ]}
     />
@@ -222,15 +258,26 @@ async function tiles(filter: InvoicesListFilter) {
 async function invoiceRows(filter: InvoicesListFilter, page: number) {
   const rows = await listInvoices(filterOf(filter));
   const shown = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  const narrowed = Object.values(filter).some(Boolean);
+  const narrowed = Object.entries(filter).some(
+    ([key, value]) => key !== "sort" && Boolean(value),
+  );
   return (
     <>
       <InvoiceTable
         rows={shown}
+        sort={{
+          order: isMadeOrder(filter.sort) ? filter.sort : undefined,
+          hrefOf: (order) =>
+            invoicesHref({
+              ...filter,
+              sort: order === "newest" ? undefined : order,
+              page: undefined,
+            }),
+        }}
         empty={
           narrowed
             ? "No invoice matches. Clear the filters to see them all."
-            : "No invoice yet. Confirming a booking issues its invoice; a credit agent's are made by the month-end run."
+            : "No invoice yet. Confirming a booking opens its invoice; a credit agent's bookings go on its month-end invoice."
         }
       />
       <Pager

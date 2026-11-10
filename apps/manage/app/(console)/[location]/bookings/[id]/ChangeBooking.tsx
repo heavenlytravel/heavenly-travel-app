@@ -18,16 +18,23 @@ import { Dialog, DialogActions } from "@repo/ui/dialog";
 import { Field, Input, Radio, Textarea, inputClassName } from "@repo/ui/field";
 import { FormError } from "@repo/ui/form-error";
 import { ChevronDownIcon } from "@repo/ui/icons";
-import { Menu, MenuItem, MenuLabel, MenuSeparator } from "@repo/ui/menu";
+import { Menu, MenuItem, MenuSeparator } from "@repo/ui/menu";
 import { Notice } from "@repo/ui/notice";
 import { PlaceInput } from "@repo/ui/place-input";
 import { Select } from "@repo/ui/select";
 import Link from "next/link";
-import { useEffect, useId, useState, type ReactNode } from "react";
+import {
+  createContext,
+  use,
+  useEffect,
+  useId,
+  useState,
+  type ReactNode,
+} from "react";
+import { BillingLine } from "../_components/BillingLine";
 import {
   addChargeAction,
   addStopAction,
-  billingPreviewAction,
   cancelBookingAction,
   cancelItemAction,
   priceItemAction,
@@ -36,7 +43,7 @@ import {
   type StopQuoteAnswer,
 } from "./actions";
 
-/** One trip as the menu offers it. */
+/** One trip as its menu offers it. */
 export type ChangeTrip = {
   id: string;
   position: number;
@@ -54,9 +61,9 @@ export type ChangeTrip = {
   live: boolean;
 };
 
-/** What the admin may do from the menu. */
+/** What the admin may change. */
 export type ChangeRights = {
-  /** Amend, add a trip, cancel, the legacy number: `bookings.manage`. */
+  /** Amend, add a trip, cancel, reinstate: `bookings.manage`. */
   manage: boolean;
   /** A discount or a correction: `bookings.create`. */
   price: boolean;
@@ -86,23 +93,35 @@ const CHARGE_KIND_TEXT: Record<
   },
 };
 
+type ChangeContextValue = {
+  trips: readonly ChangeTrip[];
+  rights: ChangeRights;
+  change: (open: Open) => void;
+};
+
+const ChangeContext = createContext<ChangeContextValue | null>(null);
+
+function useChange() {
+  const value = use(ChangeContext);
+  if (!value) throw new Error("A change menu is used outside ChangeBooking.");
+  return value;
+}
+
 /**
- * "Change booking" in the booking's header: every change to what we
- * deliver or charge, each a revision: amend a trip, add a trip, a stop or
- * a charge, a discount or a correction, cancel a trip or the booking, or
- * reinstate a cancelled trip.
- * Each dialog says what saving bills before it is saved, as the invoice
- * preview did. Nothing for an admin who may do none of them.
+ * Every change to what a booking delivers or charges, each a revision,
+ * around the booking's page: a trip's own changes in its card's "Change
+ * trip" menu (`TripChangeMenu`), the booking's in its header
+ * (`BookingChangeMenu`), each opening its dialog here. Each dialog ends
+ * with the total before and after and what saving bills.
  */
-export function ChangeBookingMenu({
+export function ChangeBooking({
   bookingId,
   label,
   chargedSen,
   keptOnCancelSen,
   trips,
-  addTripHref,
   rights,
-  cancellable,
+  children,
 }: {
   bookingId: string;
   /** "HTB-0042". */
@@ -112,113 +131,15 @@ export function ChangeBookingMenu({
   /** What it would still charge cancelled: its completed trips and its charges. */
   keptOnCancelSen: number;
   trips: readonly ChangeTrip[];
-  addTripHref: string | null;
   rights: ChangeRights;
-  /** Not cancelled or completed. */
-  cancellable: boolean;
+  children: ReactNode;
 }) {
   const [open, setOpen] = useState<Open | null>(null);
   const close = () => setOpen(null);
-  const tripRows = trips.filter((t) => t.live);
-  const cancelledRows = rights.manage ? trips.filter((t) => !t.live) : [];
-  const any =
-    cancelledRows.length > 0 ||
-    addTripHref !== null ||
-    rights.extras ||
-    (rights.manage && cancellable) ||
-    tripRows.some((t) => t.amendHref || (rights.price && t.live));
-  if (!any) return null;
-
+  const live = trips.filter((t) => t.live);
   return (
-    <>
-      <Menu
-        label="Change booking"
-        align="end"
-        trigger={
-          <Button variant="primary">
-            Change booking
-            <ChevronDownIcon className="size-4" />
-          </Button>
-        }
-      >
-        {tripRows.map((trip) => (
-          <div key={trip.id} role="group" aria-label={`Trip ${trip.position}`}>
-            <MenuLabel>
-              Trip {trip.position} · {trip.headline}
-            </MenuLabel>
-            {trip.amendHref ? (
-              <MenuItem asChild>
-                <Link href={trip.amendHref}>Amend trip</Link>
-              </MenuItem>
-            ) : null}
-            {rights.extras && trip.open ? (
-              <MenuItem onSelect={() => setOpen({ kind: "stop", trip })}>
-                Add stop
-              </MenuItem>
-            ) : null}
-            {rights.extras ? (
-              <MenuItem onSelect={() => setOpen({ kind: "charge", trip })}>
-                Add charge
-              </MenuItem>
-            ) : null}
-            {rights.price ? (
-              <>
-                <MenuItem
-                  onSelect={() =>
-                    setOpen({ kind: "price", trip, price: "discount" })
-                  }
-                >
-                  Discount
-                </MenuItem>
-                <MenuItem
-                  onSelect={() =>
-                    setOpen({ kind: "price", trip, price: "correction" })
-                  }
-                >
-                  Correct the price
-                </MenuItem>
-              </>
-            ) : null}
-            {rights.manage && trip.open && tripRows.length > 1 ? (
-              <MenuItem
-                className="text-danger"
-                onSelect={() => setOpen({ kind: "cancel-trip", trip })}
-              >
-                Cancel trip
-              </MenuItem>
-            ) : null}
-            <MenuSeparator />
-          </div>
-        ))}
-        {cancelledRows.map((trip) => (
-          <MenuItem
-            key={trip.id}
-            onSelect={() => setOpen({ kind: "reinstate-trip", trip })}
-          >
-            Reinstate trip {trip.position}
-          </MenuItem>
-        ))}
-        {cancelledRows.length > 0 ? <MenuSeparator /> : null}
-        {addTripHref ? (
-          <MenuItem asChild>
-            <Link href={addTripHref}>Add trip</Link>
-          </MenuItem>
-        ) : null}
-        {rights.extras ? (
-          <MenuItem onSelect={() => setOpen({ kind: "charge", trip: null })}>
-            Add charge to the booking
-          </MenuItem>
-        ) : null}
-        {rights.manage && cancellable ? (
-          <MenuItem
-            className="text-danger"
-            onSelect={() => setOpen({ kind: "cancel-booking" })}
-          >
-            Cancel booking
-          </MenuItem>
-        ) : null}
-      </Menu>
-
+    <ChangeContext value={{ trips, rights, change: setOpen }}>
+      {children}
       {open?.kind === "stop" ? (
         <StopDialog
           bookingId={bookingId}
@@ -240,7 +161,7 @@ export function ChangeBookingMenu({
         <ChargeDialog
           bookingId={bookingId}
           chargedSen={chargedSen}
-          trips={tripRows}
+          trips={live}
           trip={open.trip}
           onClose={close}
         />
@@ -248,6 +169,7 @@ export function ChangeBookingMenu({
       {open?.kind === "cancel-trip" ? (
         <CancelDialog
           bookingId={bookingId}
+          chargedSen={chargedSen}
           title={`Cancel trip ${open.trip.position}?`}
           hidden={{ itemId: open.trip.id }}
           action={cancelItemAction}
@@ -267,6 +189,7 @@ export function ChangeBookingMenu({
       {open?.kind === "cancel-booking" ? (
         <CancelDialog
           bookingId={bookingId}
+          chargedSen={chargedSen}
           title={`Cancel booking ${label}?`}
           hidden={{ bookingId }}
           action={cancelBookingAction}
@@ -275,59 +198,153 @@ export function ChangeBookingMenu({
           onClose={close}
         />
       ) : null}
-    </>
+    </ChangeContext>
   );
 }
 
 /**
- * What saving would bill at a new total, asked as the amounts change and
- * shown under the fields: "Saving issues HTI-0013 for RM 90.00." Null
- * while there is no total to ask about, or the answer is on its way.
+ * "Change trip" on a trip's card: amend it, add a stop or a charge, a
+ * discount or a correction, cancel it; or, cancelled, reinstate it.
+ * Nothing for an admin who may do none of them.
  */
-function useBillingPreview(bookingId: string, chargedSen: number | null) {
-  const [answer, setAnswer] = useState<{
-    for: number;
-    sentence: string;
-  } | null>(null);
-  useEffect(() => {
-    if (chargedSen === null || chargedSen < 0) return;
-    let live = true;
-    const timer = setTimeout(async () => {
-      const result = await answerOf(
-        billingPreviewAction(bookingId, chargedSen),
-      );
-      if (live && "sentence" in result)
-        setAnswer({ for: chargedSen, sentence: result.sentence });
-    }, 250);
-    return () => {
-      live = false;
-      clearTimeout(timer);
-    };
-  }, [bookingId, chargedSen]);
-  return chargedSen !== null && answer?.for === chargedSen
-    ? answer.sentence
-    : null;
+export function TripChangeMenu({ tripId }: { tripId: string }) {
+  const { trips, rights, change } = useChange();
+  const trip = trips.find((t) => t.id === tripId);
+  if (!trip) return null;
+  const others = trips.filter((t) => t.live && t.id !== trip.id).length;
+
+  if (!trip.live) {
+    if (!rights.manage) return null;
+    return (
+      <Button
+        size="sm"
+        variant="secondary"
+        onClick={() => change({ kind: "reinstate-trip", trip })}
+      >
+        Reinstate trip
+      </Button>
+    );
+  }
+
+  const items: ReactNode[] = [];
+  if (trip.amendHref) {
+    items.push(
+      <MenuItem key="amend" asChild>
+        <Link href={trip.amendHref}>Amend trip</Link>
+      </MenuItem>,
+    );
+  }
+  if (rights.extras && trip.open) {
+    items.push(
+      <MenuItem key="stop" onSelect={() => change({ kind: "stop", trip })}>
+        Add stop
+      </MenuItem>,
+    );
+  }
+  if (rights.extras) {
+    items.push(
+      <MenuItem key="charge" onSelect={() => change({ kind: "charge", trip })}>
+        Add charge
+      </MenuItem>,
+    );
+  }
+  if (rights.price) {
+    items.push(
+      <MenuItem
+        key="discount"
+        onSelect={() => change({ kind: "price", trip, price: "discount" })}
+      >
+        Discount
+      </MenuItem>,
+      <MenuItem
+        key="correction"
+        onSelect={() => change({ kind: "price", trip, price: "correction" })}
+      >
+        Correct the price
+      </MenuItem>,
+    );
+  }
+  // The booking's last live trip goes with the booking: Cancel booking.
+  const cancel = rights.manage && trip.open && others > 0;
+  if (items.length === 0 && !cancel) return null;
+
+  return (
+    <Menu
+      label={`Change trip ${trip.position}`}
+      align="end"
+      trigger={
+        <Button size="sm" variant="secondary">
+          Change trip
+          <ChevronDownIcon className="size-4" />
+        </Button>
+      }
+    >
+      {items}
+      {cancel ? (
+        <>
+          {items.length > 0 ? <MenuSeparator /> : null}
+          <MenuItem
+            className="text-danger"
+            onSelect={() => change({ kind: "cancel-trip", trip })}
+          >
+            Cancel trip
+          </MenuItem>
+        </>
+      ) : null}
+    </Menu>
+  );
 }
 
-/** The new total and what saving bills, under a dialog's fields. */
-function BillingLine({
-  bookingId,
-  chargedSen,
+/**
+ * "Change booking" in the booking's header: what belongs to the booking
+ * rather than one trip: add a trip, a charge to the whole booking, cancel
+ * it. Each trip's own changes are on its card. Nothing for an admin who
+ * may do none of them.
+ */
+export function BookingChangeMenu({
+  addTripHref,
+  cancellable,
 }: {
-  bookingId: string;
-  chargedSen: number | null;
+  addTripHref: string | null;
+  /** Not cancelled or completed. */
+  cancellable: boolean;
 }) {
-  const sentence = useBillingPreview(bookingId, chargedSen);
-  if (chargedSen === null) return null;
+  const { rights, change } = useChange();
+  const cancel = rights.manage && cancellable;
+  if (!addTripHref && !rights.extras && !cancel) return null;
   return (
-    <Notice tone="info">
-      <span className="block font-semibold">
-        New total {formatMyr(chargedSen)}
-      </span>
-      <span className="block">
-        {sentence ?? "Working out what saving bills…"}
-      </span>
-    </Notice>
+    <Menu
+      label="Change booking"
+      align="end"
+      trigger={
+        <Button variant="primary">
+          Change booking
+          <ChevronDownIcon className="size-4" />
+        </Button>
+      }
+    >
+      {addTripHref ? (
+        <MenuItem asChild>
+          <Link href={addTripHref}>Add trip</Link>
+        </MenuItem>
+      ) : null}
+      {rights.extras ? (
+        <MenuItem onSelect={() => change({ kind: "charge", trip: null })}>
+          Add charge to the booking
+        </MenuItem>
+      ) : null}
+      {cancel ? (
+        <>
+          {addTripHref || rights.extras ? <MenuSeparator /> : null}
+          <MenuItem
+            className="text-danger"
+            onSelect={() => change({ kind: "cancel-booking" })}
+          >
+            Cancel booking
+          </MenuItem>
+        </>
+      ) : null}
+    </Menu>
   );
 }
 
@@ -459,6 +476,7 @@ function PriceDialog({
       </div>
       <BillingLine
         bookingId={bookingId}
+        nowSen={chargedSen}
         chargedSen={price === null ? null : chargedSen - trip.priceSen + price}
       />
     </ChangeDialog>
@@ -574,6 +592,7 @@ function ChargeDialog({
       </Field>
       <BillingLine
         bookingId={bookingId}
+        nowSen={chargedSen}
         chargedSen={charge === null ? null : chargedSen + charge}
       />
     </ChangeDialog>
@@ -583,6 +602,7 @@ function ChargeDialog({
 /** Cancel a trip or the booking, with a fee or none. */
 function CancelDialog({
   bookingId,
+  chargedSen,
   title,
   hidden,
   action,
@@ -591,6 +611,8 @@ function CancelDialog({
   onClose,
 }: {
   bookingId: string;
+  /** What the booking charges now. */
+  chargedSen: number;
   title: string;
   hidden: Record<string, string>;
   action: Parameters<typeof useActionForm>[0];
@@ -635,6 +657,7 @@ function CancelDialog({
       </div>
       <BillingLine
         bookingId={bookingId}
+        nowSen={chargedSen}
         chargedSen={feeSen === null ? null : remainingSen + feeSen}
       />
     </ChangeDialog>
@@ -885,6 +908,7 @@ function StopDialog({
           </Field>
           <BillingLine
             bookingId={bookingId}
+            nowSen={chargedSen}
             chargedSen={
               priceSen === null ? null : chargedSen - trip.priceSen + priceSen
             }

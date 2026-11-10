@@ -5,20 +5,16 @@ import {
   entriesSeenBy,
   formatLocalDateTime,
   formatMyr,
-  isCredit,
   isPaymentTerms,
   PAYMENT_TERMS_HINTS,
   PAYMENT_TERMS_LABELS,
-  periodLabel,
   type BusinessProfile,
 } from "@repo/db";
 import {
-  businessRunPeriod,
   getBusiness,
   listActivityFor,
   listBookings,
   listBusinessInvoices,
-  listUnbilled,
   type Business,
 } from "@repo/db/server";
 import { Card, CardTitle, CARD_LINK } from "@repo/console/Card";
@@ -62,10 +58,8 @@ import {
   AddAgentForm,
   AgentStatusControl,
   ChangeTermsControl,
-  CreateRunControl,
   EditAgentControl,
 } from "../_components/AgentControls";
-import { BillNowControl } from "../../invoices/_components/BillNowControl";
 
 /**
  * Route: /~/agents/[id], and /~/agents/new to add one. An agent's page:
@@ -121,21 +115,17 @@ function profileOf(agent: Business): BusinessProfile {
 async function agentScreen(id: string) {
   const agent = await getBusiness(id);
   if (!agent) notFound();
-  const [permissions, unbilled, invoices, bookings, entries] =
-    await Promise.all([
-      getPermissions(),
-      listUnbilled(id),
-      listBusinessInvoices(id),
-      listBookings({ businessId: id }, { take: 10 }),
-      listActivityFor("business", id),
-    ]);
+  const [permissions, invoices, bookings, entries] = await Promise.all([
+    getPermissions(),
+    listBusinessInvoices(id),
+    listBookings({ businessId: id }, { take: 10 }),
+    listActivityFor("business", id),
+  ]);
   const finance = permissions.includes("invoices.manage");
   const terms = isPaymentTerms(agent.paymentTerms)
     ? agent.paymentTerms
     : "none";
-  const period = businessRunPeriod(terms);
   const href = agentHref(id);
-  const unbilledSen = unbilled.reduce((sum, b) => sum + b.unbilledSen, 0);
 
   const details: [string, ReactNode][] = [
     ["Contact", agent.contactName],
@@ -181,93 +171,6 @@ async function agentScreen(id: string) {
       <DetailColumns
         main={
           <>
-            <Card flush>
-              <CardTitle
-                inset
-                meta={unbilled.length > 0 ? formatMyr(unbilledSen) : null}
-              >
-                Not invoiced yet
-              </CardTitle>
-              {isCredit(terms) && period && finance ? (
-                <div className="grid gap-1.5 border-b border-hairline px-5 py-3.5">
-                  <CreateRunControl
-                    id={id}
-                    period={periodLabel(period)}
-                    disabled={unbilled.length === 0}
-                  />
-                  <p className="text-caption text-muted">
-                    Ticks the bookings that first pick up in{" "}
-                    {periodLabel(period)}; earlier ones are listed unticked.
-                    Nothing is numbered until you issue it.
-                  </p>
-                </div>
-              ) : null}
-              <Table bare>
-                <THead>
-                  <Th>Booking</Th>
-                  <Th align="right">Not invoiced</Th>
-                  {finance ? <Th /> : null}
-                </THead>
-                <TBody>
-                  {unbilled.length === 0 ? (
-                    <EmptyRow colSpan={finance ? 3 : 2}>
-                      Every booking of {agent.name} is billed.
-                    </EmptyRow>
-                  ) : (
-                    unbilled.map((booking) => (
-                      <tr key={booking.id}>
-                        <Td>
-                          <TwoLines
-                            top={
-                              <Link
-                                href={bookingHref(null, booking.id)}
-                                className="font-semibold underline-offset-4 hover:underline"
-                              >
-                                {booking.label}
-                              </Link>
-                            }
-                            bottom={[
-                              booking.contactName,
-                              formatLocalDateTime(booking.startsAt),
-                              booking.draftId
-                                ? "On the month-end draft"
-                                : booking.openInvoice
-                                  ? "On its open invoice"
-                                  : null,
-                            ]
-                              .filter(Boolean)
-                              .join(" · ")}
-                            className="[&>span]:whitespace-normal"
-                          />
-                        </Td>
-                        <Td className="text-right whitespace-nowrap tabular-nums">
-                          <span className="block font-semibold text-ink">
-                            {formatMyr(booking.unbilledSen)}
-                          </span>
-                          {booking.unbilledSen !== booking.chargedSen ? (
-                            <span className="block text-caption text-muted">
-                              of {formatMyr(booking.chargedSen)}
-                            </span>
-                          ) : null}
-                        </Td>
-                        {finance ? (
-                          <Td className="text-right">
-                            {booking.draftId ? null : (
-                              <BillNowControl
-                                bookingId={booking.id}
-                                label={booking.label}
-                                unbilledSen={booking.unbilledSen}
-                              />
-                            )}
-                          </Td>
-                        ) : null}
-                      </tr>
-                    ))
-                  )}
-                </TBody>
-              </Table>
-            </Card>
-
             <Card flush>
               <CardTitle inset>Invoices</CardTitle>
               <InvoiceTable

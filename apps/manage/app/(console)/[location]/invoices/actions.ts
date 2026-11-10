@@ -8,12 +8,11 @@ import {
   textOf,
 } from "@repo/db";
 import {
+  billBookingAlone,
   billBookingNow,
-  deleteDraft,
-  issueDraft,
+  issueMonthEnd,
   recordPayment,
   reversePayment,
-  setDraftLine,
   voidInvoice,
 } from "@repo/db/server";
 import {
@@ -25,11 +24,12 @@ import {
 } from "@repo/console/action-state";
 import { actorOf, getAdmin } from "../../../_lib/access";
 import { revalidateLocation } from "../../../_lib/revalidate";
-import { invoiceHref, invoicesHref } from "../../../_lib/routes";
+import { invoiceHref } from "../../../_lib/routes";
 
 /**
  * Finance's moves on invoices and credit notes (`invoices.manage`): issue
- * what a booking owes now, in full or a part, tick and issue a month-end draft, void and reissue,
+ * what a booking owes now, in full, issue an agent's month-end invoice
+ * or bill one of its bookings on its own, void and reissue,
  * record a payment or a refund, reverse a wrong entry. Each re-checks the
  * session and the key. Amounts are never typed on an invoice: they come
  * from its bookings. See docs/261108-billing-and-revisions.md.
@@ -39,10 +39,7 @@ async function finance() {
   return getAdmin("invoices.manage");
 }
 
-/**
- * Issues what a booking has not been billed yet, now: an invoice, or credit
- * notes for less. An amount typed bills part of it (a deposit); empty, all.
- */
+/** Issues what a booking has not been billed yet, now, in full: its open invoice, or credit notes for less. */
 export async function billNowAction(
   _previous: ActionState,
   formData: FormData,
@@ -51,43 +48,14 @@ export async function billNowAction(
   if (!admin) return FORBIDDEN;
   const bookingId = textOf(formData.get("bookingId"));
   if (!bookingId) return STALE;
-  const typed = textOf(formData.get("amount"));
-  const amount = typed === "" ? undefined : parseRinggit(typed);
-  if (amount === null) {
-    return {
-      error: "Enter the amount in RM, such as 350.00.",
-      field: "amount",
-    };
-  }
-  const result = await billBookingNow(actorOf(admin), bookingId, {
-    amountSen: amount,
-  });
+  const result = await billBookingNow(actorOf(admin), bookingId);
   if (!result.ok) return refusalOf(result);
   revalidateLocation();
   return null;
 }
 
-/** Ticks or unticks a booking on a draft. */
-export async function setDraftLineAction(
-  _previous: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  const admin = await finance();
-  if (!admin) return FORBIDDEN;
-  const invoiceId = textOf(formData.get("invoiceId"));
-  const bookingId = textOf(formData.get("bookingId"));
-  if (!invoiceId || !bookingId) return STALE;
-  const result = await setDraftLine(
-    invoiceId,
-    bookingId,
-    flagOf(formData.get("ticked")),
-  );
-  if (result.ok) revalidateLocation();
-  return stateOf(result);
-}
-
-/** Issues a draft, numbered now, and opens the invoice. */
-export async function issueDraftAction(
+/** Issues an agent's open month-end invoice once its period has ended. */
+export async function issueMonthEndAction(
   _previous: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
@@ -95,25 +63,25 @@ export async function issueDraftAction(
   if (!admin) return FORBIDDEN;
   const invoiceId = textOf(formData.get("invoiceId"));
   if (!invoiceId) return STALE;
-  const result = await issueDraft(actorOf(admin), invoiceId);
+  const result = await issueMonthEnd(actorOf(admin), invoiceId);
+  if (!result.ok) return refusalOf(result);
+  revalidateLocation();
+  return null;
+}
+
+/** Moves a booking off its agent's month-end invoice onto its own, and opens that one. */
+export async function billAloneAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await finance();
+  if (!admin) return FORBIDDEN;
+  const bookingId = textOf(formData.get("bookingId"));
+  if (!bookingId) return STALE;
+  const result = await billBookingAlone(actorOf(admin), bookingId);
   if (!result.ok) return refusalOf(result);
   revalidateLocation();
   return { href: invoiceHref(result.id) };
-}
-
-/** Deletes a draft; nothing was numbered. */
-export async function deleteDraftAction(
-  _previous: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
-  const admin = await finance();
-  if (!admin) return FORBIDDEN;
-  const invoiceId = textOf(formData.get("invoiceId"));
-  if (!invoiceId) return STALE;
-  const result = await deleteDraft(actorOf(admin), invoiceId);
-  if (!result.ok) return refusalOf(result);
-  revalidateLocation();
-  return { href: invoicesHref() };
 }
 
 /** Voids a document with why, and with its replacement when asked; opens the replacement. */
@@ -164,11 +132,14 @@ export async function recordPaymentAction(
   }
   const note = textOf(formData.get("note")).slice(0, 200) || null;
   const refund = flagOf(formData.get("refund"));
+  // None on a month-end invoice: spread over its bookings.
+  const bookingId = textOf(formData.get("bookingId")) || undefined;
   const result = await recordPayment(actorOf(admin), invoiceId, {
     amountSen: refund ? -amount : amount,
     method,
     paidOn,
     note,
+    bookingId,
   });
   if (result.ok) revalidateLocation();
   return stateOf(result);

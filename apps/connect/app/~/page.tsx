@@ -10,6 +10,7 @@ import {
 import { CalendarCheckIcon, InboxIcon } from "@repo/ui/icons";
 import { AccessScreen } from "../_components/AccessScreen";
 import { GettingStarted } from "../_components/GettingStarted";
+import { InstallApp } from "../_components/InstallApp";
 import { OfferCard } from "../_components/OfferCard";
 import { VendorOfferCard } from "../_components/VendorOfferCard";
 import {
@@ -101,6 +102,7 @@ async function DriverHome({
         </div>
       }
     >
+      <InstallApp />
       {jobs.offers.length > 0 ? (
         <section className="grid gap-3">
           <SectionTitle count={jobs.offers.length}>
@@ -195,6 +197,7 @@ async function MemberHome({
         </div>
       }
     >
+      <InstallApp />
       {offerCount > 0 ? (
         <section className="grid gap-3">
           <SectionTitle count={offerCount}>

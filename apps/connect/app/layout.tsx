@@ -2,10 +2,12 @@ import "@repo/ui/styles.css";
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
+import Script from "next/script";
 import { clerkAppearance } from "@repo/ui/clerk-appearance";
 import { cx } from "@repo/ui/cx";
 import { Toaster } from "@repo/ui/toast";
 import { fontVars } from "./fonts";
+import { INSTALL_PROMPT_SCRIPT } from "./_lib/install-prompt";
 
 export const metadata: Metadata = {
   title: "Heavenly Travel Connect",
@@ -41,6 +43,9 @@ export default function RootLayout({
         <body>
           {children}
           <Toaster />
+          <Script id="install-prompt" strategy="beforeInteractive">
+            {INSTALL_PROMPT_SCRIPT}
+          </Script>
         </body>
       </html>
     </ClerkProvider>

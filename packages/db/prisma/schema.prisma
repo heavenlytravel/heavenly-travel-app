@@ -210,6 +210,10 @@ model TripPart {
   /// A coach trip's driver only: the tip, out of the customer's total,
   /// that Operation sets for the driver; 0 otherwise.
   tipSen           Int         @default(0)
+  /// A vehicle part only: why its vehicle is not of the class booked, in
+  /// the words of whoever named it, Operation or the vendor; null when it
+  /// is, or none is named yet. See src/fulfilment-rules.ts, the class.
+  classReason      String?
   vendorAcceptedAt DateTime?
   /// The driver's own acceptance; for a vehicle, unused.
   driverAcceptedAt DateTime?

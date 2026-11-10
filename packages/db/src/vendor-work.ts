@@ -211,7 +211,8 @@ export async function listVendorOffers(
 
 /**
  * The vendor names its vehicle, driver or guide for a role an offer left to it.
- * The writer checks the record is the vendor's, in service, and free.
+ * The writer checks the record is the vendor's, in service, and free, and
+ * a vehicle not of the class booked has the vendor's reason.
  */
 export async function nameForVendor(
   actor: Actor,
@@ -219,6 +220,7 @@ export async function nameForVendor(
   offerId: string,
   role: PartRole,
   recordId: string,
+  classReason: string | null = null,
 ): Promise<Change & { assigned?: string[] }> {
   const parts = (await openParts(vendorId, offerId)).get(offerId) ?? [];
   const ofRole = parts.filter((p) => p.role === role);
@@ -229,6 +231,7 @@ export async function nameForVendor(
     actor,
     ofRole.map((p) => p.id),
     recordId,
+    classReason,
   );
 }
 

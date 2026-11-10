@@ -484,3 +484,31 @@ describe("describeActivity, the fleet", () => {
     );
   });
 });
+
+describe("describeActivity, a vehicle of another class", () => {
+  it("says the class given and why", () => {
+    assert.equal(
+      describeActivity({
+        action: "booking.offer.sent",
+        before: null,
+        after: {
+          role: "vehicle",
+          positions: [1],
+          named: "VLE1234",
+          vendorName: "Ali Transport",
+          classChange: "MPV instead of Sedan",
+          classReason: "No sedan free that morning",
+        },
+      }),
+      "Asked for the vehicle of trip 1 (VLE1234, Ali Transport), MPV instead of Sedan: No sedan free that morning",
+    );
+    assert.equal(
+      describeActivity({
+        action: "booking.part.named",
+        before: null,
+        after: { role: "vehicle", positions: [2], named: "VLE1234" },
+      }),
+      "Named the vehicle of trip 2 (VLE1234)",
+    );
+  });
+});

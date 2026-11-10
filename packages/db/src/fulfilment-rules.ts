@@ -488,3 +488,96 @@ export function owesAfterCancel(
     cancellationDeadline(trip.startsAt, trip.cancellationCutoffHours).getTime()
   );
 }
+
+// ---------------------------------------------------------------------------
+// The vehicle's class: the one booked, or another with a reason
+// ---------------------------------------------------------------------------
+
+/**
+ * What a trip's class reads: the class booked and what is named on it
+ * already, its vehicle's class and the classes its driver may drive.
+ * Any vehicle may do a trip; one of another class than booked needs a
+ * reason (`classChangeOf`), whoever names it, Operation or the vendor.
+ * The driver follows the vehicle named, not the class booked, and one who
+ * does not drive its class is only warned about. Nothing is re-priced:
+ * the customer pays what they booked.
+ */
+export type ClassRule = {
+  /** Null for a trip without a class. */
+  booked: { id: string; name: string } | null;
+  /** The class of the vehicle named on it; null while none is. */
+  vehicle: { id: string; name: string } | null;
+  /** The driver named on it and the classes they may drive; null while none is. */
+  driver: { name: string; classIds: readonly string[] } | null;
+};
+
+/** The longest reason for another class than booked. */
+export const CLASS_REASON_MAX_LENGTH = 200;
+
+/** "MPV instead of Sedan" when a vehicle of this class is not the class booked; null when it is. */
+export function classChangeOf(
+  booked: ClassRule["booked"],
+  vehicleClass: { id: string; name: string } | null | undefined,
+): string | null {
+  return vehicleClass && booked && vehicleClass.id !== booked.id
+    ? `${vehicleClass.name} instead of ${booked.name}`
+    : null;
+}
+
+/** The warning for a vehicle of this class whose trip's driver, named already, does not drive it; null when they do. */
+export function vehicleDriverWarning(
+  rule: ClassRule,
+  vehicleClass: { id: string; name: string },
+): string | null {
+  return rule.driver && !rule.driver.classIds.includes(vehicleClass.id)
+    ? `${rule.driver.name.split(" ")[0]} does not drive ${vehicleClass.name}`
+    : null;
+}
+
+/**
+ * The warning for a driver who drives these classes and not the trip's:
+ * its vehicle's, once one is named; the class booked before. Null when
+ * they drive it, or the trip has none.
+ */
+export function driverClassWarning(
+  rule: ClassRule,
+  classIds: readonly string[],
+): string | null {
+  const driven = rule.vehicle ?? rule.booked;
+  return driven && !classIds.includes(driven.id)
+    ? `Does not drive ${driven.name}`
+    : null;
+}
+
+/**
+ * A candidate as a picker's option for some trips: its name, with the
+ * first reason it cannot do one of them, greyed, else its class when not
+ * the one booked ("VLE1234 · Toyota Innova · MPV instead of Sedan").
+ */
+export function candidateOption(
+  candidate: {
+    id: string;
+    name: string;
+    trips: Record<string, { reasons: string[]; classChange: string | null }>;
+  },
+  itemIds: readonly string[],
+): { value: string; label: string; disabled: boolean } {
+  const fits = itemIds.flatMap((id) => candidate.trips[id] ?? []);
+  const reason = fits.flatMap((fit) => fit.reasons)[0];
+  const note = reason ?? fits.find((fit) => fit.classChange)?.classChange;
+  return {
+    value: candidate.id,
+    label: note ? `${candidate.name} · ${note}` : candidate.name,
+    disabled: reason !== undefined,
+  };
+}
+
+/** "MPV instead of Sedan" when a candidate is of another class than booked on one of these trips, which then asks why; null otherwise. */
+export function classChangeFor(
+  candidate: { trips: Record<string, { classChange: string | null }> } | null,
+  itemIds: readonly string[],
+): string | null {
+  return (
+    itemIds.map((id) => candidate?.trips[id]?.classChange).find(Boolean) ?? null
+  );
+}

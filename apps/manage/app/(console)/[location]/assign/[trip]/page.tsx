@@ -194,7 +194,9 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
                       description={
                         role === "guide" && trip.guideLanguage
                           ? `Choose the vendor, then a guide who speaks ${trip.guideLanguage}, or Any to let them assign one.${trip.guideRequest ? ` ${trip.guideRequest} was asked for too: amend the trip if a guide is found.` : ""}`
-                          : `Choose the vendor, then their ${PART_ROLE_LABELS[role].toLowerCase()} or Any to let them assign it.`
+                          : role === "vehicle"
+                            ? "Choose the vendor, then their vehicle or Any to let them assign it. A vehicle of another class than booked asks why."
+                            : `Choose the vendor, then their ${PART_ROLE_LABELS[role].toLowerCase()} or Any to let them assign it.`
                       }
                     >
                       {PART_ROLE_LABELS[role]}
@@ -219,6 +221,7 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
                   bookingId={booking.id}
                   role={role}
                   part={part}
+                  classChange={role === "vehicle" ? trip.classChange : null}
                   partIds={siblings.map((s) => s.id)}
                   positions={siblings.map((s) => s.position)}
                   itemIds={siblings.map((s) => s.itemId)}

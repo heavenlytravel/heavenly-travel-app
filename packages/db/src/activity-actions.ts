@@ -709,11 +709,18 @@ function partSentence(action: string, after: unknown) {
   const recorded =
     field(after, "recorded") === true ? ", recorded by staff" : "";
   const by = field(after, "by") === "driver" ? "the driver" : "the vendor";
+  // A vehicle not of the class booked, and why: ", MPV instead of Sedan: …".
+  const change = field(after, "classChange");
+  const why = field(after, "classReason");
+  const classNote =
+    typeof change === "string"
+      ? `, ${change}${typeof why === "string" ? `: ${why}` : ""}`
+      : "";
   switch (action) {
     case "booking.offer.sent":
       return field(after, "acceptedNow") === true
-        ? `Assigned ${what} and accepted it`
-        : `Asked for ${what}`;
+        ? `Assigned ${what} and accepted it${classNote}`
+        : `Asked for ${what}${classNote}`;
     case "booking.part.accepted":
       return `Accepted ${what} for ${by}${recorded}`;
     case "booking.part.declined": {
@@ -721,7 +728,7 @@ function partSentence(action: string, after: unknown) {
       return `Declined ${what} for ${by}${recorded}${typeof reason === "string" ? `: ${reason}` : ""}`;
     }
     case "booking.part.named":
-      return `Named ${what}`;
+      return `Named ${what}${classNote}`;
     case "booking.part.released": {
       const cause = field(after, "cause");
       return `${RELEASE_CAUSES[typeof cause === "string" ? cause : "released"] ?? "Released"} ${what}`;

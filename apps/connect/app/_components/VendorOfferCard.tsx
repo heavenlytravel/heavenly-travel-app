@@ -9,11 +9,13 @@ import {
 import type { OfferRole, VendorOfferView } from "@repo/db/server";
 import { cx } from "@repo/ui/cx";
 import { FormError } from "@repo/ui/form-error";
+import { ClassReasonField } from "@repo/console/ClassReasonField";
 import { useActionForm } from "@repo/console/use-action-form";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
 import { CarFrontIcon, ClockIcon, UserRoundIcon } from "@repo/ui/icons";
 import { Languages } from "lucide-react";
+import { useState } from "react";
 import { Countdown } from "../_ui/Countdown";
 import { Avatar, Pill, Plate } from "../_ui/parts";
 import { answerVendorOfferAction, nameRecordAction } from "../vendor-actions";
@@ -163,6 +165,10 @@ function RoleRow({ offerId, role }: { offerId: string; role: OfferRole }) {
 
 /** Picks the vendor's own vehicle, driver or tour guide for a role it was left to choose, by tapping one. */
 function NameRecord({ offerId, role }: { offerId: string; role: OfferRole }) {
+  const [chosen, setChosen] = useState("");
+  // A vehicle of another class than booked asks why.
+  const classChange =
+    role.choices.find((c) => c.id === chosen)?.classChange ?? null;
   const { pending, error, formProps } = useActionForm(nameRecordAction, {
     done: `${PART_ROLE_LABELS[role.role]} chosen.`,
   });
@@ -193,6 +199,8 @@ function NameRecord({ offerId, role }: { offerId: string; role: OfferRole }) {
                 value={choice.id}
                 required
                 disabled={blocked}
+                checked={chosen === choice.id}
+                onChange={() => setChosen(choice.id)}
                 className="peer sr-only"
               />
               <span className="flex items-center gap-3 rounded-control border border-edge bg-white px-3 py-2.5 transition-colors peer-checked:border-brand peer-checked:ring-1 peer-checked:ring-brand peer-focus-visible:outline-(length:--ring-width) peer-focus-visible:outline-offset-(length:--ring-offset) peer-focus-visible:outline-ring peer-disabled:opacity-55">
@@ -203,7 +211,13 @@ function NameRecord({ offerId, role }: { offerId: string; role: OfferRole }) {
                   <span className="truncate text-xs text-muted">
                     {blocked
                       ? choice.reasons.join(", ")
-                      : [choice.locationName, ...choice.warnings].join(" · ")}
+                      : [
+                          choice.locationName,
+                          choice.classChange,
+                          ...choice.warnings,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
                   </span>
                 </span>
                 <span
@@ -215,6 +229,7 @@ function NameRecord({ offerId, role }: { offerId: string; role: OfferRole }) {
           );
         })}
       </fieldset>
+      {classChange ? <ClassReasonField change={classChange} /> : null}
       <Button type="submit" variant="secondary" pending={pending}>
         {pending ? "Saving…" : `Choose this ${roleWord(role.role)}`}
       </Button>

@@ -2,6 +2,12 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   assignStateOf,
+  candidateOption,
+  classChangeFor,
+  classChangeOf,
+  driverClassWarning,
+  vehicleDriverWarning,
+  type ClassRule,
   defaultRespondBy,
   estimateDriveMinutes,
   firstClash,
@@ -405,5 +411,60 @@ describe("untilPickup", () => {
       label: "Started",
       soon: true,
     });
+  });
+});
+
+describe("the class given: booked, or another with a reason", () => {
+  const sedan = { id: "sedan", name: "Sedan" };
+  const mpv = { id: "mpv", name: "MPV" };
+  const rule = (over: Partial<ClassRule> = {}): ClassRule => ({
+    booked: sedan,
+    vehicle: null,
+    driver: null,
+    ...over,
+  });
+
+  it("names another class than booked, up or down", () => {
+    assert.equal(classChangeOf(sedan, mpv), "MPV instead of Sedan");
+    assert.equal(classChangeOf(mpv, sedan), "Sedan instead of MPV");
+    assert.equal(classChangeOf(sedan, sedan), null);
+    assert.equal(classChangeOf(null, mpv), null);
+  });
+
+  it("warns, never refuses, when the driver named does not drive the vehicle", () => {
+    const named = rule({
+      driver: { name: "Ali bin Abu", classIds: ["sedan"] },
+    });
+    assert.equal(vehicleDriverWarning(named, mpv), "Ali does not drive MPV");
+    assert.equal(vehicleDriverWarning(named, sedan), null);
+    assert.equal(vehicleDriverWarning(rule(), mpv), null);
+  });
+
+  it("checks the driver against the vehicle named, else the class booked", () => {
+    const named = rule({ vehicle: mpv });
+    assert.equal(driverClassWarning(named, ["mpv"]), null);
+    assert.equal(driverClassWarning(named, ["sedan"]), "Does not drive MPV");
+    assert.equal(driverClassWarning(rule(), ["mpv"]), "Does not drive Sedan");
+    assert.equal(driverClassWarning(rule({ booked: null }), []), null);
+  });
+
+  it("labels the option, a reason it cannot first", () => {
+    const candidate = {
+      id: "v1",
+      name: "VLE1234 · Toyota Innova",
+      trips: {
+        a: { reasons: [], classChange: "MPV instead of Sedan" },
+        b: { reasons: ["Road tax expired"], classChange: null },
+      },
+    };
+    assert.deepEqual(candidateOption(candidate, ["a"]), {
+      value: "v1",
+      label: "VLE1234 · Toyota Innova · MPV instead of Sedan",
+      disabled: false,
+    });
+    assert.equal(candidateOption(candidate, ["a", "b"]).disabled, true);
+    assert.equal(classChangeFor(candidate, ["b"]), null);
+    assert.equal(classChangeFor(candidate, ["b", "a"]), "MPV instead of Sedan");
+    assert.equal(classChangeFor(null, ["a"]), null);
   });
 });

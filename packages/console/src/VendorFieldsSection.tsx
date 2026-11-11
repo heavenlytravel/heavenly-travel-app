@@ -1,8 +1,6 @@
 "use client";
 
 import {
-  INVOICE_PERIODS,
-  INVOICE_PERIOD_LABELS,
   VENDOR_FIELD_LABELS,
   VENDOR_KINDS,
   VENDOR_KIND_LABELS,
@@ -12,7 +10,6 @@ import {
   VENDOR_SERVICES_FIELD,
   VENDOR_SERVICE_LABELS,
   vendorFieldsOf,
-  type InvoicePeriod,
   type VendorFields,
 } from "@repo/db";
 import type { VendorWithLocations } from "@repo/db/server";
@@ -24,7 +21,6 @@ import {
   Radio,
   Textarea,
 } from "@repo/ui/field";
-import { cx } from "@repo/ui/cx";
 import { InfoTip } from "@repo/ui/info-tip";
 import { BankCard } from "./BankCard";
 import { Card, CardTitle } from "./Card";
@@ -32,7 +28,7 @@ import { Card, CardTitle } from "./Card";
 /**
  * A vendor's fields, one copy for the admin's vendor form and Connect's
  * registration: company or individual, its name and registration, who
- * the team speaks to, what it offers, how often an agent is invoiced, and
+ * the team speaks to, what it offers, and
  * the locations it serves, where its vehicles and drivers are based. In Connect's registration
  * (`applicant`) the person is asked for apart, as the account's owner,
  * so the contact's fields are left out, and only live locations are
@@ -51,7 +47,7 @@ export function VendorFieldsSection({
   applicant?: boolean;
 }) {
   const fields = vendor ? vendorFieldsOf(vendor) : null;
-  const services = new Set<string>(fields?.services ?? []);
+  const service = fields?.services[0];
   const served = new Set(fields?.locationIds ?? []);
 
   return (
@@ -65,30 +61,32 @@ export function VendorFieldsSection({
         <CardTitle>
           <span className="inline-flex items-center gap-1.5">
             {VENDOR_FIELD_LABELS.services}
-            <InfoTip text="Only transport is assigned for now; the rest keeps a list of suppliers for Reservation." />
+            <InfoTip text="One choice. Vehicles, drivers and tour guides are assigned work; attractions and accommodation keep a list of suppliers for Reservation." />
           </span>
         </CardTitle>
         <FieldGroup className="grid gap-2 sm:grid-cols-3">
-          {/* Agents are added by the team; they book through Connect later. */}
-          {VENDOR_SERVICES.filter(
-            (service) => !applicant || service !== "agent",
-          ).map((service) => (
-            <label key={service} className="flex items-center gap-2 text-sm">
-              <Checkbox
+          {VENDOR_SERVICES.map((value) => (
+            <label key={value} className="flex items-center gap-2 text-sm">
+              <Radio
                 name={VENDOR_SERVICES_FIELD}
-                value={service}
-                defaultChecked={services.has(service)}
+                value={value}
+                required
+                defaultChecked={service === value}
               />
-              {VENDOR_SERVICE_LABELS[service]}
+              {VENDOR_SERVICE_LABELS[value]}
             </label>
           ))}
         </FieldGroup>
-        {applicant ? null : (
-          <InvoicePeriodField
-            className="mt-5"
-            value={fields?.invoicePeriod ?? "month"}
-          />
-        )}
+        {applicant ? (
+          <p className="mt-3 text-xs text-muted">
+            Once you are approved, only the team changes it.
+          </p>
+        ) : vendor ? (
+          <p className="mt-3 text-xs text-muted">
+            To change it, first remove the vehicles, drivers or tour guides the
+            new choice does not cover.
+          </p>
+        ) : null}
       </Card>
 
       <Card>
@@ -213,36 +211,6 @@ export function VendorDetailsFields({
         </Field>
       </div>
     </div>
-  );
-}
-
-/** How often an agent is invoiced: its bookings share one invoice for each period. */
-export function InvoicePeriodField({
-  value,
-  className,
-}: {
-  value: InvoicePeriod;
-  className?: string;
-}) {
-  return (
-    <fieldset className={cx("grid gap-2", className)}>
-      <legend className="mb-1 inline-flex items-center gap-1.5 text-sm font-semibold text-ink">
-        {VENDOR_FIELD_LABELS.invoicePeriod}
-        <InfoTip text="For an agent: its bookings share one invoice for each period, by the day of their first trip." />
-      </legend>
-      <div className="flex flex-wrap gap-4">
-        {INVOICE_PERIODS.map((period) => (
-          <label key={period} className="flex items-center gap-2 text-sm">
-            <Radio
-              name="invoicePeriod"
-              value={period}
-              defaultChecked={value === period}
-            />
-            {INVOICE_PERIOD_LABELS[period]}
-          </label>
-        ))}
-      </div>
-    </fieldset>
   );
 }
 

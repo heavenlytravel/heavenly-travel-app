@@ -20,7 +20,7 @@ export default async function VehiclesPage() {
   const member = await requireMember();
   const fleet = await vendorFleet(member.vendor.id);
   const { vehicles } = fleet;
-  // Only what the vendor offers, by the services it ticked.
+  // Only what the vendor offers, by the one service it chose.
   const add = fleet.adds.vehicles ? (
     <Button asChild variant="secondary" size="sm">
       <Link href="/~/vehicles/new">

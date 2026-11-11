@@ -21,7 +21,7 @@ export default async function GuidesPage() {
   const fleet = await vendorFleet(member.vendor.id);
   const { guides } = fleet;
   if (!guides) notFound();
-  // Only what the vendor offers, by the services it ticked.
+  // Only what the vendor offers, by the one service it chose.
   const add = fleet.adds.guides ? (
     <Button asChild variant="secondary" size="sm">
       <Link href="/~/guides/new">

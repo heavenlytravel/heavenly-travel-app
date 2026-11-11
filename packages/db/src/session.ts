@@ -133,7 +133,7 @@ export type ConnectVendor = {
   name: string;
   isOurs: boolean;
   status: string;
-  /** What it ticked, `VENDOR_SERVICES`: what it may add (`suppliesIt`). */
+  /** What it offers, one of `VENDOR_SERVICES`: what it may add (`suppliesIt`). */
   services: string[];
 };
 

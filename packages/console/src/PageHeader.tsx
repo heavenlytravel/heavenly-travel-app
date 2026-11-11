@@ -49,7 +49,7 @@ export function PageHeader({ title, badge, meta, action }: HeaderProps) {
 
 /**
  * The record a page belongs to, named in its header's line of facts as a
- * link back to it: "HT-4D9DJZ" under "Amend Trip 1", "KV589E" under a
+ * link back to it: "HTB-0042" under "Amend Trip 1", "KV589E" under a
  * vehicle's history. The trail over the title goes no deeper than the
  * record's list.
  */

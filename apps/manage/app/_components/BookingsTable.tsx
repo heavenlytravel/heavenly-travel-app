@@ -2,7 +2,7 @@ import Link from "next/link";
 import {
   bookingLabelOf,
   customerEmailOf,
-  formatInvoiceNumber,
+  documentLabelOf,
   formatLocalDate,
   formatLocalTime,
   formatMyr,
@@ -18,10 +18,7 @@ import {
 import type { BookingWithItems } from "@repo/db/server";
 import { bookingLocations } from "../_lib/booking-locations";
 import { bookingHref, type ScopeSlug } from "../_lib/routes";
-import {
-  BookingStatusBadge,
-  PaymentStatusBadge,
-} from "@repo/console/StatusBadges";
+import { BookingStatusBadge } from "@repo/console/StatusBadges";
 import {
   EmptyRow,
   SortTh,
@@ -43,10 +40,10 @@ const none = <span className="text-muted">—</span>;
 
 /**
  * The bookings table, in the scope on screen, in the columns Reservation
- * and Finance read it by: the booking's own number (HTI-1295-03 on an
- * agent's invoice, the invoice's for a customer of ours), its invoice,
- * the agent and the customer, each trip with its add-ons, the pick-up,
- * the total and whether the invoice is paid. Under `~` it has the column
+ * and Finance read it by: the booking's number (HTB-1042) and status,
+ * its invoices (HTI numbers, or the legacy one it was billed on outside
+ * the system), the agent and the customer, each trip with its add-ons,
+ * the pick-up and the total. Where each invoice stands is on Invoices. Under `~` it has the column
  * of locations, and a booking opens in the scope it was listed in.
  * `bare` is for the table inside a `flush` card. With `sort`, the
  * Booking ID heading sorts by when a booking was made and the Pick-up one
@@ -78,7 +75,7 @@ export function BookingsTable({
       <Th>{label}</Th>
     );
   const showLocation = scope === null;
-  const columns = showLocation ? 10 : 9;
+  const columns = showLocation ? 9 : 8;
   return (
     <Table bare={bare}>
       <THead>
@@ -91,7 +88,6 @@ export function BookingsTable({
         <Th>Add On</Th>
         {heading("pickup", "Pick-up")}
         <Th align="right">Total</Th>
-        <Th>Payment Status</Th>
       </THead>
       <TBody>
         {bookings.length === 0 ? (
@@ -119,16 +115,29 @@ export function BookingsTable({
                   </span>
                 </Td>
                 <Td className="whitespace-nowrap tabular-nums">
-                  {booking.invoice
-                    ? formatInvoiceNumber(booking.invoice.number, null)
-                    : none}
+                  {booking.legacyInvoiceNumber ? (
+                    <>
+                      <span className="block">
+                        {booking.legacyInvoiceNumber}
+                      </span>
+                      <span className="block text-xs text-muted">Legacy</span>
+                    </>
+                  ) : booking.invoiceLines.length > 0 ? (
+                    booking.invoiceLines.map(({ invoice }) => (
+                      <span key={invoice.id} className="block">
+                        {documentLabelOf(invoice)}
+                      </span>
+                    ))
+                  ) : (
+                    none
+                  )}
                 </Td>
                 <Td>
-                  {booking.agent ? (
+                  {booking.business ? (
                     <>
-                      <span className="block">{booking.agent.name}</span>
+                      <span className="block">{booking.business.name}</span>
                       <span className="block max-w-48 truncate text-xs text-muted">
-                        {booking.agent.contactEmail}
+                        {booking.business.contactEmail}
                       </span>
                     </>
                   ) : (
@@ -178,15 +187,6 @@ export function BookingsTable({
                 </Td>
                 <Td className="text-right font-medium whitespace-nowrap tabular-nums">
                   {formatMyr(booking.priceTotalSen)}
-                </Td>
-                <Td>
-                  {booking.invoice ? (
-                    <PaymentStatusBadge
-                      status={booking.invoice.paymentStatus}
-                    />
-                  ) : (
-                    none
-                  )}
                 </Td>
               </tr>
             );

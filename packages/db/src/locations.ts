@@ -342,6 +342,53 @@ export async function setSafetyBuffer(
   });
 }
 
+/** What a stop added to a trip here suggests for its driver: pay per extra km and a fee a stop, each null when not entered. */
+export type StopPay = {
+  driverPayPerKmSen: number | null;
+  stopFeeSen: number | null;
+};
+
+/**
+ * Sets what a stop added to a trip here suggests for its driver's pay
+ * (./stops' `stopPaySuggestion`). Operation's. Saving what is there logs
+ * nothing.
+ */
+export async function setStopPay(
+  actor: Actor,
+  id: string,
+  pay: StopPay,
+): Promise<Change> {
+  for (const value of [pay.driverPayPerKmSen, pay.stopFeeSen]) {
+    if (
+      value !== null &&
+      (!Number.isInteger(value) || value < 0 || value > 1_000_000)
+    ) {
+      return refuse("Enter the pay in RM, or leave it empty.");
+    }
+  }
+  return db.$transaction(async (tx) => {
+    const location = await tx.location.findUnique({
+      where: { id },
+      select: { driverPayPerKmSen: true, stopFeeSen: true },
+    });
+    if (!location) return NOT_FOUND;
+    if (
+      location.driverPayPerKmSen === pay.driverPayPerKmSen &&
+      location.stopFeeSen === pay.stopFeeSen
+    ) {
+      return { ok: true };
+    }
+    await tx.location.update({ where: { id }, data: pay });
+    await logActivity(tx, actor, {
+      action: "location.stop-pay.updated",
+      entityId: id,
+      before: location,
+      after: pay,
+    });
+    return { ok: true };
+  });
+}
+
 /**
  * Changes the name, the slug and the states. The slug is locked once the
  * location has been live. The states cannot change so that a saved

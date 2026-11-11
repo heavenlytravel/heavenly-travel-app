@@ -6,6 +6,8 @@ import {
   suppliesIt,
   checkReviewNote,
   parseVendorFields,
+  serviceChangeRefusalOf,
+  vendorAddsOf,
   vendorFieldsOf,
 } from "./vendor-input";
 
@@ -21,7 +23,7 @@ const FORM = {
 
 function errorOf(
   values: Record<string, string>,
-  services = ["coach-charter"],
+  services = ["vehicle-driver"],
   locations = ["loc1"],
 ) {
   const result = parseVendorFields({ ...FORM, ...values }, services, locations);
@@ -29,10 +31,10 @@ function errorOf(
 }
 
 describe("parseVendorFields", () => {
-  it("reads the form: the email lowercase, the services in order, the locations once each and sorted", () => {
+  it("reads the form: the email lowercase, the one service, the locations once each and sorted", () => {
     const result = parseVendorFields(
       FORM,
-      ["coach-charter", "car-with-driver", "spa"],
+      ["vehicle", "spa"],
       ["loc2", "loc1", "loc2", ""],
     );
     assert.deepEqual(result, {
@@ -45,29 +47,25 @@ describe("parseVendorFields", () => {
         contactPhone: "0123456789",
         contactEmail: "ops@pulaucoach.my",
         address: "Kuah, Langkawi",
-        services: ["car-with-driver", "coach-charter"],
+        services: ["vehicle"],
         locationIds: ["loc1", "loc2"],
-        invoicePeriod: "month",
         ...NO_BANK,
       },
     });
   });
 
-  it("takes no agent from a vendor signing up, which our team adds", () => {
-    const values = { ...FORM, invoicePeriod: "half-month" };
-    const staff = parseVendorFields(values, ["agent"], ["loc1"]);
-    assert.ok(staff.ok);
-    assert.deepEqual(staff.value.services, ["agent"]);
-    assert.equal(staff.value.invoicePeriod, "half-month");
-    const applicant = parseVendorFields(
-      values,
-      ["agent", "coach-charter"],
+  it("drops a service it does not know, an old one or agent included", () => {
+    const result = parseVendorFields(
+      FORM,
+      ["agent", "coach-charter", "tour-guide"],
       ["loc1"],
-      { applicant: true },
     );
-    assert.ok(applicant.ok);
-    assert.deepEqual(applicant.value.services, ["coach-charter"]);
-    assert.equal(applicant.value.invoicePeriod, "month");
+    assert.ok(result.ok);
+    assert.deepEqual(result.value.services, ["tour-guide"]);
+  });
+
+  it("takes exactly one service", () => {
+    assert.match(errorOf({}, ["vehicle", "driver"]) ?? "", /what it offers/);
   });
 
   it("needs a name, a kind, a contact who can be called and written to, a service and a location", () => {
@@ -76,7 +74,7 @@ describe("parseVendorFields", () => {
     assert.match(errorOf({ contactName: "" }) ?? "", /speaks to/);
     assert.match(errorOf({ contactPhone: "12" }) ?? "", /phone/);
     assert.match(errorOf({ contactEmail: "ops@" }) ?? "", /email/);
-    assert.match(errorOf({}, []) ?? "", /offers/);
+    assert.match(errorOf({}, []) ?? "", /what it offers/);
     assert.match(errorOf({}, ["driver"], []) ?? "", /location/);
   });
 });
@@ -88,38 +86,54 @@ describe("vendorFieldsOf", () => {
       ...NO_BANK,
       services: ["driver", "spa"],
       locations: [{ id: "loc2" }, { id: "loc1" }],
-      invoicePeriod: "fortnight",
     });
     assert.deepEqual(fields.locationIds, ["loc1", "loc2"]);
     assert.deepEqual(fields.services, ["driver"]);
-    assert.equal(fields.invoicePeriod, "month");
   });
 });
 
 describe("suppliesIt", () => {
   const vendor = (services: string[], isOurs = false) => ({ isOurs, services });
 
-  it("lets a vendor add only what it ticked", () => {
-    const coach = { kind: "vehicle", category: "coach-charter" } as const;
-    assert.equal(suppliesIt(vendor(["car-with-driver"]), coach), false);
-    assert.equal(suppliesIt(vendor(["coach-charter"]), coach), true);
-    assert.equal(suppliesIt(vendor(["driver"]), { kind: "driver" }), true);
-    assert.equal(
-      suppliesIt(vendor(["coach-charter"]), { kind: "driver" }),
-      true,
-    );
-    assert.equal(suppliesIt(vendor(["driver"]), { kind: "guide" }), false);
-    assert.equal(suppliesIt(vendor(["agent"]), { kind: "driver" }), false);
+  it("supplies vehicles with vehicle only or vehicle and driver, of any class", () => {
+    assert.equal(suppliesIt(vendor(["vehicle"]), "vehicle"), true);
+    assert.equal(suppliesIt(vendor(["vehicle-driver"]), "vehicle"), true);
+    assert.equal(suppliesIt(vendor(["driver"]), "vehicle"), false);
+    assert.equal(suppliesIt(vendor(["tour-guide"]), "vehicle"), false);
+  });
+
+  it("supplies drivers with driver only or vehicle and driver", () => {
+    assert.equal(suppliesIt(vendor(["driver"]), "driver"), true);
+    assert.equal(suppliesIt(vendor(["vehicle-driver"]), "driver"), true);
+    assert.equal(suppliesIt(vendor(["vehicle"]), "driver"), false);
+  });
+
+  it("supplies guides with tour guide alone, and nothing with the rest", () => {
+    assert.equal(suppliesIt(vendor(["tour-guide"]), "guide"), true);
+    assert.equal(suppliesIt(vendor(["vehicle-driver"]), "guide"), false);
+    for (const supply of ["vehicle", "driver", "guide"] as const) {
+      assert.equal(suppliesIt(vendor(["attraction"]), supply), false);
+      assert.equal(suppliesIt(vendor(["accommodation"]), supply), false);
+      assert.equal(suppliesIt(vendor(["car-with-driver"]), supply), false);
+    }
+  });
+
+  it("adds what it offers", () => {
+    assert.deepEqual(vendorAddsOf(vendor(["vehicle"])), {
+      vehicles: true,
+      drivers: false,
+      guides: false,
+    });
   });
 
   it("lets ours add anything", () => {
-    assert.equal(suppliesIt(vendor([], true), { kind: "guide" }), true);
+    assert.equal(suppliesIt(vendor([], true), "guide"), true);
   });
 
-  it("names the services to tick", () => {
+  it("names what it would have to offer", () => {
     assert.match(
-      supplyRefusalOf("Lim Transport", { kind: "guide" }),
-      /Lim Transport does not offer tour guides. Tick Tour guide/,
+      supplyRefusalOf("Lim Transport", "driver"),
+      /Lim Transport does not offer drivers. Change what it offers to Driver only or Vehicle and driver/,
     );
   });
 });
@@ -128,5 +142,51 @@ describe("checkReviewNote", () => {
   it("needs a reason", () => {
     assert.equal(checkReviewNote("").ok, false);
     assert.equal(checkReviewNote("No SSM certificate").ok, true);
+  });
+});
+
+describe("serviceChangeRefusalOf", () => {
+  const theirs = { isOurs: false };
+  const has = (vehicle: number, driver: number, guide: number) => ({
+    vehicle,
+    driver,
+    guide,
+  });
+
+  it("refuses dropping drivers while it has some, naming how many", () => {
+    assert.equal(
+      serviceChangeRefusalOf(theirs, "vehicle", has(3, 2, 0)),
+      "Remove its 2 drivers first: Vehicle only does not cover drivers.",
+    );
+    assert.equal(
+      serviceChangeRefusalOf(theirs, "driver", has(1, 4, 0)),
+      "Remove its 1 vehicle first: Driver only does not cover vehicles.",
+    );
+  });
+
+  it("names everything left over", () => {
+    assert.equal(
+      serviceChangeRefusalOf(theirs, "attraction", has(3, 2, 1)),
+      "Remove its 3 vehicles, 2 drivers and 1 tour guide first: Attraction does not cover vehicles, drivers or tour guides.",
+    );
+  });
+
+  it("lets a change go ahead when the new choice covers what it has", () => {
+    assert.equal(serviceChangeRefusalOf(theirs, "vehicle", has(3, 0, 0)), null);
+    assert.equal(
+      serviceChangeRefusalOf(theirs, "vehicle-driver", has(3, 2, 0)),
+      null,
+    );
+    assert.equal(
+      serviceChangeRefusalOf(theirs, "tour-guide", has(0, 0, 0)),
+      null,
+    );
+  });
+
+  it("never refuses ours", () => {
+    assert.equal(
+      serviceChangeRefusalOf({ isOurs: true }, "vehicle", has(3, 2, 1)),
+      null,
+    );
   });
 });

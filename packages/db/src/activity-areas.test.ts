@@ -81,7 +81,7 @@ describe("activityAreasHeld", () => {
       "coverage",
       "status",
     ]);
-    assert.deepEqual(heldBy("FINANCE"), ["bookings", "status"]);
+    assert.deepEqual(heldBy("FINANCE"), ["bookings", "billing", "status"]);
     assert.deepEqual(heldBy(), ["status"]);
   });
 

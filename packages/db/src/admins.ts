@@ -3,6 +3,7 @@ import type { Actor } from "./activity-actions";
 import { refuse, type Change } from "./change";
 import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
+import { madeOrderBy, type MadeOrder } from "./list-order";
 import { adminTeamsOf, type AdminLevel, type AdminTeam } from "./roles";
 import { NO_TEAM_ERROR, type StaffAccess } from "./user-input";
 import { userSearchWhere } from "./users";
@@ -17,14 +18,18 @@ const LAST_SUPER_ERROR =
   "This is the only SUPER admin. Promote another SUPER admin first.";
 
 /**
- * Every admin, in the order they were made one, or those a search finds:
- * each word of it in their first name, last name or email.
+ * Every admin, in the order they were made one or the newest first
+ * (`order`), or those a search finds: each word of it in their first
+ * name, last name or email.
  */
-export function listAdmins(search?: string): Promise<AdminWithUser[]> {
+export function listAdmins(
+  search?: string,
+  order: MadeOrder = "oldest",
+): Promise<AdminWithUser[]> {
   return db.adminProfile.findMany({
     where: { user: userSearchWhere(search) },
     ...withUser,
-    orderBy: { createdAt: "asc" },
+    orderBy: madeOrderBy(order),
   });
 }
 

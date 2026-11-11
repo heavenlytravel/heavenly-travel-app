@@ -40,7 +40,7 @@ export default async function BusinessPage() {
               <Link href="/~/account/business/edit">Edit details</Link>
             </Button>
             <p className="text-xs text-muted">
-              The name, the SSM or IC number, the services and the locations
+              The name, the SSM or IC number, what you offer and the locations
               were checked when you were approved. To change one, WhatsApp the
               team.
             </p>

@@ -27,6 +27,7 @@ import {
   type VehicleFields,
   type VehicleInput,
 } from "./vehicle-input";
+import { madeOrderBy, type MadeOrder } from "./list-order";
 import { modelName } from "./vehicle-model-input";
 import { dropModelIfUnused, modelFor } from "./vehicle-models";
 import { plateTermOf } from "./search";
@@ -103,6 +104,8 @@ export type FleetFilter = {
   due?: boolean;
   /** As `searchTermOf` reads it: part of a vehicle's plate or model, or of a driver's name or phone. */
   search?: string;
+  /** By when each was added; none for the list's own order. */
+  order?: MadeOrder;
 };
 
 /** Where a vehicle matches a search: its plate, its brand or its model. */
@@ -117,7 +120,11 @@ export function vehicleSearchWhere(search: string): Prisma.VehicleWhereInput {
   };
 }
 
-/** Every vehicle, or those the filter leaves, in service or not; a class's alone for its page. */
+/**
+ * Every vehicle, or those the filter leaves, in service or not; a class's
+ * alone for its page. In service first, by class and plate, or by when
+ * each was added (`order`).
+ */
 export async function listVehicles(
   filter: FleetFilter & { vehicleClassId?: string } = {},
 ): Promise<ListedVehicle[]> {
@@ -131,9 +138,10 @@ export async function listVehicles(
   if (filter.search) where.push(vehicleSearchWhere(filter.search));
   const rows = await db.vehicle.findMany({
     where: { AND: where },
+    ...(filter.order ? { orderBy: madeOrderBy(filter.order) } : {}),
     ...listed,
   });
-  return rows.sort(byClassAndPlate);
+  return filter.order ? rows : rows.sort(byClassAndPlate);
 }
 
 export function getVehicle(id: string): Promise<VehicleWithModel | null> {
@@ -206,7 +214,7 @@ export async function createVehicle(
         tx,
         fields.vendorId,
         fields.locationId,
-        { kind: "vehicle", vehicleClassId: fields.vehicleClassId },
+        "vehicle",
       );
       if (!vendor.ok) return vendor;
       const gone = await deletedMediaRefusal(
@@ -317,19 +325,12 @@ export async function updateVehicle(
         : null;
       if (after.locationId && !locationName) return NO_LOCATION;
       let vendorName: string | null = null;
-      if (
-        after.vendorId !== undefined ||
-        after.locationId !== undefined ||
-        after.vehicleClassId !== undefined
-      ) {
+      if (after.vendorId !== undefined || after.locationId !== undefined) {
         const vendor = await checkVendorServes(
           tx,
           after.vendorId ?? current.vendorId,
           after.locationId ?? current.locationId,
-          {
-            kind: "vehicle",
-            vehicleClassId: after.vehicleClassId ?? current.vehicleClassId,
-          },
+          "vehicle",
         );
         if (!vendor.ok) return vendor;
         if (after.vendorId !== undefined) vendorName = vendor.name;

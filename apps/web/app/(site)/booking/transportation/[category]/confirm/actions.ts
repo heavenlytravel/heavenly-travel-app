@@ -2,6 +2,7 @@
 
 import {
   BOOKING_RULES,
+  bookingLabelOf,
   flightOfTrip,
   formatMyr,
   GUEST_ACTOR,
@@ -199,7 +200,10 @@ export async function createTripsBookingAction(
   after(() => sendBookingEmail("received", booking));
   return {
     done: user
-      ? bookingHref(booking.reference)
-      : receivedHref(booking.reference, maskEmail(contact.value.contactEmail)),
+      ? bookingHref(bookingLabelOf(booking))
+      : receivedHref(
+          bookingLabelOf(booking),
+          maskEmail(contact.value.contactEmail),
+        ),
   };
 }

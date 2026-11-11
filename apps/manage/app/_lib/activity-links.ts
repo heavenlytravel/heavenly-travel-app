@@ -18,6 +18,8 @@ import {
   vehicleHref,
   userHref,
   vendorHref,
+  agentHref,
+  invoiceHref,
 } from "./routes";
 
 /**
@@ -34,6 +36,8 @@ const ACTIVITY_RECORD_NAMES: Record<ActivityEntityType, string> = {
   driver: "Driver",
   guide: "Tour guide",
   vendor: "Vendor",
+  business: "Agent",
+  invoice: "Invoice",
   "vehicle-class": "Class",
   user: "User",
   admin: "Admin",
@@ -45,7 +49,7 @@ const ACTIVITY_RECORD_NAMES: Record<ActivityEntityType, string> = {
 };
 
 /**
- * The record an entry belongs to, in a few words: "Booking HT-7K3QZM",
+ * The record an entry belongs to, in a few words: "Booking HTB-1042",
  * "Vehicle VLE1234", "The wall". A location's entry names the area of
  * its change, "Langkawi · Coverage and rates", and on the location's own
  * history (`here`, its id) the area alone.
@@ -120,6 +124,10 @@ export function activityEntryHref(
         : null;
     case "vendor":
       return may("fleet.manage") ? vendorHref(null, entry.entityId) : null;
+    case "business":
+      return may("bookings.view") ? agentHref(entry.entityId) : null;
+    case "invoice":
+      return may("invoices.manage") ? invoiceHref(entry.entityId) : null;
     case "vehicle-class":
       return may("coverage.view") ? classHref(null, entry.entityId) : null;
     case "media":

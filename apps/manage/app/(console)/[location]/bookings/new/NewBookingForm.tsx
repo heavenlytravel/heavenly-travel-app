@@ -4,12 +4,11 @@ import {
   andList,
   BOOKING_RULES,
   CONTACT_NAME_MAX_LENGTH,
-  formatMyr,
+  LEGACY_INVOICE_MAX,
   parseContact,
-  startOfTrip,
+  parseLegacyInvoiceNumber,
   TRIP_CATEGORY_LABELS,
   type BBox,
-  type InvoicePreview,
   type TripCategory,
 } from "@repo/db";
 import { answerOf } from "@repo/ui/action-answer";
@@ -18,7 +17,7 @@ import { Button } from "@repo/ui/button";
 import { Field, Input } from "@repo/ui/field";
 import { PlusIcon } from "@repo/ui/icons";
 import { Switch } from "@repo/ui/switch";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { SCOPE_FIELD } from "@repo/console/fleet-form";
 import { ALL, bookingsHref, type ScopeSlug } from "../../../../_lib/routes";
 import { useActionForm } from "@repo/console/use-action-form";
@@ -26,7 +25,7 @@ import { AgentPicker, type Agent } from "../_components/AgentPicker";
 import { BookingSummary } from "../_components/BookingSummary";
 import { BookingTripStep, itemIssue } from "../_components/BookingTripStep";
 import { HiddenFields } from "../_components/HiddenFields";
-import { InvoiceNumberField } from "../_components/InvoiceNumberField";
+import { NewBookingChoice } from "../_components/NewBookingChoice";
 import { Step, StepFoot } from "../_components/Step";
 import { quoteTripAction } from "../_lib/quote-action";
 import {
@@ -38,6 +37,7 @@ import {
   itemFields,
   itemsByStart,
   itemVehicle,
+  LEGACY_INVOICE_FIELD,
   newItemDraft,
   placesLine,
   SAME_VEHICLE_FIELD,
@@ -50,7 +50,7 @@ import {
   type TripDraft,
   type VehicleDraft,
 } from "../_lib/trip-form";
-import { createManualBookingAction, previewInvoiceAction } from "./actions";
+import { createManualBookingAction } from "./actions";
 
 type Contact = { name: string; phone: string; email: string };
 
@@ -75,9 +75,10 @@ const EMPTY_CONTACT: Contact = { name: "", phone: "", email: "" };
  * detail that changes mid-call is one click away and nothing entered is
  * lost. The summary beside the steps keeps the customer, each trip with
  * its price and what it is made of, the total and the button in view; an
- * agreed price is set there, per trip. The booking is made confirmed;
- * above the button, the invoice number it would take, or an old
- * invoice's typed instead. The server prices every trip again and applies the agreed
+ * agreed price is set there, per trip. The old system's invoice number, a
+ * note, goes with the customer. Above the one button, a choice: confirm
+ * now, with what that bills, or save for later as received. The server
+ * prices every trip again and applies the agreed
  * prices itself. Opened in a location, its place fields suggest that
  * location's places first, and the booking opens there once made. See
  * docs/261027-multi-trip-booking.md.
@@ -86,10 +87,7 @@ export function NewBookingForm({
   hasGoogle,
   scope,
   near,
-  ownInvoice,
   agents,
-  agentLocations,
-  locationId,
 }: {
   /** False when the server runs without a Google key and offers the districts themselves. */
   hasGoogle: boolean;
@@ -97,17 +95,13 @@ export function NewBookingForm({
   scope: ScopeSlug;
   /** In a location, the box whose places the place fields suggest first. */
   near?: BBox;
-  /** The invoice a booking of our own customer would get: the next number. Null when it could not be read. */
-  ownInvoice: InvoicePreview | null;
   /** The agents a booking may come through, by name. */
   agents: readonly Agent[];
-  /** The locations an agent added here may serve. */
-  agentLocations: readonly { id: string; name: string }[];
-  /** The location the form is open in; null under every location. */
-  locationId: string | null;
 }) {
   const [contact, setContact] = useState<Contact>(EMPTY_CONTACT);
   const [agentId, setAgentId] = useState("");
+  const [legacy, setLegacy] = useState("");
+  const [confirmNow, setConfirmNow] = useState(true);
   // Added from the form and not yet in `agents`, until the refresh brings them.
   const [added, setAdded] = useState<Agent[]>([]);
   const allAgents = [
@@ -240,6 +234,12 @@ export function NewBookingForm({
   }
 
   const customer = parseContact(contact);
+  const legacyNumber = parseLegacyInvoiceNumber(legacy);
+  const customerIssue = !customer.ok
+    ? customer.error
+    : !legacyNumber.ok
+      ? legacyNumber.error
+      : null;
   // One vehicle does one trip at a time; trips on their own vehicles may meet.
   const clashes = shared && several ? clashNotes(trips) : new Map();
   const vehicles = items.map((_, index) => itemVehicle(items, index, shared));
@@ -253,19 +253,19 @@ export function NewBookingForm({
       return issue && several ? `Trip ${index + 1}: ${issue}` : issue;
     })
     .find((issue) => issue !== null);
-  const missing = !customer.ok
-    ? "Fill in the customer."
-    : unfinished >= 0
-      ? several
-        ? `Trip ${unfinished + 1}: ${issues[unfinished]}`
-        : issues[unfinished]!
-      : (priceIssue ?? null);
+  const missing =
+    customerIssue !== null
+      ? "Fill in the customer."
+      : unfinished >= 0
+        ? several
+          ? `Trip ${unfinished + 1}: ${issues[unfinished]}`
+          : issues[unfinished]!
+        : (priceIssue ?? null);
   const totalSen = bookingTotalSen(items, shared, true);
   const locations = [
     ...new Set(items.flatMap((item) => item.trip.quote?.location ?? [])),
   ];
   const sorted = itemsByStart(items);
-  const invoice = useInvoicePreview(agentId, items, ownInvoice);
 
   return (
     <form
@@ -289,6 +289,7 @@ export function NewBookingForm({
       <input type="hidden" name={CONTACT_FIELDS.phone} value={contact.phone} />
       <input type="hidden" name={CONTACT_FIELDS.email} value={contact.email} />
       <input type="hidden" name={AGENT_FIELD} value={agentId} />
+      <input type="hidden" name={LEGACY_INVOICE_FIELD} value={legacy} />
       {shared ? (
         <input type="hidden" name={SAME_VEHICLE_FIELD} value="on" />
       ) : null}
@@ -304,10 +305,16 @@ export function NewBookingForm({
           <Step
             number={1}
             title="Customer Info"
-            done={customer.ok}
+            done={customerIssue === null}
             summary={
-              customer.ok
-                ? [agent?.name, contact.name, contact.phone, contact.email]
+              customerIssue === null
+                ? [
+                    agent?.name,
+                    contact.name,
+                    contact.phone,
+                    contact.email,
+                    legacy.trim() ? `Old invoice ${legacy.trim()}` : null,
+                  ]
                     .filter(Boolean)
                     .join(" · ")
                 : "Who the booking is for"
@@ -320,14 +327,33 @@ export function NewBookingForm({
               value={agentId}
               onChange={setAgentId}
               onAdded={(one) => setAdded((list) => [...list, one])}
-              locations={agentLocations}
-              locationId={locationId}
             />
             <CustomerFields contact={contact} onChange={setContact} />
+            <Field
+              label="Old invoice number"
+              hint={
+                legacyNumber.ok ? (
+                  "Optional. The old system's number, such as HT1223, as a note for the team. It bills nothing."
+                ) : (
+                  <span className="text-danger">{legacyNumber.error}</span>
+                )
+              }
+              className="mt-4 sm:max-w-80"
+            >
+              <Input
+                maxLength={LEGACY_INVOICE_MAX}
+                autoComplete="off"
+                value={legacy}
+                onChange={(e) => setLegacy(e.target.value)}
+              />
+            </Field>
             <StepFoot
-              disabled={!customer.ok}
+              disabled={customerIssue !== null}
               missing={
-                customer.ok || contact === EMPTY_CONTACT ? null : customer.error
+                customerIssue === null ||
+                (contact === EMPTY_CONTACT && legacyNumber.ok)
+                  ? null
+                  : customerIssue
               }
               onNext={() => openStep(`trip:${items[0]!.trip.id}`)}
             />
@@ -469,122 +495,35 @@ export function NewBookingForm({
             canPrice
             submit={
               <>
-                <InvoiceNumberField
-                  preview={invoice.preview}
-                  waiting={
-                    invoice.error ??
-                    (agent
-                      ? `Shown once the first trip's date and time are set. The booking joins ${agent.name}'s existing invoice or opens a new one.`
-                      : "Checking…")
-                  }
-                  check={(digits) =>
-                    answerOf(
-                      previewInvoiceAction({
-                        agentId,
-                        startsAt: invoice.startsAt,
-                        oldNumber: digits,
-                      }),
-                    )
-                  }
-                  className="mb-1"
+                <NewBookingChoice
+                  agentId={agentId}
+                  totalSen={totalSen}
+                  confirm={confirmNow}
+                  onConfirm={setConfirmNow}
                 />
                 <Button
                   type="submit"
                   disabled={missing !== null}
                   pending={create.pending}
+                  className="mt-1"
                 >
                   {create.pending
                     ? "Creating…"
-                    : [
-                        "Create booking",
-                        totalSen !== null ? formatMyr(totalSen) : null,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
+                    : confirmNow
+                      ? "Create and confirm"
+                      : "Save for later"}
                 </Button>
               </>
             }
             missing={missing}
             error={create.error}
             cancelHref={bookingsHref(scope)}
-            foot="The booking and every trip are confirmed at once, ready for Assign."
           />
         </aside>
       </div>
       {confirmDialog}
     </form>
   );
-}
-
-/**
- * The invoice the booking would get, as it is entered: our own
- * customer's is the next number, from the page; an agent's is asked of the
- * server once the first trip has a day and time, and again only when the
- * agent changes or the first trip moves out of the period the answer was
- * for (a second trip later in the month asks nothing). `startsAt` is the
- * first trip's start, as the server reads the period from it.
- */
-function useInvoicePreview(
-  agentId: string,
-  items: readonly ItemDraft[],
-  ownInvoice: InvoicePreview | null,
-) {
-  const first = items
-    .map((item) => ({
-      day: item.trip.trip.date,
-      start: startOfTrip(item.trip.trip),
-    }))
-    .filter((one) => one.start !== null)
-    .sort((x, y) => x.start!.getTime() - y.start!.getTime())[0];
-  const startsAt = first?.start?.toISOString() ?? null;
-  const [answer, setAnswer] = useState<{
-    agentId: string;
-    startsAt: string;
-    preview: InvoicePreview | null;
-    error: string | null;
-  } | null>(null);
-  const range = answer?.preview?.period;
-  const fresh =
-    answer !== null &&
-    first !== undefined &&
-    answer.agentId === agentId &&
-    (range
-      ? range.from <= first.day && first.day <= range.to
-      : answer.startsAt === startsAt);
-  const asking = agentId !== "" && startsAt !== null && !fresh;
-
-  useEffect(() => {
-    if (!asking || startsAt === null) return;
-    let current = true;
-    void answerOf(
-      previewInvoiceAction({ agentId, startsAt, oldNumber: "" }),
-    ).then((result) => {
-      if (!current) return;
-      setAnswer(
-        "error" in result
-          ? { agentId, startsAt, preview: null, error: result.error }
-          : { agentId, startsAt, preview: result, error: null },
-      );
-    });
-    return () => {
-      current = false;
-    };
-  }, [asking, agentId, startsAt]);
-
-  if (agentId === "") {
-    return {
-      preview: ownInvoice,
-      error: ownInvoice
-        ? null
-        : "The next invoice number could not be read. Reload the page.",
-      startsAt,
-    };
-  }
-  return {
-    preview: fresh ? answer.preview : null,
-    error: fresh ? answer.error : null,
-    startsAt,
-  };
 }
 
 /** Who the booking is for: the name the driver asks for, a phone and an email. */

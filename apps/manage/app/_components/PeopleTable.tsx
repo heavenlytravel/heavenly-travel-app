@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { ScopeSlug } from "../_lib/routes";
+import { AddedTd, AddedTh, type MadeSort } from "./AddedColumn";
 import { ServiceBadge } from "@repo/console/StatusBadges";
 import {
   EmptyRow,
@@ -18,6 +19,7 @@ type Person = {
   name: string;
   phone: string;
   isActive: boolean;
+  createdAt: Date;
   vendor: { isOurs: boolean; name: string };
   location: { name: string };
 };
@@ -33,8 +35,9 @@ type Column<P> = {
  * A vendor's people as a table, in the scope on screen, the drivers' and
  * the tour guides' alike: the name and phone (and the vendor, when not
  * ours), the table's own columns, `lead` before the location under `~`
- * and `trail` after it, and whether they are active. Each opens in the
- * scope it was listed in. `bare` is for a `flush` card.
+ * and `trail` after it, when each was added where the list sorts by it
+ * (`sort`), and whether they are active. Each opens in the scope it was
+ * listed in. `bare` is for a `flush` card.
  */
 export function PeopleTable<P extends Person>({
   people,
@@ -43,6 +46,7 @@ export function PeopleTable<P extends Person>({
   heading,
   lead,
   trail = [],
+  sort,
   bare = false,
   emptyMessage,
 }: {
@@ -53,11 +57,13 @@ export function PeopleTable<P extends Person>({
   heading: string;
   lead: readonly Column<P>[];
   trail?: readonly Column<P>[];
+  sort?: MadeSort;
   bare?: boolean;
   emptyMessage: string;
 }) {
   const showLocation = scope === null;
-  const columns = 2 + lead.length + trail.length + (showLocation ? 1 : 0);
+  const columns =
+    2 + lead.length + trail.length + Number(showLocation) + Number(!!sort);
   const cells = (person: P, list: readonly Column<P>[]) =>
     list.map((column) => (
       <Td key={column.heading} className={column.className}>
@@ -75,6 +81,7 @@ export function PeopleTable<P extends Person>({
         {trail.map((column) => (
           <Th key={column.heading}>{column.heading}</Th>
         ))}
+        {sort ? <AddedTh sort={sort} /> : null}
         <Th>Status</Th>
       </THead>
       <TBody>
@@ -106,6 +113,7 @@ export function PeopleTable<P extends Person>({
                 <Td className="whitespace-nowrap">{person.location.name}</Td>
               ) : null}
               {cells(person, trail)}
+              {sort ? <AddedTd at={person.createdAt} /> : null}
               <Td className="whitespace-nowrap">
                 <ServiceBadge
                   active={person.isActive}

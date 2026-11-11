@@ -10,17 +10,21 @@ import { refuse, type Change, type Created, type Refusal } from "./change";
 import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
 import { releaseHeldWork } from "./fulfilment";
+import { madeOrderBy, type MadeOrder } from "./list-order";
 import { phoneDigitsOf } from "./search";
 import type { NewUserFields } from "./user-input";
 import {
   checkReviewNote,
   checkVendorFields,
+  serviceChangeRefusalOf,
   suppliesIt,
   supplyRefusalOf,
   VENDOR_LOCATIONS_FIELD,
+  VENDOR_SERVICES_FIELD,
   vendorFieldsOf,
   type VendorFields,
   type VendorStatus,
+  type VendorSupply,
 } from "./vendor-input";
 
 /**
@@ -58,12 +62,14 @@ const NOT_FOUND: Refusal = refuse(
 /** What the vendor list narrows to. */
 export type VendorFilter = {
   status?: VendorStatus;
-  /** What it supplies, one of `VENDOR_SERVICES`. */
+  /** What it offers, one of `VENDOR_SERVICES`. */
   service?: string;
   /** Part of its name, its contact's name or phone, or its registration. */
   search?: string;
   /** A location it serves, by id. */
   locationId?: string;
+  /** By when each was added; none for ours first, then by name. */
+  order?: MadeOrder;
 };
 
 /** Where a vendor matches a search. */
@@ -79,7 +85,7 @@ export function vendorSearchWhere(search: string): Prisma.VendorWhereInput {
   };
 }
 
-/** Every vendor, or those the filter leaves: ours first, then by name. */
+/** Every vendor, or those the filter leaves: ours first, then by name, or by when each was added (`order`). */
 export function listVendors(
   filter: VendorFilter = {},
 ): Promise<VendorWithLocations[]> {
@@ -92,7 +98,9 @@ export function listVendors(
   }
   return db.vendor.findMany({
     where: { AND: where },
-    orderBy: [{ isOurs: "desc" }, { name: "asc" }],
+    orderBy: filter.order
+      ? madeOrderBy(filter.order)
+      : [{ isOurs: "desc" }, { name: "asc" }],
     ...withLocations,
   });
 }
@@ -113,7 +121,7 @@ export type VendorOption = {
   isOurs: boolean;
   status: string;
   locationIds: string[];
-  /** What it supplies, `VENDOR_SERVICES`: a guide is asked of one that offers tour guides. */
+  /** What it offers, one of `VENDOR_SERVICES`: each part is asked of one that supplies it (`suppliesIt`). */
   services: string[];
 };
 
@@ -150,15 +158,9 @@ export function listAgents(): Promise<{ id: string; name: string }[]> {
   });
 }
 
-/** What a writer adds to a vendor: a vehicle of a class, a driver or a tour guide. */
-export type SuppliedRecord =
-  | { kind: "vehicle"; vehicleClassId: string }
-  | { kind: "driver" }
-  | { kind: "guide" };
-
 /**
  * Checks that a vendor exists, offers what is added (`suppliesIt`: a
- * vehicle of a coach class needs coach charter ticked, and so on) and
+ * vehicle needs "vehicle only" or "vehicle and driver", and so on) and
  * serves the location it is based at, inside the writer's transaction;
  * answers the vendor's name for the log.
  */
@@ -166,7 +168,7 @@ export async function checkVendorServes(
   tx: Prisma.TransactionClient,
   vendorId: string,
   locationId: string,
-  record: SuppliedRecord,
+  supply: VendorSupply,
 ): Promise<{ ok: true; name: string; isOurs: boolean } | Refusal> {
   const vendor = await tx.vendor.findUnique({
     where: { id: vendorId },
@@ -183,19 +185,6 @@ export async function checkVendorServes(
       "vendorId",
     );
   }
-  const supply =
-    record.kind === "vehicle"
-      ? {
-          kind: "vehicle" as const,
-          category:
-            (
-              await tx.vehicleClass.findUnique({
-                where: { id: record.vehicleClassId },
-                select: { category: true },
-              })
-            )?.category ?? "",
-        }
-      : record;
   if (!suppliesIt(vendor, supply)) {
     return refuse(supplyRefusalOf(vendor.name, supply), "vendorId");
   }
@@ -400,7 +389,9 @@ export async function setVendorOwner(
 
 /**
  * Changes any of the fields. A location the vendor stops serving is
- * refused while one of its vehicles, drivers or guides is based there. Saving what
+ * refused while one of its vehicles, drivers or guides is based there, a
+ * change of service while it has ones the new choice does not cover
+ * (`serviceChangeRefusalOf`). Saving what
  * is already there logs nothing.
  */
 export async function updateVendor(
@@ -413,7 +404,12 @@ export async function updateVendor(
   return db.$transaction(async (tx) => {
     const vendor = await tx.vendor.findUnique({
       where: { id },
-      include: { locations: { select: { id: true, name: true } } },
+      include: {
+        locations: { select: { id: true, name: true } },
+        // Out of service ones count too: they are still its own, and
+        // deleting them is how staff remove them.
+        _count: { select: { vehicles: true, drivers: true, guides: true } },
+      },
     });
     if (!vendor) return NOT_FOUND;
     const current = vendorFieldsOf(vendor);
@@ -426,6 +422,17 @@ export async function updateVendor(
       locationIds !== undefined &&
       locationIds.join(",") !== current.locationIds.join(",");
     if (!changed && !servicesChanged && !locationsChanged) return { ok: true };
+
+    // checkVendorFields saw to exactly one service.
+    const [service] = services ?? [];
+    if (servicesChanged && service) {
+      const refusal = serviceChangeRefusalOf(vendor, service, {
+        vehicle: vendor._count.vehicles,
+        driver: vendor._count.drivers,
+        guide: vendor._count.guides,
+      });
+      if (refusal) return refuse(refusal, VENDOR_SERVICES_FIELD);
+    }
 
     let locationNames: string[] | null = null;
     if (locationsChanged) {
@@ -778,7 +785,7 @@ export function listRegistrationLocations(): Promise<
  * What a vendor's own vehicle and driver forms offer in Connect: the
  * locations it serves, and at each the classes on sale there (an offering
  * on, of a class on), so a vendor adds capacity behind what we sell. For
- * a vehicle (`forVehicles`), only the classes of the categories it ticked.
+ * a vehicle (`forVehicles`), none unless it offers vehicles.
  */
 export async function vendorFleetChoices(
   vendorId: string,
@@ -820,12 +827,8 @@ export async function vendorFleetChoices(
   });
   const classesAt: Record<string, string[]> = {};
   const classes = new Map<string, (typeof offerings)[number]["vehicleClass"]>();
-  for (const { locationId, vehicleClass } of offerings) {
-    const supply = {
-      kind: "vehicle",
-      category: vehicleClass.category,
-    } as const;
-    if (forVehicles && !(vendor && suppliesIt(vendor, supply))) continue;
+  const none = forVehicles && !(vendor && suppliesIt(vendor, "vehicle"));
+  for (const { locationId, vehicleClass } of none ? [] : offerings) {
     (classesAt[locationId] ??= []).push(vehicleClass.id);
     classes.set(vehicleClass.id, vehicleClass);
   }

@@ -26,8 +26,10 @@ const DEFAULT_RULES = {
   /** Assign and complete. */
   "bookings.fulfil": ["OPERATION"],
   "bookings.notes": ["OPERATION", "RESERVATION", "SALES", "FINANCE"],
-  /** Set where a booking's invoice's payment stands, and give an older booking its invoice. */
-  "bookings.payment": ["RESERVATION", "SALES", "FINANCE"],
+  /** Invoices and credit notes: the list, the month-end runs, billing a booking alone, voids, payments and refunds, an agent's payment terms. */
+  "invoices.manage": ["FINANCE"],
+  /** The agents: add one with its terms, change its details, make it inactive. */
+  "agents.manage": ["RESERVATION", "SALES", "FINANCE"],
   /** Change a location's coverage, the classes it sells, its zones and its rates; the class catalogue. */
   "coverage.manage": ["OPERATION"],
   /** Read them: the same tabs and the catalogue, without a way to change them. */
@@ -157,7 +159,9 @@ export const PERMISSION_LABELS: Record<Permission, string> = {
   "bookings.fulfil":
     "Assign vehicles and drivers, and report a trip's steps for its driver",
   "bookings.notes": "Write notes on a booking",
-  "bookings.payment": "Give a booking its invoice and set its payment status",
+  "invoices.manage":
+    "Invoices: month-end runs, voids, payments and refunds, agents' payment terms",
+  "agents.manage": "Add agents and change their details",
   "coverage.manage":
     "Change zones, classes on sale, rates and the class catalogue",
   "coverage.view": "See coverage, classes and rates",
@@ -204,9 +208,9 @@ export const PERMISSION_GROUPS: readonly {
       "bookings.manage",
       "bookings.create",
       "bookings.fulfil",
-      "bookings.payment",
     ],
   },
+  { label: "Billing", permissions: ["agents.manage", "invoices.manage"] },
   { label: "Fleet", permissions: ["fleet.manage", "vendors.review"] },
   {
     label: "Coverage and rates",

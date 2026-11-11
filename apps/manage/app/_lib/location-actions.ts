@@ -19,6 +19,8 @@ import {
   addLocationAddress,
   setLocationAddresses,
   setSafetyBuffer,
+  setStopPay,
+  parseRinggit,
   textOf,
   updateLocation,
   type AddressWrite,
@@ -290,6 +292,42 @@ export async function setSafetyBufferAction(
     locationId,
     minutes.value,
   );
+  if (result.ok) revalidateLocation();
+  return stateOf(result);
+}
+
+/**
+ * What a stop added to a trip here suggests for its driver: pay per extra
+ * km and a fee a stop, in RM, each empty for none. Operation's
+ * (`coverage.manage`).
+ */
+export async function setStopPayAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await getAdmin("coverage.manage");
+  if (!admin) return FORBIDDEN;
+  const locationId = textOf(formData.get("locationId"));
+  if (!locationId) return STALE;
+  const read = (field: string) => {
+    const typed = textOf(formData.get(field));
+    return typed === "" ? null : parseRinggit(typed);
+  };
+  const perKm = read("driverPayPerKm");
+  if (perKm === null && textOf(formData.get("driverPayPerKm")) !== "") {
+    return {
+      error: "Enter the pay per km in RM, such as 1.20.",
+      field: "driverPayPerKm",
+    };
+  }
+  const fee = read("stopFee");
+  if (fee === null && textOf(formData.get("stopFee")) !== "") {
+    return { error: "Enter the stop fee in RM, such as 20.", field: "stopFee" };
+  }
+  const result = await setStopPay(actorOf(admin), locationId, {
+    driverPayPerKmSen: perKm,
+    stopFeeSen: fee,
+  });
   if (result.ok) revalidateLocation();
   return stateOf(result);
 }

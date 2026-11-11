@@ -1,6 +1,6 @@
 "use client";
 
-import { SEARCH_MAX_LENGTH } from "@repo/db";
+import { SEARCH_MAX_LENGTH, searchTermOf } from "@repo/db";
 import { inputClassName } from "@repo/ui/field";
 import { SearchIcon } from "@repo/ui/icons";
 import { useRouter } from "next/navigation";
@@ -34,19 +34,26 @@ export function SearchBox({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [text, setText] = useState(value);
-  // A search changed elsewhere, by a link or the back button, shows here;
-  // the one this box just made is what is typed already.
+  // What this box last asked the list for, as the list reads it back.
+  const [sent, setSent] = useState(value);
+  // A search changed elsewhere, by a link or the back button, shows here.
+  // The list answering this box's own search never touches the box: what
+  // was typed since, while the answer was on its way, stays as typed.
   const [shown, setShown] = useState(value);
   if (value !== shown) {
     setShown(value);
-    if (value !== text.trim()) setText(value);
+    if (!pending && value !== sent) {
+      setSent(value);
+      setText(value);
+    }
   }
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
 
   function search(next: string) {
     const url = new URL(href, window.location.origin);
-    const term = next.trim();
+    const term = searchTermOf(next) ?? "";
+    setSent(term);
     if (term) url.searchParams.set(SEARCH_PARAM, term);
     startTransition(() =>
       router.replace(`${url.pathname}${url.search}`, { scroll: false }),

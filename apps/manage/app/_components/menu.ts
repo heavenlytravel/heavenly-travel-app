@@ -15,10 +15,12 @@ import {
   IdCardIcon,
   ImageIcon,
   LayoutDashboardIcon,
+  ListIcon,
   MapIcon,
   MapPinIcon,
   RouteIcon,
   SettingsIcon,
+  SuitcaseIcon,
   ShieldCheckIcon,
   SlidersHorizontalIcon,
   TagIcon,
@@ -65,6 +67,10 @@ export const MENU_ICONS = {
   user: UserRoundIcon,
   activity: ActivityIcon,
   settings: SettingsIcon,
+  billing: BanknoteIcon,
+  agents: SuitcaseIcon,
+  invoices: FileTextIcon,
+  orders: ListIcon,
 };
 
 export type MenuIcon = keyof typeof MENU_ICONS;

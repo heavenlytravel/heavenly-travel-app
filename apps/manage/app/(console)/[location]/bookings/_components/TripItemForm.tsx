@@ -8,6 +8,7 @@ import { SCOPE_FIELD } from "@repo/console/fleet-form";
 import type { ActionState } from "@repo/console/action-state";
 import { ALL, type ScopeSlug } from "../../../../_lib/routes";
 import { useActionForm } from "@repo/console/use-action-form";
+import { BillingLine } from "./BillingLine";
 import { BookingSummary } from "./BookingSummary";
 import { DetailsStep } from "./DetailsStep";
 import { HiddenFields } from "./HiddenFields";
@@ -52,8 +53,15 @@ export function TripItemForm({
   hasGoogle,
   canPrice,
   priceNote,
+  booking,
 }: {
   action: (state: ActionState, formData: FormData) => Promise<ActionState>;
+  /**
+   * The booking the trip is on, for the line above the button: its total
+   * before and after, and what saving bills. `tripSen` is what the trip
+   * charges now, 0 for one being added.
+   */
+  booking: { id: string; chargedSen: number; tripSen: number };
   /** The record saved: the item amended, or the booking a trip is added to. */
   target: { name: "itemId" | "bookingId"; value: string };
   /** The toast once saved. */
@@ -186,17 +194,29 @@ export function TripItemForm({
             canPrice={canPrice}
             priceNote={priceNote}
             submit={
-              <Button
-                type="submit"
-                disabled={missing !== null}
-                pending={pending}
-              >
-                {pending
-                  ? "Saving…"
-                  : totalSen !== null
-                    ? `Save changes · ${formatMyr(totalSen)}`
-                    : "Save changes"}
-              </Button>
+              <>
+                <BillingLine
+                  bookingId={booking.id}
+                  nowSen={booking.chargedSen}
+                  chargedSen={
+                    totalSen === null
+                      ? null
+                      : booking.chargedSen - booking.tripSen + totalSen
+                  }
+                />
+                <Button
+                  type="submit"
+                  disabled={missing !== null}
+                  pending={pending}
+                  className="mt-1"
+                >
+                  {pending
+                    ? "Saving…"
+                    : totalSen !== null
+                      ? `Save trip · ${formatMyr(totalSen)}`
+                      : "Save trip"}
+                </Button>
+              </>
             }
             missing={missing}
             error={error}

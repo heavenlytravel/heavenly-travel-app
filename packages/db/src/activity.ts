@@ -8,7 +8,11 @@ import {
   type Actor,
 } from "./activity-actions";
 import { activityActionsIn, type ActivityArea } from "./activity-areas";
-import { BOOKING_NUMBER_SELECT, bookingLabelOf } from "./booking-number";
+import {
+  BOOKING_NUMBER_SELECT,
+  bookingLabelOf,
+  documentLabelOf,
+} from "./booking-number";
 import { db } from "./client";
 import type { ActivityLog, Prisma } from "./generated/prisma/client";
 import type { LocationPageRef } from "./location-page-input";
@@ -87,7 +91,7 @@ export function changedFields<P extends Record<string, Scalar>>(
 export type ActivityEntry = ActivityLog & {
   /** "Nurul Aina", the email when there is no name, "Guest", "System", or "Former staff". */
   actorName: string;
-  /** "HT-7K3QZM", "Selangor", "Petaling", "Langkawi", the admin's email, "The wall", "Media", "VLE1234", a driver's name; the id when unknown. */
+  /** "HTB-1042", "Selangor", "Petaling", "Langkawi", the admin's email, "The wall", "Media", "VLE1234", a driver's name; the id when unknown. */
   entityLabel: string;
   /** The record was deleted since: its label is the name it last had, and it has no page to open. */
   isDeleted: boolean;
@@ -131,6 +135,8 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     driver: idsOf(rows, "driver"),
     guide: idsOf(rows, "guide"),
     vendor: idsOf(rows, "vendor"),
+    business: idsOf(rows, "business"),
+    invoice: idsOf(rows, "invoice"),
   };
 
   const [
@@ -144,6 +150,8 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     drivers,
     guides,
     vendors,
+    businesses,
+    invoices,
   ] = await Promise.all([
     read([...userIds], () =>
       db.user.findMany({
@@ -154,7 +162,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     read(ids.booking, () =>
       db.booking.findMany({
         where: { id: { in: ids.booking } },
-        select: { id: true, ...BOOKING_NUMBER_SELECT },
+        select: BOOKING_NUMBER_SELECT,
       }),
     ),
     read(ids.state, () =>
@@ -203,6 +211,18 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
       db.vendor.findMany({
         where: { id: { in: ids.vendor } },
         select: { id: true, name: true },
+      }),
+    ),
+    read(ids.business, () =>
+      db.business.findMany({
+        where: { id: { in: ids.business } },
+        select: { id: true, name: true },
+      }),
+    ),
+    read(ids.invoice, () =>
+      db.invoice.findMany({
+        where: { id: { in: ids.invoice } },
+        select: { id: true, type: true, number: true },
       }),
     ),
   ]);
@@ -297,6 +317,8 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
       deletedGuides,
     ),
     vendor: new Map(vendors.map((v) => [v.id, v.name] as const)),
+    business: new Map(businesses.map((b) => [b.id, b.name] as const)),
+    invoice: new Map(invoices.map((i) => [i.id, documentLabelOf(i)] as const)),
   };
 
   return rows.map((row) => {
@@ -372,7 +394,11 @@ function entityLabelOf(
     case "driver":
     case "guide":
     case "vendor":
+    case "business":
       return labels[entityType].get(row.entityId) ?? row.entityId;
+    case "invoice":
+      // An open invoice dropped is gone: its entry says why.
+      return labels[entityType].get(row.entityId) ?? "Former open invoice";
     default:
       return row.entityId;
   }

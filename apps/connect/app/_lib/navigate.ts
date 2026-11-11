@@ -9,3 +9,6 @@ export function wazeHref(stop: { lat: number; lng: number }) {
 export function googleMapsHref(stop: { lat: number; lng: number }) {
   return `https://www.google.com/maps/dir/?api=1&destination=${stop.lat},${stop.lng}`;
 }
+
+/** Google Maps directions through every place of a trip in order, its stops as waypoints (`directionsHref`). */
+export { directionsHref } from "@repo/db";

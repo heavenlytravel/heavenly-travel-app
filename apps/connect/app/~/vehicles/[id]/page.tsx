@@ -31,10 +31,10 @@ export default async function VehiclePage({
     isNew ? null : getVehicle(id),
     vendorFleetChoices(member.vendor.id, { forVehicles: true }),
     listModelSuggestions(),
-    isNew ? [] : heldBookingsOf({ vehicleId: id }, "reference"),
+    isNew ? [] : heldBookingsOf({ vehicleId: id }),
   ]);
   if (!isNew && vehicle?.vendorId !== member.vendor.id) notFound();
-  // A new one only of what it offers, by the services it ticked.
+  // A new one only of what it offers, by the one service it chose.
   if (isNew && !vendorAddsOf(member.vendor).vehicles) notFound();
   const [only] = choices.locations.length === 1 ? choices.locations : [];
 

@@ -3,6 +3,7 @@ import { modelName, VEHICLE_DOCUMENTS, vehicleDocumentsDue } from "@repo/db";
 import type { ListedVehicle } from "@repo/db/server";
 import { BusIcon, CarIcon } from "@repo/ui/icons";
 import { vehicleHref, type ScopeSlug } from "../_lib/routes";
+import { AddedTd, AddedTh, type MadeSort } from "./AddedColumn";
 import { DocumentsDue } from "@repo/console/DocumentsDue";
 import { ServiceBadge } from "@repo/console/StatusBadges";
 import {
@@ -19,7 +20,8 @@ import {
  * The vehicles as a table, in the scope on screen: the plate and model
  * (and the vendor, when not ours), the class where the list holds
  * several, the location under `~`, the colour and year, the documents
- * due, and whether it is in service. Each opens in the scope it was
+ * due, when it was added where the list sorts by it (`sort`), and
+ * whether it is in service. Each opens in the scope it was
  * listed in. The fleet's list and a class's page at a location show
  * it; `bare` is for a `flush` card.
  */
@@ -27,17 +29,19 @@ export function VehiclesTable({
   vehicles,
   scope,
   showClass = true,
+  sort,
   bare = false,
   emptyMessage,
 }: {
   vehicles: readonly ListedVehicle[];
   scope: ScopeSlug;
   showClass?: boolean;
+  sort?: MadeSort;
   bare?: boolean;
   emptyMessage: string;
 }) {
   const showLocation = scope === null;
-  const columns = 4 + Number(showClass) + Number(showLocation);
+  const columns = 4 + Number(showClass) + Number(showLocation) + Number(!!sort);
   return (
     <Table bare={bare}>
       <THead>
@@ -46,6 +50,7 @@ export function VehiclesTable({
         {showLocation ? <Th>Location</Th> : null}
         <Th>Colour</Th>
         <Th>Documents</Th>
+        {sort ? <AddedTh sort={sort} /> : null}
         <Th>Status</Th>
       </THead>
       <TBody>
@@ -104,6 +109,7 @@ export function VehiclesTable({
                     <span className="text-muted">Not checked</span>
                   )}
                 </Td>
+                {sort ? <AddedTd at={vehicle.createdAt} /> : null}
                 <Td className="whitespace-nowrap">
                   <ServiceBadge active={vehicle.isActive} />
                 </Td>

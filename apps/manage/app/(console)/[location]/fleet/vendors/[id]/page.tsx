@@ -130,14 +130,14 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
   const owner = members.find((m) => m.role === "owner") ?? null;
   const reviews = permissions.includes("vendors.review");
   const takesFleet = status === "active" || status === "suspended";
-  // It adds only what it ticked: an agent-only vendor adds nothing.
+  // It adds only what it offers: an attraction adds nothing.
   const adds = vendorAddsOf(vendor);
   // Guides show for ours and a vendor offering them, or one that has some.
   const showsGuides = adds.guides || guides.length > 0;
   // What suspending takes it off, read for SUPER while it can be suspended.
   const held =
     reviews && status === "active"
-      ? await heldBookingsOf({ vendorId: id }, "number")
+      ? await heldBookingsOf({ vendorId: id })
       : [];
 
   return (

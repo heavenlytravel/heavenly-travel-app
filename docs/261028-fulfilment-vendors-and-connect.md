@@ -118,6 +118,18 @@ received ──► confirmed ──► assigned ──► completed
   driver one of those or driver only; a tour guide "tour guide". Manage and Connect
   refuse the rest when saved, Connect hides its Add, and Assign lists only the vendors
   that offer the role. Ours offers everything.
+- **A vendor offers exactly one thing** (2026-11-10, replaces the two points above): one
+  choice at sign-up, a radio, from vehicle only, driver only, vehicle and driver, tour
+  guide, attraction and accommodation, kept as the one value of `Vendor.services`. A
+  vehicle of any class needs vehicle only or vehicle and driver (the car and coach split
+  is gone), a driver driver only or vehicle and driver, a guide tour guide; attraction
+  and accommodation supply nothing yet. Assign asks a vendor only for the roles it
+  supplies, and refuses the rest when saved, so a vehicle-only vendor is never asked for
+  a driver. The vendor sees it read-only in Connect ("To offer something else, contact
+  us."); staff with `fleet.manage` change it on the vendor's page, logged as
+  `vendor.updated`. `pnpm --filter @repo/db db:set-vendor-service` maps the old ticks
+  (car with driver and coach charter to vehicle and driver, self-drive to vehicle only)
+  and lists the vendors to review.
 - **"Agent" is a service staff tick, never asked at sign-up:** an agent sells our trips
   to its customers and shares an invoice per period (docs/261102-booking-ops.md, "5.").
   It is never offered work. Booking through Connect as an agent comes later.

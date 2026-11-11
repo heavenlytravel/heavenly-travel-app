@@ -28,7 +28,6 @@ import { modelName } from "./vehicle-model-input";
 const tripInclude = {
   booking: {
     select: {
-      id: true,
       ...BOOKING_NUMBER_SELECT,
       contactName: true,
       items: { select: { status: true } },
@@ -101,7 +100,7 @@ export type AssignPart = {
 export type AssignRow = {
   itemId: string;
   bookingId: string;
-  /** The booking's number, or its reference before numbers (`bookingLabelOf`). */
+  /** The booking's number, HTB-1042 (`bookingLabelOf`). */
   label: string;
   /** The booking's customer, as booked. */
   customer: string;

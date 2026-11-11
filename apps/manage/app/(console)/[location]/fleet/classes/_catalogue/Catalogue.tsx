@@ -1,5 +1,11 @@
 import Link from "next/link";
-import { TRIP_CATEGORIES, formatMyr, plural } from "@repo/db";
+import {
+  TRIP_CATEGORIES,
+  formatLocalDate,
+  formatMyr,
+  plural,
+  type MadeOrder,
+} from "@repo/db";
 import { listVehicleClasses, type CatalogueClass } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
@@ -8,8 +14,9 @@ import { Tile, TileFoot } from "@repo/console/Card";
 import { LocationMark } from "@repo/console/LocationMark";
 import { Streamed } from "@repo/console/Skeleton";
 import { ServiceBadge } from "@repo/console/StatusBadges";
+import { AddedSortLink } from "../../../../../_components/AddedColumn";
 import { CardImage } from "../../../../../_components/CardImage";
-import { classHref, ratesHref } from "../../../../../_lib/routes";
+import { classesHref, classHref, ratesHref } from "../../../../../_lib/routes";
 import { ClassCategoriesSkeleton, ClassCategory } from "./ClassCategory";
 import { seatsText } from "./class-text";
 import { VehicleClassActiveSwitch } from "./VehicleClassControls";
@@ -23,13 +30,50 @@ import { VehicleClassActiveSwitch } from "./VehicleClassControls";
  * picture of the vehicles based there. Operation adds, edits and switches
  * (`manages`, `coverage.manage`); Reservation and Sales read it. Classes
  * are never deleted, only turned off; a booking keeps its snapshot of the
- * class. See docs/261018-location-work-and-class-catalogue.md.
+ * class. Each category in the catalogue's order, or by when each was
+ * added (`order`), the cards then saying when. See
+ * docs/261018-location-work-and-class-catalogue.md.
  */
-export function Catalogue({ manages }: { manages: boolean }) {
+export function Catalogue({
+  manages,
+  order,
+}: {
+  manages: boolean;
+  /** None for the catalogue's order. */
+  order?: MadeOrder;
+}) {
   return (
-    <Streamed fallback={<ClassCategoriesSkeleton />}>
+    <>
+      <div className="mb-4 flex items-center justify-end gap-4">
+        {order ? (
+          <Link
+            href={classesHref(null)}
+            scroll={false}
+            className="rounded-sm text-sm font-medium text-muted underline-offset-4 hover:text-ink hover:underline focus-ring"
+          >
+            Catalogue order
+          </Link>
+        ) : null}
+        <AddedSortLink
+          sort={{ order, hrefOf: (next) => classesHref(null, next) }}
+        />
+      </div>
+      <CatalogueClasses manages={manages} order={order} />
+    </>
+  );
+}
+
+function CatalogueClasses({
+  manages,
+  order,
+}: {
+  manages: boolean;
+  order?: MadeOrder;
+}) {
+  return (
+    <Streamed key={order ?? ""} fallback={<ClassCategoriesSkeleton />}>
       {async () => {
-        const classes = await listVehicleClasses();
+        const classes = await listVehicleClasses(order);
         return (
           <div className="grid gap-8">
             {TRIP_CATEGORIES.map((category) => {
@@ -52,6 +96,7 @@ export function Catalogue({ manages }: { manages: boolean }) {
                       key={vehicleClass.id}
                       vehicleClass={vehicleClass}
                       manages={manages}
+                      showsAdded={order !== undefined}
                       lastActive={vehicleClass.isActive && active === 1}
                     />
                   ))}
@@ -75,10 +120,13 @@ export function Catalogue({ manages }: { manages: boolean }) {
 function ClassCard({
   vehicleClass,
   manages,
+  showsAdded,
   lastActive,
 }: {
   vehicleClass: CatalogueClass;
   manages: boolean;
+  /** While the catalogue is by when each was added. */
+  showsAdded: boolean;
   /** The last active class of its category, so turning it off asks first. */
   lastActive: boolean;
 }) {
@@ -111,6 +159,9 @@ function ClassCard({
           </h3>
           <p className="text-xs text-muted">
             {seatsText(vehicleClass)} passengers · {vehicleClass.luggage}
+            {showsAdded
+              ? ` · Added ${formatLocalDate(vehicleClass.createdAt)}`
+              : null}
           </p>
           <p className="mt-1.5 line-clamp-2 text-sm text-body">
             {vehicleClass.description}

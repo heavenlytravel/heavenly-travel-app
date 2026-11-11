@@ -50,9 +50,15 @@ export function VendorDetails({
         [VENDOR_FIELD_LABELS.address, vendor.address || "None yet"],
         [
           VENDOR_FIELD_LABELS.services,
-          vendorServicesOf(vendor.services)
-            .map((service) => VENDOR_SERVICE_LABELS[service])
-            .join(", ") || "None yet",
+          // Chosen at sign-up; only the team changes it.
+          <>
+            {vendorServicesOf(vendor.services)
+              .map((service) => VENDOR_SERVICE_LABELS[service])
+              .join(", ") || "None yet"}
+            <span className="block text-xs font-normal text-muted">
+              To offer something else, contact us.
+            </span>
+          </>,
         ],
         [
           VENDOR_FIELD_LABELS.locationIds,

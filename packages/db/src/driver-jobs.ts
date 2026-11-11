@@ -1,3 +1,5 @@
+import { bookingLabelOf } from "./booking-number";
+import { settleBilling } from "./billing";
 import { logActivity } from "./activity";
 import { ITEM_ACTIONS, type Actor } from "./activity-actions";
 import { bookingStatusOf } from "./booking-status";
@@ -12,6 +14,7 @@ import {
 } from "./fulfilment-rules";
 import type { Prisma } from "./generated/prisma/client";
 import { isPlace, type Place } from "./place";
+import { stopsOf } from "./stops";
 import { isUniqueViolation } from "./prisma-errors";
 import {
   checkTripEvent,
@@ -61,7 +64,7 @@ export type DriverTrip = {
   itemId: string;
   partId: string;
   offerId: string;
-  reference: string;
+  bookingLabel: string;
   position: number;
   status: string;
   startsAt: Date;
@@ -79,7 +82,7 @@ export type DriverTrip = {
 /** Trips of one booking the driver is asked for, answered together, with the timing warnings they see before accepting. */
 export type DriverOffer = {
   offerId: string;
-  reference: string;
+  bookingLabel: string;
   trips: DriverTrip[];
   warnings: string[];
 };
@@ -104,7 +107,7 @@ export function tripOf(part: JobPart): DriverTrip {
     itemId: part.itemId,
     partId: part.id,
     offerId: part.offerId,
-    reference: part.item.booking.reference,
+    bookingLabel: bookingLabelOf(part.item.booking),
     position: part.item.position,
     status: part.item.status,
     startsAt: part.item.startsAt,
@@ -174,7 +177,7 @@ export async function listDriverJobs(
     const held = await heldJobs(db, { driverId: driver.id }, bookingId);
     jobs.offers.push({
       offerId,
-      reference: ofOffer[0]!.item.booking.reference,
+      bookingLabel: bookingLabelOf(ofOffer[0]!.item.booking),
       trips: ofOffer.map(tripOf),
       warnings: offerWarnings(
         ofOffer.map((p) => jobOf(p.item)),
@@ -214,11 +217,19 @@ export function stopOf(value: unknown): JobStop | null {
 
 /** One job as the driver opens it: the trip, its taps, and the customer's details while they may see them. */
 export type DriverJob = DriverTrip & {
+  /** What the driver is paid for the trip: the base from the offer, plus each addition with why. Never the customer's price. */
+  pay: {
+    baseSen: number;
+    lines: { amountSen: number; reason: string }[];
+    totalSen: number;
+  };
   /** Null before the driver accepted, and from a few days after the trip. */
   customer: {
     name: string;
     phone: string;
     pickup: JobStop | null;
+    /** The stops on the way, in order. */
+    stops: JobStop[];
     dropoff: JobStop | null;
     flightNumber: string | null;
     notes: string | null;
@@ -261,7 +272,7 @@ export async function getDriverJob(
           booking: {
             select: {
               id: true,
-              reference: true,
+              number: true,
               contactName: true,
               contactPhone: true,
             },
@@ -269,9 +280,15 @@ export async function getDriverJob(
           tripDetails: {
             select: {
               ...tripInclude.tripDetails.select,
+              stops: true,
               flightNumber: true,
               notes: true,
             },
+          },
+          payLines: {
+            where: { role: "driver" },
+            orderBy: { createdAt: "asc" },
+            select: { amountSen: true, reason: true },
           },
           parts: {
             where: { role: "guide", vendorAcceptedAt: { not: null } },
@@ -284,7 +301,13 @@ export async function getDriverJob(
     },
   });
   if (!part) return null;
-  const trip = tripOf(part);
+  const lines = part.item.payLines;
+  const pay = {
+    baseSen: part.costSen,
+    lines,
+    totalSen: part.costSen + lines.reduce((sum, l) => sum + l.amountSen, 0),
+  };
+  const trip = { ...tripOf(part), pay };
   const job = jobOf(part.item);
   const shows =
     trip.accepted &&
@@ -309,6 +332,7 @@ export async function getDriverJob(
       name: part.item.booking.contactName,
       phone: part.item.booking.contactPhone,
       pickup: stopOf(details?.pickupPlace),
+      stops: stopsOf(details?.stops).map((stop) => stopOf(stop.place)!),
       dropoff: stopOf(details?.dropoffPlace),
       flightNumber: details?.flightNumber ?? null,
       notes: details?.notes ?? null,
@@ -459,6 +483,8 @@ export async function reportTripEvent(
           where: { id: item.bookingId },
           data: { status: bookingStatusOf(siblings) },
         });
+        // The last trip done ends the booking: its open invoice is issued.
+        await settleBilling(tx, actor, item.bookingId, new Date());
       }
       return { ok: true };
     });

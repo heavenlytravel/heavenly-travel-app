@@ -4,17 +4,14 @@ import {
   formatLocalDate,
   isBookingOrder,
   isBookingStatus,
-  isPaymentStatus,
   isTripMode,
-  PAYMENT_STATUS_LABELS,
-  PAYMENT_STATUSES,
   pickupInstant,
   searchTermOf,
   type BookingStatus,
 } from "@repo/db";
 import {
   countBookings,
-  listAgents,
+  listAgentNames,
   listBookings,
   listClassOptions,
   type BookingFilter,
@@ -66,12 +63,12 @@ const textOf = (value: unknown) => (typeof value === "string" ? value : "");
 
 /**
  * Route: /[location]/bookings?status=received&q=…&date=2026-10-29&to=…
- * &agent=…&payment=…&service=…&class=…&trip=…&sort=…&page=2. The bookings of the scope,
+ * &agent=…&service=…&class=…&trip=…&sort=…&page=2. The bookings of the scope,
  * newest made first unless sorted by pick-up: every location's under `~`,
  * with the column of locations, or those with a trip picking up in one
  * location under its slug. Figure tiles count each status and narrow the
  * list to it; the search, the pick-up days and the Filters (the agent,
- * the payment, the service, the vehicle class and the kind of trip)
+ * the service, the vehicle class and the kind of trip)
  * narrow the counts and the list alike.
  * A draft location's opens too, though its menu has no row for it. Every
  * team that sees bookings opens it; "New booking" is Reservation's and
@@ -85,7 +82,7 @@ export default async function BookingsPage({
   const [scope, query, agents, classes, permissions] = await Promise.all([
     scopeOf(params),
     searchParams,
-    listAgents(),
+    listAgentNames(),
     listClassOptions(),
     getPermissions(),
   ]);
@@ -108,7 +105,6 @@ export default async function BookingsPage({
     agentParam === DIRECT || agents.some((a) => a.id === agentParam)
       ? agentParam
       : undefined;
-  const payment = isPaymentStatus(query.payment) ? query.payment : undefined;
   const sortParam = query[SORT_PARAM];
   const trip = isTripMode(query.trip) ? query.trip : undefined;
   const service = serviceOf(query.service);
@@ -121,7 +117,6 @@ export default async function BookingsPage({
     date,
     to,
     agent,
-    payment,
     service,
     class: classId,
     trip,
@@ -133,8 +128,7 @@ export default async function BookingsPage({
     search: q,
     pickupOn,
     pickupTo,
-    agentId: agent === DIRECT ? null : agent,
-    paymentStatus: payment,
+    businessId: agent === DIRECT ? null : agent,
     category: service,
     vehicleClassId: classId,
     tripMode: trip,
@@ -149,15 +143,6 @@ export default async function BookingsPage({
         ...agents.map((a) => ({ value: a.id, label: a.name })),
       ],
     },
-    {
-      param: "payment",
-      label: "Payment",
-      value: payment ?? "",
-      options: PAYMENT_STATUSES.map((value) => ({
-        value,
-        label: PAYMENT_STATUS_LABELS[value],
-      })),
-    },
     ...tripFilterGroups({ classes, service, classId, trip }),
   ];
   // The list as filtered, on its first page: what each control changes a field of.
@@ -168,7 +153,6 @@ export default async function BookingsPage({
     date,
     to,
     agent,
-    payment,
     service,
     classId,
     trip,
@@ -291,13 +275,7 @@ function emptyMessage(filter: BookingsListFilter, where: BookingFilter) {
   const which = filter.status
     ? `${BOOKING_STATUS_LABELS[filter.status].toLowerCase()} bookings`
     : "bookings";
-  if (
-    filter.agent ||
-    filter.payment ||
-    filter.service ||
-    filter.class ||
-    filter.trip
-  ) {
+  if (filter.agent || filter.service || filter.class || filter.trip) {
     return `No ${which} match these filters.`;
   }
   if (where.pickupOn && where.pickupTo) {

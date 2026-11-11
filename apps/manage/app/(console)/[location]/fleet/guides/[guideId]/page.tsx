@@ -62,7 +62,7 @@ export default async function GuidePage({
 async function guideScreen(scope: ConsoleScope, guideId: string) {
   const [guide, held, locations, vendors] = await Promise.all([
     getGuide(guideId),
-    heldBookingsOf({ guideId }, "number"),
+    heldBookingsOf({ guideId }),
     locationsVisible(),
     listVendorOptions(),
   ]);

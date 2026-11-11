@@ -17,8 +17,6 @@ import {
   tripViewOfItem,
   untilPickup,
   isUrgentTrip,
-  type PartRole,
-  type VendorSupply,
 } from "@repo/db";
 import {
   bookingIdOfTrip,
@@ -103,22 +101,15 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
       ])
     : [[], [], [], []];
   const candidatesOf = { vehicle: vehicles, driver: drivers, guide: guides };
+  // Each role is then offered to the vendors that supply it (`suppliesIt`):
+  // a vehicle-only vendor is never asked for a driver, nor a driver-only
+  // one for a vehicle.
   const serving = vendors.filter(
     (v) =>
       v.status === "active" &&
       (v.isOurs ||
         (item.locationId !== null && v.locationIds.includes(item.locationId))),
   );
-  // Each role is offered to the vendors that ticked it: an agent-only
-  // vendor never shows here.
-  const supplyOf: Record<PartRole, VendorSupply> = {
-    vehicle: {
-      kind: "vehicle",
-      category: item.tripDetails?.vehicleClassCategory ?? "",
-    },
-    driver: { kind: "driver" },
-    guide: { kind: "guide" },
-  };
 
   const live = trips.filter((t) => isLive(t) && t.status !== "completed");
   const open = assignTripsOf(live.map((t) => ({ ...t, roles: rolesToAsk(t) })));
@@ -216,9 +207,7 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
                         (t) => t.id !== trip.id && t.roles.includes(role),
                       )}
                       candidates={candidates}
-                      vendors={serving.filter((v) =>
-                        suppliesIt(v, supplyOf[role]),
-                      )}
+                      vendors={serving.filter((v) => suppliesIt(v, role))}
                     />
                   </Card>
                 );
@@ -236,6 +225,8 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
                   candidates={candidates.filter(
                     (c) => c.vendor.id === part.offer.vendor.id,
                   )}
+                  payLines={trip.payLines.filter((line) => line.role === role)}
+                  tripClassId={trip.vehicleClassId}
                 />
               );
             })}

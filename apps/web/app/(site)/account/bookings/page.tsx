@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
+  bookingLabelOf,
   formatLocalDateTime,
   formatMyr,
   isLive,
@@ -52,12 +53,12 @@ export default async function BookingsPage() {
             return (
               <li key={booking.id}>
                 <Link
-                  href={accountBookingHref(booking.reference)}
+                  href={accountBookingHref(bookingLabelOf(booking))}
                   className={`${panel} block transition-shadow hover:shadow-raised focus-ring`}
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <span className="font-serif text-xl">
-                      {booking.reference}
+                      {bookingLabelOf(booking)}
                     </span>
                     <BookingStatusBadge status={booking.status} />
                   </div>

@@ -1,5 +1,6 @@
 import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
+import { madeOrderBy, type MadeOrder } from "./list-order";
 
 /** Readers of the `User` table beyond the session's own. */
 
@@ -50,16 +51,18 @@ const listed = { include: access } satisfies Prisma.UserDefaultArgs;
 export type ListedUser = Prisma.UserGetPayload<typeof listed>;
 
 /**
- * A page of every account, the newest first, or of those a search finds,
+ * A page of every account, the newest first or the oldest (`order`), or of those a search finds,
  * with the number of them all; each with where it has access: its admin
  * level, and the vendors it works or drives for in Connect.
  */
 export async function listUsers({
   search,
+  order = "newest",
   take,
   skip,
 }: {
   search?: string;
+  order?: MadeOrder;
   take: number;
   skip: number;
 }): Promise<{ users: ListedUser[]; total: number }> {
@@ -68,7 +71,7 @@ export async function listUsers({
     db.user.findMany({
       where,
       ...listed,
-      orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+      orderBy: madeOrderBy(order),
       take,
       skip,
     }),

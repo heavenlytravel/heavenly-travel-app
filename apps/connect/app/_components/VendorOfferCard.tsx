@@ -79,7 +79,7 @@ export function VendorOfferCard({
           ) : null}
         </div>
         <span className="pb-1 text-xs font-semibold text-muted tabular-nums">
-          {offer.reference}
+          {offer.bookingLabel}
         </span>
       </div>
       <OfferTrips

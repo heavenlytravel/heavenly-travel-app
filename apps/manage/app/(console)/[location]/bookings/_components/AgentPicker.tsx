@@ -1,11 +1,5 @@
 "use client";
 
-import { VENDOR_FIELD_LABELS } from "@repo/db";
-import {
-  InvoicePeriodField,
-  VendorDetailsFields,
-  VendorLocationChecks,
-} from "@repo/console/VendorFieldsSection";
 import { answerOf, UNANSWERED_MESSAGE } from "@repo/ui/action-answer";
 import { Button } from "@repo/ui/button";
 import { Dialog, DialogActions } from "@repo/ui/dialog";
@@ -19,24 +13,26 @@ import { showFieldError } from "@repo/ui/validation";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition, type FormEvent } from "react";
 import { createPortal } from "react-dom";
-import { addAgentAction } from "../new/actions";
+import { addAgentForBookingAction } from "../../agents/actions";
+import {
+  AgentProfileFields,
+  PaymentTermsFields,
+} from "../../agents/_components/AgentFields";
 
 /** An agent a booking may come through. */
 export type Agent = { id: string; name: string };
 
 /**
- * The agent the booking came through, if any: its invoice is the agent's.
- * One not yet entered is added here, beside the list, through a dialog
- * that asks for an agent alone, not any other vendor, and is chosen at
- * once. The rest of a vendor, its bank, is entered later on its page.
+ * The agent the booking came through, if any: it is billed to the agent,
+ * by its payment terms. One not yet entered is added here, beside the
+ * list, through the dialog Add agent's page asks the same in, and is
+ * chosen at once.
  */
 export function AgentPicker({
   agents,
   value,
   onChange,
   onAdded,
-  locations,
-  locationId,
 }: {
   agents: readonly Agent[];
   /** The agent chosen, by id; "" for none. */
@@ -44,10 +40,6 @@ export function AgentPicker({
   onChange: (agentId: string) => void;
   /** An agent added here, for the list until the page's own brings it. */
   onAdded: (agent: Agent) => void;
-  /** The locations an agent may serve. */
-  locations: readonly { id: string; name: string }[];
-  /** The location the form is open in, ticked for a new agent; null under every location. */
-  locationId: string | null;
 }) {
   const [adding, setAdding] = useState(false);
   return (
@@ -83,8 +75,6 @@ export function AgentPicker({
       {adding
         ? createPortal(
             <AddAgentDialog
-              locations={locations}
-              locationId={locationId}
               onClose={() => setAdding(false)}
               onAdded={(agent) => {
                 onAdded(agent);
@@ -99,15 +89,11 @@ export function AgentPicker({
   );
 }
 
-/** The dialog that adds an agent: who it is, who the team speaks to, how it is invoiced, where it works. */
+/** The dialog that adds an agent: who it is, who the team speaks to, how it pays. */
 function AddAgentDialog({
-  locations,
-  locationId,
   onClose,
   onAdded,
 }: {
-  locations: readonly { id: string; name: string }[];
-  locationId: string | null;
   onClose: () => void;
   onAdded: (agent: Agent) => void;
 }) {
@@ -122,7 +108,7 @@ function AddAgentDialog({
     event.stopPropagation();
     const formData = new FormData(event.currentTarget);
     startTransition(async () => {
-      const answer = await answerOf(addAgentAction(formData));
+      const answer = await answerOf(addAgentForBookingAction(formData));
       if (!answer || "error" in answer) {
         const message = answer?.error ?? UNANSWERED_MESSAGE;
         const atField =
@@ -145,7 +131,7 @@ function AddAgentDialog({
         if (!open && !pending) onClose();
       }}
       title="Add an agent"
-      description="An agent the booking comes through, chosen for it once added. Its bank and the rest are entered later on its page under Vendors."
+      description="An agent the booking comes through, chosen for it once added. The rest is on its page under Agents."
       width="md"
     >
       <form
@@ -154,17 +140,8 @@ function AddAgentDialog({
         onInput={() => setError(null)}
         className="grid gap-5"
       >
-        <VendorDetailsFields fields={null} />
-        <InvoicePeriodField value="month" />
-        <fieldset className="grid gap-2">
-          <legend className="mb-1 text-sm font-semibold text-ink">
-            {VENDOR_FIELD_LABELS.locationIds}
-          </legend>
-          <VendorLocationChecks
-            locations={locations}
-            served={new Set(locationId ? [locationId] : [])}
-          />
-        </fieldset>
+        <AgentProfileFields profile={null} />
+        <PaymentTermsFields terms="none" daysToPay={30} />
         <FormError error={error} />
         <DialogActions>
           <Button

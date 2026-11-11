@@ -2,6 +2,7 @@
 
 import {
   isChargeRevisionKind,
+  isIsoDate,
   isPriceRevisionKind,
   MAX_STOP_WAIT_MINUTES,
   parseLegacyInvoiceNumber,
@@ -483,7 +484,7 @@ export async function setPayLaterAction(
   if (!bookingId) return STALE;
   const clear = textOf(formData.get("clear")) === "true";
   const dueOn = textOf(formData.get("dueOn"));
-  if (!clear && !/^\d{4}-\d{2}-\d{2}$/.test(dueOn)) {
+  if (!clear && !isIsoDate(dueOn)) {
     return { error: "Choose the day it is to be paid by.", field: "dueOn" };
   }
   const result = await setPayLater(

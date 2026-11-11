@@ -431,6 +431,9 @@ function whereOf(filter: BookingFilter): Prisma.BookingWhereInput | undefined {
         : []),
       // A booking id pasted whole, from a log or a link.
       { id: filter.search },
+      // The old random reference (HT-7K3QZM) customers were given, until
+      // the column is dropped.
+      { reference: { contains: filter.search.trim().toUpperCase() } },
       // A legacy invoice number as typed (HT1223, HTI-1295-03), in part.
       {
         legacyInvoiceNumber: {

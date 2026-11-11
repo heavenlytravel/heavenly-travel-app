@@ -59,6 +59,7 @@ describe("document numbers", () => {
     assert.equal(bookingNumberOfPath("htb-1042"), null);
     assert.equal(bookingNumberOfPath("HT-7K3QZM"), null);
     assert.equal(bookingNumberOfPath("1042"), null);
+    assert.equal(bookingNumberOfPath("%E0"), null);
   });
 
   it("keeps a legacy invoice number as free text, upper case", () => {

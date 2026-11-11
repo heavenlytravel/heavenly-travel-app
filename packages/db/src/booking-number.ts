@@ -84,7 +84,13 @@ export function parseDocumentNumber(
  * included, which no longer opens a booking.
  */
 export function bookingNumberOfPath(segment: string): number | null {
-  const match = /^HTB-(\d{4,7})$/.exec(decodeURIComponent(segment));
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(segment);
+  } catch {
+    return null; // "%E0": not an address of ours.
+  }
+  const match = /^HTB-(\d{4,7})$/.exec(decoded);
   return match ? Number(match[1]) : null;
 }
 

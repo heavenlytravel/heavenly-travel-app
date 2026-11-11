@@ -2,8 +2,9 @@
 //
 // Run once per database after the schema push of
 // docs/261108-billing-and-revisions.md, right before the merge (the code
-// still live until then gives invoices the old way), and again if a
-// booking was made in between: every step skips what it did already.
+// still live until then gives invoices the old way), and again right
+// after the deploy, for any booking made or confirmed in between: every
+// step skips what it did already.
 //
 // 1. Agents leave Vendor: each vendor offering "agent" is copied to a
 //    `Business` with the same id (its invoice period becomes its payment
@@ -228,13 +229,15 @@ async function billOldInvoices() {
           });
         }
       }
+      // The old row goes first: one main's code numbered after the first
+      // run's counters holds the number the new series gives next.
+      await tx.invoice.delete({ where: { id: row.id } });
       const issued = await issueOldInvoice(tx, SYSTEM_ACTOR, {
         bookingIds: row.bookings.map((b) => b.id),
         oldNumber,
         issuedAt: row.createdAt,
         paid: paid ? { at: row.updatedAt } : null,
       });
-      await tx.invoice.delete({ where: { id: row.id } });
       say(
         issued
           ? `Old ${oldInvoiceLabel(row.number ?? 0, null)} (${names}): ${issued.label} for RM ${formatRinggit(issued.totalSen)}${paid ? ", paid" : ""}.`

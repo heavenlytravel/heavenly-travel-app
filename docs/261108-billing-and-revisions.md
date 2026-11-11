@@ -477,7 +477,22 @@ changes" (decision 7) stands.
    (`Invoice (type, number)`, `Booking.number`, `Invoice.replacedById`); the only thing
    dropped is the index `Invoice_number_key`. No row or column is lost.
 2. Right before the merge: `pnpm --filter @repo/db db:set-billing:prod` (it rehearses on a
-   copy, asks for "production", backs up, then runs).
+   copy, asks for "production", backs up, then runs), then
+   `pnpm --filter @repo/db db:set-vendor-service:prod`.
+3. Merge, and once the deploy is live, `db:set-billing:prod` again. The code live until
+   then makes bookings without a number and invoices the old way, from the counter the
+   first run reset; the second run numbers and issues them. Keep the gap short: an issue
+   in the new code before the second run can meet a number such an old row holds.
+
+Rehearsed whole on 2026-11-11 on a fresh copy of production, the copy on main's schema
+exactly: 97 bookings, 12 old invoice rows all pending, 10 agent vendors, 6 vendors. The
+push SQL applied; the script made the 10 agents businesses (90 bookings), numbered
+HTB-0001 to HTB-0097, took HTB-0054, 0096 and 0097 (cancelled) to RM 0.00, wrote Rev 1
+for all 97, issued the 12 old rows as HTI-0001 to HTI-0012 (all owed, for Finance to
+record what came in) and deleted the 10 agent vendors; `db:set-vendor-service` gave the
+6 vendors their one service (five Vehicle and driver, one Vehicle only); a second
+`db:set-billing` changed nothing. Every booking and invoice then read without error
+(booking, billing, revisions, fulfilment, Order List, invoices).
 
 The rehearsal below predates "One open invoice per booking": the script now also issues the old
 rows as new invoices and opens or issues the rest, so it is rehearsed again before the merge.
@@ -490,7 +505,7 @@ gave HTB-0001 to HTB-0061 in the order made, moved 60 old numbers into the legac
 HTB-0062, HTI-0001 and HTC-0001, and wrote Rev 1 for all 61. HTB-0054, cancelled and never
 invoiced, is the one booking with no legacy number; its total went from RM 420.00 to
 RM 0.00 (a cancel charges only its fees), so nothing is left to bill. A second run changed
-nothing. 3. Merge. 4. Next schema change: drop `Booking.reference`, `quoteNumber`, `invoiceId`, `invoiceLine`,
+nothing. Next schema change: drop `Booking.reference`, `quoteNumber`, `invoiceId`, `invoiceLine`,
 `agentId` and `invoiceNumber`; `Invoice.agentId`, `paymentStatus` and the old relation;
 `Vendor.invoicePeriod`, `agentBookings` and `agentInvoices`; and `VehicleClass.imageUrl`.
 Make `Booking.number` required.

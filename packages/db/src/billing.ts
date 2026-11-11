@@ -419,10 +419,11 @@ const OPEN_SELECT = {
   createdAt: true,
   periodStart: true,
   periodEnd: true,
-  _count: { select: { payments: { where: { reversedAt: null } } } },
+  // Reversed ones too: a payment is never deleted, so its invoice is kept.
+  _count: { select: { payments: true } },
 } as const satisfies Prisma.InvoiceSelect;
 
-/** The booking's own open invoice, with how many live payments it holds. */
+/** The booking's own open invoice, with how many payments it holds. */
 function ownOpenOf(client: Tx, bookingId: string) {
   return client.invoice.findFirst({
     where: {
@@ -434,16 +435,26 @@ function ownOpenOf(client: Tx, bookingId: string) {
   });
 }
 
-/** The agent's open month-end invoice the booking is a line of. */
-function periodOpenOf(client: Tx, bookingId: string) {
-  return client.invoice.findFirst({
+/**
+ * The agents' open month-end invoices the booking is a line of: the one
+ * it is billed on, and any it left after a payment there (./leavePeriod),
+ * the one billed first.
+ */
+async function periodsOpenOf(client: Tx, bookingId: string) {
+  const docs = await client.invoice.findMany({
     where: {
       status: "open",
       periodStart: { not: null },
       lines: { some: { bookingId } },
     },
-    select: OPEN_SELECT,
+    select: {
+      ...OPEN_SELECT,
+      lines: { where: { bookingId }, select: { amountSen: true } },
+    },
   });
+  const billed = (d: (typeof docs)[number]) =>
+    d.lines.some((l) => l.amountSen > 0) ? 0 : 1;
+  return docs.sort((a, b) => billed(a) - billed(b));
 }
 
 type OpenInvoice = NonNullable<Awaited<ReturnType<typeof ownOpenOf>>>;
@@ -614,14 +625,25 @@ async function retotalPeriod(tx: Tx, actor: Actor, invoiceId: string) {
   });
 }
 
-/** Takes the booking's line off an open month-end invoice. */
+/**
+ * Takes the booking's line off an open month-end invoice. One paid on
+ * there keeps its line, billing nothing, so its payments stay on a line
+ * of theirs: it reads Refund due there, for Finance to refund or move.
+ */
 async function leavePeriod(
   tx: Tx,
   actor: Actor,
   bookingId: string,
   invoiceId: string,
 ) {
-  await tx.invoiceLine.deleteMany({ where: { invoiceId, bookingId } });
+  if ((await tx.payment.count({ where: { invoiceId, bookingId } })) > 0) {
+    await tx.invoiceLine.updateMany({
+      where: { invoiceId, bookingId },
+      data: { amountSen: 0 },
+    });
+  } else {
+    await tx.invoiceLine.deleteMany({ where: { invoiceId, bookingId } });
+  }
   await retotalPeriod(tx, actor, invoiceId);
 }
 
@@ -729,12 +751,14 @@ async function syncOpenInvoice(
     0,
     booking.priceTotalSen - (await billedSenOf(tx, booking.id)),
   );
-  const onPeriod = await periodOpenOf(tx, booking.id);
+  const onPeriods = await periodsOpenOf(tx, booking.id);
   if (await isMonthly(tx, booking)) {
     const target =
       amountSen > 0 ? await periodInvoiceFor(tx, actor, booking, now) : null;
-    if (onPeriod && onPeriod.id !== target?.id) {
-      await leavePeriod(tx, actor, booking.id, onPeriod.id);
+    for (const onPeriod of onPeriods) {
+      if (onPeriod.id !== target?.id) {
+        await leavePeriod(tx, actor, booking.id, onPeriod.id);
+      }
     }
     if (target) {
       const line = await lineOf(tx, booking, amountSen);
@@ -749,7 +773,9 @@ async function syncOpenInvoice(
     }
     return;
   }
-  if (onPeriod) await leavePeriod(tx, actor, booking.id, onPeriod.id);
+  for (const onPeriod of onPeriods) {
+    await leavePeriod(tx, actor, booking.id, onPeriod.id);
+  }
   const open = await ownOpenOf(tx, booking.id);
   if (hasEnded(booking.status)) {
     if (open) await closeOpen(tx, actor, booking, open, now);
@@ -1433,7 +1459,7 @@ export async function billBookingAlone(
   return db.$transaction(async (tx) => {
     const booking = await heldBooking(tx, bookingId);
     if (!booking) return refuse("This booking was deleted meanwhile.");
-    const from = await periodOpenOf(tx, booking.id);
+    const [from] = await periodsOpenOf(tx, booking.id);
     if (!from || !(await isMonthly(tx, booking))) {
       return refuse(
         "This booking is not on an open month-end invoice. Reload it.",
@@ -1533,12 +1559,25 @@ export async function issueMonthEnd(
     if (billing.length === 0 && doc._count.payments === 0) {
       return refuse("Nothing on it is left to bill. Reload it.");
     }
+    // A booking with nothing left to bill leaves it, unless paid on it:
+    // its line stays, at nothing, to hold its payments.
+    const paidFor = new Set(
+      (
+        await tx.payment.findMany({
+          where: { invoiceId },
+          select: { bookingId: true },
+        })
+      ).map((p) => p.bookingId),
+    );
+    const kept = lines.filter(
+      (l) => l.amountSen > 0 || paidFor.has(l.booking.id),
+    );
     await tx.invoiceLine.deleteMany({
       where: {
-        id: { in: lines.filter((l) => l.amountSen === 0).map((l) => l.id) },
+        id: { in: lines.filter((l) => !kept.includes(l)).map((l) => l.id) },
       },
     });
-    for (const line of billing) {
+    for (const line of kept) {
       await tx.invoiceLine.update({
         where: { id: line.id },
         data: await lineOf(tx, line.booking, line.amountSen),
@@ -1632,6 +1671,11 @@ export async function voidInvoice(
     if (held && !input.reissue) {
       return refuse(
         `${label} has payments or credit notes. Void it with its replacement, so they move across.`,
+      );
+    }
+    if (input.reissue && doc.lines.length === 0) {
+      return refuse(
+        `${label} has no booking on it to bill again. Void it without a replacement.`,
       );
     }
     await tx.invoice.update({
@@ -1791,6 +1835,26 @@ export async function recordPayment(
       if (-input.amountSen > over) {
         return refuse(
           `No more than was paid over: ${formatMyr(over)}.`,
+          "amount",
+        );
+      }
+    }
+    if (credit) {
+      // What the note credits the booking, less what was refunded on it.
+      const bookingId = parts[0]!.bookingId;
+      const left =
+        doc.payments
+          .filter((p) => p.bookingId === bookingId)
+          .reduce((sum, p) => sum + p.amountSen, 0) -
+        doc.lines
+          .filter((l) => l.bookingId === bookingId)
+          .reduce((sum, l) => sum + l.amountSen, 0);
+      if (left <= 0) {
+        return refuse("Everything on this credit note is refunded already.");
+      }
+      if (-input.amountSen > left) {
+        return refuse(
+          `No more than is left to refund on it: ${formatMyr(left)}.`,
           "amount",
         );
       }

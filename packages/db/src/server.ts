@@ -387,6 +387,7 @@ export {
   issueMonthEnd,
   voidInvoice,
   recordPayment,
+  setPayLater,
   reversePayment,
   listInvoices,
   getInvoice,

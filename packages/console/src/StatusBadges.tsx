@@ -113,12 +113,13 @@ export function ItemStatusBadge({ status }: { status: string }) {
 
 /**
  * Where an invoice's money stands, worked out from its payments: owed
- * and waiting (amber), owed past its due date (red, a real problem),
+ * and waiting (amber), owed and agreed for later (brand blue), owed past its due date (red, a real problem),
  * partly in (brand blue), all in (green), nothing owed (grey), and money
  * to give back (navy).
  */
 export const PAYMENT_STATE_TONES: Record<PaymentState, BadgeTone> = {
   unpaid: "amber",
+  "pay-later": "brand",
   overdue: "red",
   "partially-paid": "brand",
   paid: "green",

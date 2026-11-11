@@ -44,6 +44,7 @@ export async function nameRecordAction(
     offerId,
     role,
     recordId,
+    textOf(formData.get("vehicleClassReason")) || null,
   );
   if (!result.ok) return refusalOf(result);
   revalidatePath("/~");

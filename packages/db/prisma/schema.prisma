@@ -210,6 +210,10 @@ model TripPart {
   /// A coach trip's driver only: the tip, out of the customer's total,
   /// that Operation sets for the driver; 0 otherwise.
   tipSen           Int         @default(0)
+  /// A vehicle part only: why its vehicle is not of the class booked, in
+  /// the words of whoever named it, Operation or the vendor; null when it
+  /// is, or none is named yet. See src/fulfilment-rules.ts, the class.
+  classReason      String?
   vendorAcceptedAt DateTime?
   /// The driver's own acceptance; for a vehicle, unused.
   driverAcceptedAt DateTime?
@@ -902,6 +906,11 @@ model Booking {
   /// (HT1223, HTI-1295-03): for reference, not unique. A booking with one
   /// is billed outside the system: no invoice is ever made for it here.
   legacyInvoiceNumber String?
+  /// Agreed to be paid later, by this day: staff's "Assign now, payment
+  /// not in yet". Shown for reference, it marks nothing overdue; the first
+  /// payment ends it. Null for none, and for a credit agent's booking,
+  /// which pays later on its terms.
+  payLaterDueOn       DateTime? @db.Date
   /// The account the booking shows under; null for a guest.
   userId              String?
   user                User?     @relation(fields: [userId], references: [id])

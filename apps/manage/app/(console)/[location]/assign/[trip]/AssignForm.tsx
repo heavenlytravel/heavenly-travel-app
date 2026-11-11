@@ -2,6 +2,8 @@
 
 import {
   BOOKING_RULES,
+  candidateOption,
+  classChangeFor,
   defaultRespondBy,
   formatLocalDateTime,
   localDateTimeInputs,
@@ -16,6 +18,7 @@ import { Checkbox, Field, Input } from "@repo/ui/field";
 import { FormError } from "@repo/ui/form-error";
 import { Select } from "@repo/ui/select";
 import { useState } from "react";
+import { ClassReasonField } from "@repo/console/ClassReasonField";
 import { useActionForm } from "@repo/console/use-action-form";
 import { assignAction } from "../actions";
 
@@ -27,8 +30,8 @@ type Moment = { date: string; time: string };
 /**
  * One role of a trip still to assign, the vehicle, the driver or the tour
  * guide, in its own card: its vendor first (ours first), then one of that vendor's (one
- * that cannot do the trip greyed with why) or Any, which the vendor
- * assigns, said plainly under it; what we pay, a vendor that is not ours
+ * that cannot do the trip greyed with why, a vehicle of another class
+ * than booked marked so and asking why) or Any, which the vendor assigns, said plainly under it; what we pay, a vendor that is not ours
  * for a vehicle, the driver or guide themselves for theirs, and a coach
  * driver's tip;
  * when the vendor answers by, before the pickup; for our vehicle or guide,
@@ -92,6 +95,11 @@ export function AssignForm({
   ];
   const firstPickup = new Date(
     Math.min(...posted.map((t) => t.startsAt.getTime())),
+  );
+  // Another class than booked on a trip it posts for: asked why.
+  const classChange = classChangeFor(
+    candidate,
+    posted.map((t) => t.id),
   );
   const respondBy =
     respondByEdit ?? localDateTimeInputs(defaultRespondBy(firstPickup));
@@ -164,14 +172,7 @@ export function AssignForm({
                   ? "Any, we name it later"
                   : "Any, the vendor assigns",
               },
-              ...own.map((c) => {
-                const reason = c.trips[trip.id]?.reasons[0];
-                return {
-                  value: c.id,
-                  label: reason ? `${c.name} · ${reason}` : c.name,
-                  disabled: reason !== undefined,
-                };
-              }),
+              ...own.map((c) => candidateOption(c, [trip.id])),
             ]}
           />
         </Field>
@@ -183,6 +184,7 @@ export function AssignForm({
             : `${vendor.name} will assign the ${noun}. You see who once they do.`}
         </p>
       ) : null}
+      {classChange ? <ClassReasonField change={classChange} /> : null}
       {fit?.warnings.map((warning) => (
         <p key={warning} className="text-caption text-warning">
           {warning}

@@ -224,12 +224,21 @@ Assigning is Operation's work (`bookings.fulfil`).
 | Vendor A's | Vendor A's | Vendor A            | Vendor A, then its driver | A, one offer   |
 | Vendor A's | Vendor B's | Vendor B            | Vendor A, then its driver | A and B        |
 
-- **The picker** lists vehicles and drivers, ours first, only those of a class the
-  booking's trips are of: a class changes by amending the booking. One that cannot be
-  used is shown greyed with the reason: not allowed on this class, a licence, PSV, road tax,
+- **The picker** lists vehicles and drivers, ours first, the class booked first (below). One
+  that cannot be used is shown greyed with the reason: a licence, PSV, road tax,
   insurance, inspection or permit expired on the trip's date, out of service, its vendor
   suspended, or another job at that time. It shows each driver's day ("Ali: 8:00
   Airport → Datai, ends about 8:45").
+- **Another class, with a reason** (2026-11-11). Any vehicle may do a trip. The class booked
+  is listed first; one of another class says so ("MPV instead of Sedan") and asks why when it
+  is named, by Operation on Assign or by the vendor choosing for "Any" in Connect alike. The
+  reason is kept on the trip's vehicle part (`TripPart.classReason`) and in the booking's
+  history, and shows on the vehicle card. Nothing is re-priced; the customer pays what they
+  booked, and is not told yet. **The driver follows the vehicle:** a driver who does not drive
+  its class (the vehicle's once named, the class booked before) is listed with a warning,
+  never hidden or refused, and so is a vehicle whose named driver does not drive it
+  (`ClassRule` in `packages/db/src/fulfilment-rules.ts`). A driver's job in Connect shows
+  the class of the vehicle named.
 - **Named or open.** Operation names a vendor's own vehicle or driver, and the vendor
   confirms; or asks a vendor for a vehicle, a driver or both, and the vendor chooses.
 - **The offer** to a vendor holds the booking's trips, what is asked, the amounts for each

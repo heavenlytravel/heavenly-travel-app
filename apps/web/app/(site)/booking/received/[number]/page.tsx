@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { bookingNumberOfPath, EMAILS_ON, isMaskedEmail } from "@repo/db";
+import {
+  bookingNumberOfPath,
+  EMAILS_ON,
+  formatDocumentNumber,
+  isMaskedEmail,
+} from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { notFound } from "next/navigation";
 import { eyebrow, PageTitle, Panel } from "../../../_components/Page";
@@ -26,8 +31,10 @@ export default async function ReceivedPage({
   params,
   searchParams,
 }: PageProps<"/booking/received/[number]">) {
-  const reference = decodeURIComponent((await params).number);
-  if (bookingNumberOfPath(reference) === null) notFound();
+  const number = bookingNumberOfPath((await params).number);
+  if (number === null) notFound();
+  // Decoded once: the path parsed already.
+  const reference = formatDocumentNumber("booking", number);
   const { to } = await searchParams;
   const sentTo = isMaskedEmail(to) ? to : null;
 

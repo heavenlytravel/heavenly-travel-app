@@ -104,6 +104,8 @@ const AREA_OF = {
   "booking.business.changed": "bookings",
   "booking.billed.alone": "billing",
   "booking.legacy.changed": "bookings",
+  "booking.pay-later.set": "billing",
+  "booking.pay-later.cleared": "billing",
   "invoice.opened": "billing",
   "invoice.issued": "billing",
   "invoice.voided": "billing",

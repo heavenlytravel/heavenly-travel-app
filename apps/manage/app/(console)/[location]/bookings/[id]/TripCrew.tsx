@@ -117,7 +117,13 @@ export function TripCrew({
                 <dt className="text-muted">{PART_ROLE_LABELS[role]}</dt>
                 <dd className="text-body">
                   {part ? (
-                    `${namedOf(part)} · ${part.offer.vendor.name}`
+                    [
+                      namedOf(part),
+                      part.offer.vendor.name,
+                      role === "vehicle" ? trip.classChange?.label : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")
                   ) : (
                     <NotAssignedBadge
                       urgent={isUrgentTrip({ startsAt: trip.startsAt, state })}

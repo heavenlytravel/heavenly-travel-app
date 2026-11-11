@@ -95,6 +95,7 @@ import { ItemActions } from "./BookingControls";
 import {
   BookingAgentControl,
   OldInvoiceNumberControl,
+  PayLaterControl,
 } from "./BillingControls";
 import {
   BookingChangeMenu,
@@ -608,6 +609,38 @@ function MoneyCard({
                   ],
                 ]}
               />
+            ) : null}
+            {billing.payLater ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-brand-tint px-3 py-2 text-sm text-brand-strong">
+                <span>
+                  <span className="block font-semibold">Pay later</span>
+                  <span className="block text-caption">
+                    {billing.payLater.byTerms
+                      ? billing.payLater.dueOn
+                        ? `On the agent's terms, due ${formatLocalDate(billing.payLater.dueOn)}.`
+                        : "On the agent's terms: due once its month-end invoice is issued."
+                      : billing.payLater.dueOn
+                        ? `Agreed, to be paid by ${formatLocalDate(billing.payLater.dueOn)}.`
+                        : "Agreed for later."}
+                  </span>
+                </span>
+                {manage && !billing.payLater.byTerms ? (
+                  <PayLaterControl
+                    bookingId={booking.id}
+                    dueOn={
+                      billing.payLater.dueOn?.toISOString().slice(0, 10) ?? null
+                    }
+                  />
+                ) : null}
+              </div>
+            ) : manage &&
+              !billing.monthly &&
+              booking.status !== "cancelled" &&
+              billing.money?.state === "unpaid" ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 text-caption text-muted">
+                <span>No payment yet. Agreed to be paid later?</span>
+                <PayLaterControl bookingId={booking.id} dueOn={null} />
+              </div>
             ) : null}
             {waiting ? (
               <div className="rounded-control bg-warning-tint px-3 py-2 text-sm text-warning-strong">

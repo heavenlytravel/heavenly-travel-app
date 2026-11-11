@@ -45,6 +45,20 @@ export const jobInclude = {
     include: {
       ...tripInclude,
       events: { orderBy: { at: "asc" } },
+      // The vehicle named on the trip: its class is the one driven, a
+      // free upgrade over the one booked.
+      parts: {
+        where: { role: "vehicle", vehicleId: { not: null } },
+        select: {
+          vehicle: {
+            select: {
+              vehicleModel: {
+                select: { vehicleClass: { select: { name: true } } },
+              },
+            },
+          },
+        },
+      },
     },
   },
 } satisfies Prisma.TripPartInclude;
@@ -69,6 +83,7 @@ export type DriverTrip = {
   status: string;
   startsAt: Date;
   endsAt: Date | null;
+  /** The class of the vehicle named on it, else the class booked. */
   className: string;
   passengers: number;
   /** "Kuah", "Pantai Cenang": the area, never the exact address. */
@@ -112,7 +127,10 @@ export function tripOf(part: JobPart): DriverTrip {
     status: part.item.status,
     startsAt: part.item.startsAt,
     endsAt: part.item.endsAt,
-    className: details?.vehicleClassName ?? "",
+    className:
+      part.item.parts[0]?.vehicle?.vehicleModel.vehicleClass.name ??
+      details?.vehicleClassName ??
+      "",
     passengers: details?.passengers ?? 0,
     pickupArea: pickup ? placeArea(pickup) : "",
     dropoffArea: dropoff ? placeArea(dropoff) : null,

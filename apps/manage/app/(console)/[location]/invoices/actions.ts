@@ -2,6 +2,7 @@
 
 import {
   flagOf,
+  isIsoDate,
   isPaymentMethod,
   parseReason,
   parseRinggit,
@@ -127,7 +128,7 @@ export async function recordPaymentAction(
     return { error: "Choose how it was paid.", field: "method" };
   }
   const paidOn = textOf(formData.get("paidOn"));
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(paidOn)) {
+  if (!isIsoDate(paidOn)) {
     return { error: "Choose the day it came in.", field: "paidOn" };
   }
   const note = textOf(formData.get("note")).slice(0, 200) || null;

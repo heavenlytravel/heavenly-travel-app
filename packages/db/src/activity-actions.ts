@@ -11,6 +11,7 @@ import { LOCATION_FIELD_LABELS } from "./location-input";
 import { andList } from "./names";
 import { loggedPageRef, pageNameOf } from "./location-page-input";
 import { SITE_PAGE_LABELS, isSitePageKey } from "./site-page-input";
+import { formatLocalDate } from "./booking-rules";
 import { formatMyr } from "./money";
 import { OFFERING_FIELD_LABELS } from "./offering-input";
 import {
@@ -185,6 +186,13 @@ const ACTIONS = {
   "booking.billed.alone": { entityType: "booking", customerVisible: false },
   /** Its legacy invoice number, before and after; null for none. */
   "booking.legacy.changed": { entityType: "booking", customerVisible: false },
+  /** Agreed to be paid later: the `dueOn` day, before and after. */
+  "booking.pay-later.set": { entityType: "booking", customerVisible: false },
+  /** Back to Pending from Pay later. */
+  "booking.pay-later.cleared": {
+    entityType: "booking",
+    customerVisible: false,
+  },
   /** An open invoice opened, numbered only when issued: a booking's on confirming (`totalSen`), or an agent's month-end one (`period`); `billTo`. Before 2026-11-10 it was numbered then, its `document`. */
   "invoice.opened": { entityType: "invoice", customerVisible: false },
   /** An open invoice nothing was paid on dropped, never numbered, with its `reason`. */
@@ -709,11 +717,18 @@ function partSentence(action: string, after: unknown) {
   const recorded =
     field(after, "recorded") === true ? ", recorded by staff" : "";
   const by = field(after, "by") === "driver" ? "the driver" : "the vendor";
+  // A vehicle not of the class booked, and why: ", MPV instead of Sedan: …".
+  const change = field(after, "classChange");
+  const why = field(after, "classReason");
+  const classNote =
+    typeof change === "string"
+      ? `, ${change}${typeof why === "string" ? `: ${why}` : ""}`
+      : "";
   switch (action) {
     case "booking.offer.sent":
       return field(after, "acceptedNow") === true
-        ? `Assigned ${what} and accepted it`
-        : `Asked for ${what}`;
+        ? `Assigned ${what} and accepted it${classNote}`
+        : `Asked for ${what}${classNote}`;
     case "booking.part.accepted":
       return `Accepted ${what} for ${by}${recorded}`;
     case "booking.part.declined": {
@@ -721,7 +736,7 @@ function partSentence(action: string, after: unknown) {
       return `Declined ${what} for ${by}${recorded}${typeof reason === "string" ? `: ${reason}` : ""}`;
     }
     case "booking.part.named":
-      return `Named ${what}`;
+      return `Named ${what}${classNote}`;
     case "booking.part.released": {
       const cause = field(after, "cause");
       return `${RELEASE_CAUSES[typeof cause === "string" ? cause : "released"] ?? "Released"} ${what}`;
@@ -1375,6 +1390,14 @@ export function describeActivity(entry: DescribableActivity): string {
         ? `Billed on its own invoice, ${own}, off ${from}`
         : `Billed on its own invoice, ${own}`;
     }
+    case "booking.pay-later.set": {
+      const dueOn = field(entry.after, "dueOn");
+      return typeof dueOn === "string"
+        ? `Set it to Pay later, due ${formatLocalDate(new Date(`${dueOn}T00:00:00Z`))}`
+        : "Set it to Pay later";
+    }
+    case "booking.pay-later.cleared":
+      return "Set it back to Pending from Pay later";
     case "booking.legacy.changed": {
       const value = field(entry.after, "legacyInvoiceNumber");
       return typeof value === "string"

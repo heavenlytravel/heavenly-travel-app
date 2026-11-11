@@ -117,10 +117,12 @@ export default async function InvoicesPage({
       param: "state",
       label: "Payment",
       value: filter.state ?? "",
-      options: PAYMENT_STATES.map((value) => ({
-        value,
-        label: PAYMENT_STATE_LABELS[value],
-      })),
+      options: PAYMENT_STATES.filter((value) => value !== "pay-later").map(
+        (value) => ({
+          value,
+          label: PAYMENT_STATE_LABELS[value],
+        }),
+      ),
     },
     {
       param: "billed",

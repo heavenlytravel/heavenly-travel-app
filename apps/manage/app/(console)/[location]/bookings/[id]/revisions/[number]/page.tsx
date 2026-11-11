@@ -45,7 +45,8 @@ export default async function RevisionPage({
   const scope = await scopeOf(params);
   const { id, number } = await params;
   const n = Number(number);
-  if (!Number.isInteger(n) || n < 1) notFound();
+  // Within Postgres' int, which Prisma refuses past.
+  if (!Number.isInteger(n) || n < 1 || n > 2_147_483_647) notFound();
   return (
     <Streamed
       fallback={

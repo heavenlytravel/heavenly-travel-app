@@ -1,6 +1,9 @@
 import { bookingLabelOf, documentLabelOf } from "./booking-number";
 import {
+  isCredit,
+  paysLater,
   sumMoney,
+  withPayLater,
   type InvoiceMoney,
   type PaymentState,
 } from "./billing-rules";
@@ -78,7 +81,8 @@ export async function listOrders(
       startsAt: true,
       status: true,
       priceTotalSen: true,
-      business: { select: { name: true } },
+      payLaterDueOn: true,
+      business: { select: { name: true, paymentTerms: true } },
       invoiceLines: { select: { invoice: { select: DOCUMENT_MONEY } } },
     },
   });
@@ -86,6 +90,16 @@ export async function listOrders(
     const docs = booking.invoiceLines
       .map((l) => l.invoice)
       .filter((d) => d.status !== "void");
+    const monthly =
+      !docs.some((d) => d.type === "invoice" && periodOfRow(d) === null) &&
+      (booking.business ? isCredit(booking.business.paymentTerms) : false);
+    const money = sumMoney(
+      docs.flatMap((d) => {
+        const share = moneyOf(d, now, booking.id);
+        return share ? [share] : [];
+      }),
+      now,
+    );
     return {
       id: booking.id,
       label: bookingLabelOf(booking),
@@ -100,13 +114,12 @@ export async function listOrders(
         status: d.status,
         monthEnd: periodOfRow(d) !== null,
       })),
-      money: sumMoney(
-        docs.flatMap((d) => {
-          const money = moneyOf(d, now, booking.id);
-          return money ? [money] : [];
-        }),
-        now,
-      ),
+      money: money
+        ? withPayLater(
+            money,
+            paysLater({ payLaterDueOn: booking.payLaterDueOn, monthly }),
+          )
+        : null,
     };
   });
   return filter.state

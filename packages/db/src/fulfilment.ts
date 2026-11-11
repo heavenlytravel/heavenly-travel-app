@@ -21,6 +21,11 @@ import {
   timingWarnings,
   hasGuide,
   tripAssigned,
+  CLASS_REASON_MAX_LENGTH,
+  classChangeOf,
+  driverClassWarning,
+  vehicleDriverWarning,
+  type ClassRule,
   type DeclineReason,
   type Job,
   type PartRole,
@@ -137,7 +142,11 @@ const partInclude = {
       plate: true,
       colour: true,
       vehicleModel: {
-        select: { brand: true, name: true, vehicleClassId: true },
+        select: {
+          brand: true,
+          name: true,
+          vehicleClass: { select: { id: true, name: true } },
+        },
       },
     },
   },
@@ -164,6 +173,8 @@ export type FulfilmentTrip = {
   cancelledAt: Date | null;
   cancellationCutoffHours: number;
   vehicleClassId: string | null;
+  /** "MPV instead of Sedan" when its vehicle, named, is not of the class booked, and why; null otherwise. */
+  classChange: { label: string; reason: string | null } | null;
   /** A tour guide goes on it, a third role to assign. */
   withGuide: boolean;
   /** The language the customer paid for the guide to speak; null without one. */
@@ -208,6 +219,7 @@ export async function getBookingFulfilment(
     cancelledAt: item.cancelledAt,
     cancellationCutoffHours: item.cancellationCutoffHours,
     vehicleClassId: item.tripDetails?.vehicleClassId ?? null,
+    classChange: classChangeView(item),
     withGuide: hasGuide(item.tripDetails),
     guideLanguage: item.tripDetails?.guideLanguage ?? null,
     guideRequest: item.tripDetails?.guideRequest ?? null,
@@ -228,6 +240,88 @@ export async function bookingIdOfTrip(itemId: string): Promise<string | null> {
   return item?.bookingId ?? null;
 }
 
+/** "MPV instead of Sedan" and why, for a trip whose vehicle is not of the class booked; null otherwise. */
+function classChangeView(item: {
+  tripDetails: { vehicleClassId: string; vehicleClassName: string } | null;
+  parts: TripPartView[];
+}): FulfilmentTrip["classChange"] {
+  const part = item.parts.find((p) => p.role === "vehicle");
+  const label = classChangeOf(
+    bookedClassOf(item.tripDetails),
+    part?.vehicle?.vehicleModel.vehicleClass,
+  );
+  return label ? { label, reason: part?.classReason ?? null } : null;
+}
+
+/** The class a trip was booked in, by the name it was booked under; null without one. */
+function bookedClassOf(
+  details: { vehicleClassId: string; vehicleClassName: string } | null,
+): ClassRule["booked"] {
+  return details
+    ? { id: details.vehicleClassId, name: details.vehicleClassName }
+    : null;
+}
+
+/** A candidate's fit for one trip, and its class when not the one booked: "MPV instead of Sedan". */
+export type CandidateFit = TripFit & { classChange: string | null };
+
+/**
+ * Each trip's class rule (`ClassRule`), by item id: its class booked and
+ * the vehicle and driver named on it already. A trip not found is not in
+ * it.
+ */
+async function classRulesOf(
+  client: Prisma.TransactionClient,
+  itemIds: readonly string[],
+): Promise<Map<string, ClassRule>> {
+  const items = await client.bookingItem.findMany({
+    where: { id: { in: [...itemIds] } },
+    select: {
+      id: true,
+      tripDetails: {
+        select: { vehicleClassId: true, vehicleClassName: true },
+      },
+      parts: {
+        where: { role: { in: ["vehicle", "driver"] } },
+        select: {
+          role: true,
+          vehicle: {
+            select: {
+              vehicleModel: {
+                select: {
+                  vehicleClass: { select: { id: true, name: true } },
+                },
+              },
+            },
+          },
+          driver: {
+            select: { name: true, vehicleClasses: { select: { id: true } } },
+          },
+        },
+      },
+    },
+  });
+  return new Map(
+    items.map((item) => {
+      const vehicle = item.parts.find((p) => p.role === "vehicle")?.vehicle;
+      const driver = item.parts.find((p) => p.role === "driver")?.driver;
+      return [
+        item.id,
+        {
+          booked: bookedClassOf(item.tripDetails),
+          vehicle: vehicle?.vehicleModel.vehicleClass ?? null,
+          driver: driver
+            ? {
+                name: driver.name,
+                classIds: driver.vehicleClasses.map((c) => c.id),
+              }
+            : null,
+        } satisfies ClassRule,
+      ] as const;
+    }),
+  );
+}
+
 /** A vehicle, a driver or a guide the picker lists, and why it cannot be used, if so. */
 export type Candidate = {
   id: string;
@@ -239,11 +333,13 @@ export type Candidate = {
   reasons: string[];
   /** Estimates that do not refuse it: the drive between jobs. */
   warnings: string[];
+  /** A vehicle not of the class booked: "MPV instead of Sedan"; null otherwise. */
+  classChange: string | null;
   /**
    * Its fit for each live trip on its own, by item id: for a choice made
    * per trip, so a clash on trip 3 greys it on trip 3 alone.
    */
-  trips: Record<string, TripFit>;
+  trips: Record<string, CandidateFit>;
   /** Its other jobs on the trips' days: "08:00 HTB-1042 Airport → Datai, until 08:45". */
   day: string[];
 };
@@ -282,12 +378,15 @@ function expiredOn(
 }
 
 /**
- * The picker: every vehicle or driver in service that may do a class the
- * booking's live trips are of, ours first, each with the reasons it
- * cannot do them, greyed in the list,
- * and the timing warnings that only warn. A clash with another job, a
- * class it is not of or may not drive, a document expired on a trip's
- * day, its vendor suspended. The same again for each trip on its own, for
+ * The picker: every vehicle, driver or guide in service, ours first, the
+ * class booked before the others, each with the reasons it cannot do the
+ * booking's live trips, greyed in the list, and the warnings that only
+ * warn. Refused: a clash with another job, a document expired on a
+ * trip's day, its vendor suspended, a guide without the language paid
+ * for. Warned: the drive between jobs, a driver who does not drive the
+ * class (the vehicle's once named, `ClassRule`). A vehicle not of the
+ * class booked says so, "MPV instead of Sedan", and needs a reason when
+ * named. The same again for each trip on its own, for
  * a choice made per trip. The drive between jobs is the straight line's
  * estimate here.
  */
@@ -305,7 +404,11 @@ export async function listCandidates(
   if (trips.length === 0) return [];
   const jobs = trips.map((t) => t.job);
   const days = daysOf(jobs);
-  const classIds = new Set(trips.map((t) => t.vehicleClassId));
+  const rules = await classRulesOf(
+    db,
+    trips.map((t) => t.id),
+  );
+  const ruleOf = (itemId: string) => rules.get(itemId)!;
   const location = await db.bookingItem.findFirst({
     where: { bookingId },
     select: { location: { select: { id: true, safetyBufferMinutes: true } } },
@@ -316,8 +419,9 @@ export async function listCandidates(
     select: { id: true, name: true, isOurs: true, status: true },
   } as const;
 
-  // Each row says whether it may do a class and which of its documents
-  // expire on some days, so its fit is worked for all trips and each.
+  // Each row says what its class means on a trip and which of its
+  // documents expire on some days, so its fit is worked for all trips and
+  // each.
   const rows =
     role === "guide"
       ? (
@@ -337,8 +441,8 @@ export async function listCandidates(
           vendor: g.vendor,
           location: g.location,
           // A guide goes with any class.
-          mayDo: () => true,
-          notClass: "",
+          classWarning: (): string | null => null,
+          classChange: (): string | null => null,
           speaks: g.languages,
           expired: (on: ReadonlySet<string>) =>
             expiredOn(
@@ -360,8 +464,7 @@ export async function listCandidates(
                   select: {
                     brand: true,
                     name: true,
-                    vehicleClassId: true,
-                    vehicleClass: { select: { name: true } },
+                    vehicleClass: { select: { id: true, name: true } },
                   },
                 },
               },
@@ -371,9 +474,10 @@ export async function listCandidates(
             name: `${v.plate} · ${modelName(v.vehicleModel)}`,
             vendor: v.vendor,
             location: v.location,
-            mayDo: (classId: string | null) =>
-              classId === v.vehicleModel.vehicleClassId,
-            notClass: `A ${v.vehicleModel.vehicleClass.name}, not the class booked`,
+            classWarning: (rule: ClassRule) =>
+              vehicleDriverWarning(rule, v.vehicleModel.vehicleClass),
+            classChange: (rule: ClassRule) =>
+              classChangeOf(rule.booked, v.vehicleModel.vehicleClass),
             expired: (on: ReadonlySet<string>) =>
               expiredOn(
                 v as unknown as Record<string, Date | null>,
@@ -400,9 +504,9 @@ export async function listCandidates(
               name: d.name,
               vendor: d.vendor,
               location: d.location,
-              mayDo: (classId: string | null) =>
-                classId !== null && may.has(classId),
-              notClass: "Not allowed on this class",
+              classWarning: (rule: ClassRule) =>
+                driverClassWarning(rule, [...may]),
+              classChange: (): string | null => null,
               expired: (on: ReadonlySet<string>) =>
                 expiredOn(
                   d as unknown as Record<string, Date | null>,
@@ -415,11 +519,8 @@ export async function listCandidates(
             };
           });
 
-  // One of a class no trip is of is not listed at all: a class changes by
-  // amending the booking, not here.
-  const fitting = rows.filter((row) => [...classIds].some(row.mayDo));
   const candidates = await Promise.all(
-    fitting.map(async (row): Promise<Candidate & { rank: number }> => {
+    rows.map(async (row): Promise<Candidate & { rank: number }> => {
       const held = await heldJobs(db, row.held, bookingId);
       const suspended =
         row.vendor.status !== "active" ? ["Its vendor is suspended"] : [];
@@ -436,27 +537,33 @@ export async function listCandidates(
       };
       // The fit for a set of trips: one, or all of them at once.
       const fitFor = (
-        asked: readonly Job[],
-        classes: readonly (string | null)[],
+        asked: readonly (typeof trips)[number][],
         languages: readonly string[],
-      ): TripFit => {
+      ): CandidateFit => {
+        const jobsAsked = asked.map((t) => t.job);
         const reasons = [
-          ...(classes.every(row.mayDo) ? [] : [row.notClass]),
           ...unspoken(languages),
-          ...row.expired(daysOf(asked)),
+          ...row.expired(daysOf(jobsAsked)),
           ...suspended,
         ];
-        const clash = firstClash(asked, held);
+        const clash = firstClash(jobsAsked, held);
         if (clash) reasons.push(clashSentence(clash));
-        const warnings = clash
-          ? []
-          : timingWarnings(asked, held, { bufferMinutes, who });
-        return { reasons, warnings };
+        const warnings = [
+          ...new Set(
+            asked.flatMap((t) => row.classWarning(ruleOf(t.id)) ?? []),
+          ),
+          ...(clash
+            ? []
+            : timingWarnings(jobsAsked, held, { bufferMinutes, who })),
+        ];
+        const classChange =
+          asked.map((t) => row.classChange(ruleOf(t.id))).find(Boolean) ?? null;
+        return { reasons, warnings, classChange };
       };
       const languagesOf = (t: (typeof trips)[number]) =>
         t.guideLanguage ? [t.guideLanguage] : [];
       const asked = [...new Set(trips.flatMap(languagesOf))];
-      const all = fitFor(jobs, [...classIds], asked);
+      const all = fitFor(trips, asked);
       return {
         id: row.id,
         name: row.name,
@@ -468,19 +575,21 @@ export async function listCandidates(
         locationName: row.location.name,
         reasons: all.reasons,
         warnings: all.warnings,
+        classChange: all.classChange,
         trips: Object.fromEntries(
-          trips.map((t) => [
-            t.id,
-            fitFor([t.job], [t.vehicleClassId], languagesOf(t)),
-          ]),
+          trips.map((t) => [t.id, fitFor([t], languagesOf(t))]),
         ),
         day: held
           .filter((job) => days.has(todayInMalaysia(job.startsAt)))
           .sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime())
           .map(dayLine),
+        // The class booked, and drivers who drive it, before the others.
         rank:
-          (all.reasons.length > 0 ? 4 : 0) +
-          (row.vendor.isOurs ? 0 : 2) +
+          (all.reasons.length > 0 ? 8 : 0) +
+          (row.vendor.isOurs ? 0 : 4) +
+          (all.classChange || trips.some((t) => row.classWarning(ruleOf(t.id)))
+            ? 2
+            : 0) +
           (row.location.id === here ? 0 : 1),
       };
     }),
@@ -517,6 +626,8 @@ export type PartAsk = {
   costSen: Record<string, number>;
   /** A coach trip's driver's tip, by item id; any vendor, ours too. */
   tipSen: Record<string, number>;
+  /** Why the vehicle named is not of the class booked; needed when it is not, else unused. */
+  classReason: string | null;
 };
 
 export type AssignInput = {
@@ -560,15 +671,27 @@ async function clashRefusal(
     : null;
 }
 
-/** A named record checked: in service, its vendor the one asked and active. */
+/**
+ * A named record checked: in service, its vendor the one asked and
+ * active; a guide speaking the language paid for; a vehicle not of the
+ * class booked with a reason, kept on those trips' parts (`classReasons`,
+ * by item id). A driver who does not drive the class is only warned of,
+ * in the picker.
+ */
 async function namedRecord(
   tx: Prisma.TransactionClient,
   role: PartRole,
-  ask: Pick<PartAsk, "vendorId" | "recordId">,
+  ask: Pick<PartAsk, "vendorId" | "recordId" | "classReason">,
   /** The trips it is named for: a guide must speak each one's language. */
   trips: readonly TripRow[],
 ) {
-  if (!ask.recordId) return { ok: true as const, name: null };
+  const none = {
+    ok: true as const,
+    name: null,
+    classChange: null,
+    classReasons: {} as Record<string, string>,
+  };
+  if (!ask.recordId) return none;
   const what = role === "guide" ? "tour guide" : role;
   const record =
     role === "guide"
@@ -590,6 +713,9 @@ async function namedRecord(
               isActive: true,
               vendorId: true,
               vendor: { select: { status: true } },
+              vehicleModel: {
+                select: { vehicleClass: { select: { id: true, name: true } } },
+              },
             },
           })
         : await tx.driver.findUnique({
@@ -614,6 +740,40 @@ async function namedRecord(
       role,
     );
   }
+  // Another class than booked, on some trips: said why, kept on those.
+  const classReasons: Record<string, string> = {};
+  let classChange: string | null = null;
+  if ("vehicleModel" in record) {
+    const changed = trips.flatMap((trip) => {
+      const change = classChangeOf(
+        trip.tripDetails
+          ? {
+              id: trip.tripDetails.vehicleClassId,
+              name: trip.tripDetails.vehicleClassName,
+            }
+          : null,
+        record.vehicleModel.vehicleClass,
+      );
+      return change ? [{ trip, change }] : [];
+    });
+    if (changed.length > 0) {
+      const why = ask.classReason?.trim() ?? "";
+      classChange = changed[0]!.change;
+      if (!why) {
+        return refuse(
+          `${name} is ${classChange}. Say why, for the team to see.`,
+          "vehicleClassReason",
+        );
+      }
+      if (why.length > CLASS_REASON_MAX_LENGTH) {
+        return refuse(
+          `Keep the reason under ${CLASS_REASON_MAX_LENGTH} characters.`,
+          "vehicleClassReason",
+        );
+      }
+      for (const { trip } of changed) classReasons[trip.id] = why;
+    }
+  }
   if ("languages" in record && Array.isArray(record.languages)) {
     const speaks: readonly unknown[] = record.languages;
     const unspoken = [
@@ -626,7 +786,7 @@ async function namedRecord(
       );
     }
   }
-  return { ok: true as const, name };
+  return { ...none, name, classChange, classReasons };
 }
 
 /**
@@ -820,6 +980,7 @@ export async function assignBooking(
             guideId: role === "guide" ? ask.recordId : null,
             costSen: vendor.isOurs ? 0 : (ask.costSen[trip.id] ?? 0),
             tipSen: tipOf(trip),
+            classReason: named.classReasons[trip.id] ?? null,
             vendorAcceptedAt: vendorAccepted,
           },
         });
@@ -842,6 +1003,7 @@ export async function assignBooking(
             : {}),
           respondBy: respondBy.toISOString(),
           ...(vendorAccepted && role !== "driver" ? { acceptedNow: true } : {}),
+          ...classLogOf(named),
         },
       });
       await settleOffer(tx, offer.id, now);
@@ -1041,15 +1203,28 @@ function describeParts(
   };
 }
 
+/** What the activity log keeps of another class than booked: "MPV instead of Sedan" and why. */
+function classLogOf(named: {
+  classChange: string | null;
+  classReasons: Record<string, string>;
+}) {
+  const reason = Object.values(named.classReasons)[0];
+  return named.classChange && reason
+    ? { classChange: named.classChange, classReason: reason }
+    : {};
+}
+
 /**
  * The vendor names the vehicle, the driver or the guide Operation left to
  * it, for every one of the parts. Refused when it clashes with another job, is
- * not the vendor's, or is out of service. Naming does not accept.
+ * not the vendor's, or is out of service, and for a vehicle not of the
+ * class booked without `classReason`. Naming does not accept.
  */
 export async function nameParts(
   actor: Actor,
   partIds: string[],
   recordId: string,
+  classReason: string | null = null,
 ): Promise<Change & { assigned?: string[] }> {
   return db.$transaction(async (tx) => {
     const parts = await tx.tripPart.findMany({
@@ -1080,7 +1255,7 @@ export async function nameParts(
     const named = await namedRecord(
       tx,
       role,
-      { vendorId: parts[0]!.offer.vendorId, recordId },
+      { vendorId: parts[0]!.offer.vendorId, recordId, classReason },
       parts.map((p) => p.item),
     );
     if (!named.ok) return named;
@@ -1093,19 +1268,34 @@ export async function nameParts(
       named.name!,
     );
     if (clash) return clash;
-    await tx.tripPart.updateMany({
-      where: { id: { in: partIds } },
-      data:
-        role === "vehicle"
-          ? { vehicleId: recordId }
-          : role === "guide"
+    if (role === "vehicle") {
+      // Each trip keeps the reason when its class booked is not the vehicle's.
+      for (const part of parts) {
+        await tx.tripPart.update({
+          where: { id: part.id },
+          data: {
+            vehicleId: recordId,
+            classReason: named.classReasons[part.itemId] ?? null,
+          },
+        });
+      }
+    } else {
+      await tx.tripPart.updateMany({
+        where: { id: { in: partIds } },
+        data:
+          role === "guide"
             ? { guideId: recordId }
             : { driverId: recordId, driverAcceptedAt: null },
-    });
+      });
+    }
     await logActivity(tx, actor, {
       action: "booking.part.named",
       entityId: bookingId,
-      after: { ...describeParts(parts), named: named.name },
+      after: {
+        ...describeParts(parts),
+        named: named.name,
+        ...classLogOf(named),
+      },
     });
     const assigned = await settleTrips(tx, actor, [
       ...new Set(parts.map((p) => p.itemId)),

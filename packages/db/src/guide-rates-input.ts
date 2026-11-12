@@ -25,7 +25,7 @@ export const GUIDE_RATE_PRICES = [
 export type GuideRatePrice = (typeof GUIDE_RATE_PRICES)[number];
 
 export const GUIDE_RATE_PRICE_LABELS: Record<GuideRatePrice, string> = {
-  oneWaySen: "One-way",
+  oneWaySen: "Transfer",
   hours4Sen: "4 hours",
   hours8Sen: "8 hours",
   hours12Sen: "12 hours",

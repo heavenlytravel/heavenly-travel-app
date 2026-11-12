@@ -11,7 +11,7 @@ import { Checkbox, Radio } from "@repo/ui/field";
 import { FormError } from "@repo/ui/form-error";
 
 /**
- * "Add-ons", under the vehicle on the confirm page: the tour guide, for a
+ * The add-ons step's choices (./AddOnsStep): the tour guide, for a
  * car or a coach, one-way or hourly. Only the languages on sale for every
  * trip show, each at its price for them all (the location's guide rates);
  * with none on sale, nothing shows. One language is chosen, ticking the
@@ -43,8 +43,7 @@ export function AddOns({
   const issue = guideOfferIssue(guide.language, offers);
 
   return (
-    <div className="grid gap-4 border-t border-hairline pt-5">
-      <h3 className="font-serif text-xl leading-tight">Add-ons</h3>
+    <div className="grid gap-4">
       <label className="flex items-start gap-3">
         <Checkbox
           className="mt-1"

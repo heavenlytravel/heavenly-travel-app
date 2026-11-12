@@ -875,7 +875,7 @@ export function RateGrid({
                       </button>
                     </>
                   ) : (
-                    "No routes yet, so no one-way trip can be priced here: every trip is priced from the grid."
+                    "No routes yet, so no transfer can be priced here: every trip is priced from the grid."
                   )}
                 </EmptyRow>
               ) : (

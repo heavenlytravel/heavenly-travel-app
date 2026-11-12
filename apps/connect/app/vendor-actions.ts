@@ -12,7 +12,7 @@ import { sendDriverEmailFor } from "@repo/email";
 import { type ActionState, refusalOf, STALE } from "@repo/console/action-state";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { actorOf, getMemberAccess, NOT_A_MEMBER } from "./_lib/access";
+import { actorOf, getMemberAccess, notAMember } from "./_lib/access";
 
 /**
  * A vendor's answers in Connect, by its owner or staff: naming the vehicle,
@@ -27,7 +27,7 @@ export async function nameRecordAction(
   formData: FormData,
 ): Promise<ActionState> {
   const member = await getMemberAccess();
-  if (!member) return NOT_A_MEMBER;
+  if (!member) return notAMember();
   const offerId = textOf(formData.get("offerId"));
   const role = textOf(formData.get("role"));
   const recordId = textOf(formData.get("recordId"));
@@ -56,7 +56,7 @@ export async function answerVendorOfferAction(
   formData: FormData,
 ): Promise<ActionState> {
   const member = await getMemberAccess();
-  if (!member) return NOT_A_MEMBER;
+  if (!member) return notAMember();
   const offerId = textOf(formData.get("offerId"));
   if (!offerId) return STALE;
   const reason = textOf(formData.get("reason"));

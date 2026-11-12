@@ -1,6 +1,8 @@
+import { VIEW_AS_PATH } from "@repo/db";
 import {
   BriefcaseBusiness,
   CarFront,
+  Eye,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -32,7 +34,10 @@ export type NavItem = {
  * owner. The business's details and one's own profiles are under the
  * account (`ACCOUNT_PATH`).
  */
-export function navItems(member?: { owner: boolean }): NavItem[] {
+export function navItems(
+  member?: { owner: boolean },
+  admin = false,
+): NavItem[] {
   return [
     {
       href: HOME_PATH,
@@ -57,6 +62,17 @@ export function navItems(member?: { owner: boolean }): NavItem[] {
             label: "Team",
             icon: Users,
             match: ["/~/staff"],
+          },
+        ]
+      : []),
+    // A SUPER's list of everyone to view Connect as, read only.
+    ...(admin
+      ? [
+          {
+            href: VIEW_AS_PATH,
+            label: "View as",
+            icon: Eye,
+            match: [VIEW_AS_PATH],
           },
         ]
       : []),

@@ -12,7 +12,7 @@ import { sendDriverEmailFor } from "@repo/email";
 import { type ActionState, refusalOf, STALE } from "@repo/console/action-state";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { actorOf, getDriverAccess } from "./_lib/access";
+import { actorOf, getDriverAccess, notADriver } from "./_lib/access";
 
 /**
  * A driver's actions in Connect: answering an offer, reporting a trip and
@@ -21,17 +21,13 @@ import { actorOf, getDriverAccess } from "./_lib/access";
  * POST, and lets the writer in @repo/db check that the job is theirs.
  */
 
-const NOT_A_DRIVER: ActionState = {
-  error: "You are not signed in as a driver. Reload the page.",
-};
-
 /** Accept or decline an offer: every trip of it, together. */
 export async function answerOfferAction(
   _previous: ActionState,
   formData: FormData,
 ): Promise<ActionState> {
   const access = await getDriverAccess();
-  if (!access) return NOT_A_DRIVER;
+  if (!access) return notADriver();
   const offerId = textOf(formData.get("offerId"));
   const accept = textOf(formData.get("answer")) === "accept";
   const reason = textOf(formData.get("reason"));
@@ -72,8 +68,7 @@ export async function reportTapAction(
   tap: TapPayload,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const access = await getDriverAccess();
-  if (!access)
-    return { ok: false, error: "You are not signed in as a driver." };
+  if (!access) return { ok: false, ...(await notADriver()) };
   if (
     typeof tap?.itemId !== "string" ||
     !isTripEventKind(tap.kind) ||
@@ -104,8 +99,7 @@ export async function undoNoShowAction(
   itemId: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const access = await getDriverAccess();
-  if (!access)
-    return { ok: false, error: "You are not signed in as a driver." };
+  if (!access) return { ok: false, ...(await notADriver()) };
   if (typeof itemId !== "string" || !itemId) {
     return { ok: false, error: "Reload the page and try again." };
   }

@@ -2,7 +2,6 @@
 
 import {
   createVendor,
-  getConnectAccess,
   keepApplicantProfile,
   mayRegisterVendor,
   parseVendorFields,
@@ -16,7 +15,7 @@ import {
   stateOf,
 } from "@repo/console/action-state";
 import { after } from "next/server";
-import { actorOf } from "../_lib/access";
+import { actorOf, getRegistrantAccess, notARegistrant } from "../_lib/access";
 import { STATUS_PATH } from "../_ui/nav";
 import { ALREADY_REGISTERED_HREF } from "./paths";
 
@@ -56,10 +55,8 @@ export async function checkRegistrationAction(
 export async function registerVendorAction(
   formData: FormData,
 ): Promise<ActionState> {
-  const access = await getConnectAccess();
-  if (access.status === "signed-out") {
-    return { error: "Your sign-in ended. Sign in again, then send it." };
-  }
+  const access = await getRegistrantAccess();
+  if (!access) return notARegistrant();
   const { user } = access;
   if (!(await mayRegisterVendor(user.id))) {
     return { href: ALREADY_REGISTERED_HREF };

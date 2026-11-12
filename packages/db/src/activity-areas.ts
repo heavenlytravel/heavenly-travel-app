@@ -123,6 +123,8 @@ const AREA_OF = {
   "user.email.changed": "team",
   "user.password.set": "team",
   "user.deleted": "team",
+  "connect.view-as.started": "team",
+  "connect.view-as.ended": "team",
   "admin.promoted": "team",
   "admin.updated": "team",
   "admin.revoked": "team",

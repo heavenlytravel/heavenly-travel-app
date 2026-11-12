@@ -1,5 +1,5 @@
 import { answerUpload } from "@repo/console/image-upload";
-import { getMemberAccess, NOT_A_MEMBER } from "../../../_lib/access";
+import { getMemberAccess, notAMember } from "../../../_lib/access";
 
 /**
  * POST /api/uploads/vehicle-image, with the photo as the form field
@@ -9,7 +9,7 @@ import { getMemberAccess, NOT_A_MEMBER } from "../../../_lib/access";
  */
 export async function POST(request: Request) {
   if (!(await getMemberAccess())) {
-    return Response.json(NOT_A_MEMBER, { status: 403 });
+    return Response.json(await notAMember(), { status: 403 });
   }
   return answerUpload(request);
 }

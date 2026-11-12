@@ -11,6 +11,7 @@ import {
   tripOf,
   type DriverJob,
   type DriverTrip,
+  type JobViewer,
 } from "./driver-jobs";
 import {
   answerParts,
@@ -345,10 +346,10 @@ export type VendorJob = DriverJob & {
 /**
  * One job the vendor accepted, or null when it holds none of the trip.
  * The customer's details show until a few days after the trip, and the
- * view is logged, as PDPA asks.
+ * view is logged, as PDPA asks, against the admin when one views as them.
  */
 export async function getVendorJob(
-  actor: Actor,
+  { actor, viewAs }: JobViewer,
   vendor: { id: string; name: string },
   itemId: string,
   now: Date = new Date(),
@@ -421,7 +422,11 @@ export async function getVendorJob(
     logActivity(tx, actor, {
       action: "booking.contact.viewed",
       entityId: first.item.booking.id,
-      after: { position: first.item.position, vendorName: vendor.name },
+      after: {
+        position: first.item.position,
+        vendorName: vendor.name,
+        ...(viewAs ? { viewAs } : {}),
+      },
     }),
   );
   return {

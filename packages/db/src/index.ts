@@ -17,6 +17,7 @@ export * from "./place";
 export * from "./phone";
 export * from "./trip-view";
 export * from "./names";
+export * from "./view-as";
 export * from "./contact";
 export type { SessionUser, Access } from "./session";
 export * from "./change";

@@ -3,18 +3,12 @@
 import { PAGE_STATUS_LABELS, type PageStatus } from "@repo/db";
 import { PAGE_TONES } from "@repo/console/StatusBadges";
 import { StatusDot, type BadgeTone } from "@repo/ui/badge";
-import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  FilesIcon,
-  PencilIcon,
-  SearchIcon,
-} from "@repo/ui/icons";
+import { FloatingPill, pillButtonClass } from "@repo/ui/floating-pill";
+import { FilesIcon, PencilIcon, SearchIcon } from "@repo/ui/icons";
 import { useDismiss } from "@repo/ui/use-dismiss";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
-import { flushSync } from "react-dom";
 
 /** Where a page stands, as its dot shows it: its status, or paused, a class's page while the class is off sale there. */
 export type PreviewStanding = PageStatus | "paused";
@@ -45,10 +39,6 @@ const STANDINGS: Record<PreviewStanding, { label: string; tone: BadgeTone }> = {
   paused: { label: "Paused: the class is off here", tone: "amber" },
 };
 
-/** A button or link on the pill; the keyboard's ring is the site's, in white on the ink. */
-const pillButton =
-  "inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-3 font-semibold hover:bg-white/10 focus-ring focus-ring-dark";
-
 function Dot({ standing }: { standing: PreviewStanding }) {
   return <StatusDot tone={STANDINGS[standing].tone} />;
 }
@@ -58,7 +48,8 @@ function Dot({ standing }: { standing: PreviewStanding }) {
  * public sees it: a dark pill at the foot of the window saying it is a
  * preview, the page shown and where it stands, "Pages", which opens the
  * pages that can be previewed with it, and "Edit", its editor in the
- * console. The pill folds down to a round button. The page ends with room
+ * console. The pill folds into a round button and widens back
+ * (`FloatingPill`), folded or not for the tab. The page ends with room
  * for it, so it never hides the footer. A location's pages and the site's
  * own pages both use it; what it links and where each page stands are
  * worked out on the server. On a phone the pill keeps to the word and the
@@ -87,11 +78,8 @@ export function PreviewBar({
   groups: PreviewGroup[];
 }) {
   const [open, setOpen] = useState(false);
-  const [folded, setFolded] = useState(false);
-  const root = useRef<HTMLElement>(null);
+  const root = useRef<HTMLDivElement>(null);
   const pagesButton = useRef<HTMLButtonElement>(null);
-  const foldButton = useRef<HTMLButtonElement>(null);
-  const unfoldButton = useRef<HTMLButtonElement>(null);
   const panelId = useId();
 
   const close = () => {
@@ -103,92 +91,63 @@ export function PreviewBar({
   // outside the pill and the pages, which leaves the focus where it lands.
   useDismiss(root, open, (by) => (by === "escape" ? close() : setOpen(false)));
 
-  // The button that takes the place of the one pressed keeps the focus.
-  const fold = (to: boolean) => {
-    flushSync(() => {
-      setFolded(to);
-      setOpen(false);
-    });
-    (to ? unfoldButton : foldButton).current?.focus();
-  };
-
   const { label } = STANDINGS[standing];
   return (
     <>
       {/* Room at the foot of the page for the pill, continuing the footer's last band. */}
       <div aria-hidden="true" className="h-20 bg-ink" />
-      <aside
-        ref={root}
-        aria-label="Preview"
-        className="pointer-events-none fixed inset-x-0 bottom-4 z-(--layer-staff) flex flex-col items-center gap-2 px-3 text-caption text-white"
-      >
-        {open && (
-          <PagePicker
-            id={panelId}
-            title={title}
-            note={note}
-            searchLabel={searchLabel}
-            groups={groups}
-            onChoose={close}
-          />
-        )}
-        {folded ? (
-          <button
-            ref={unfoldButton}
-            type="button"
-            aria-label={`Show the preview bar: ${name}, ${label}`}
-            onClick={() => fold(false)}
-            className="pointer-events-auto relative flex size-11 cursor-pointer items-center justify-center rounded-full bg-ink shadow-overlay ring-1 ring-white/15 hover:bg-navy focus-ring focus-ring-dark"
-          >
-            <ChevronUpIcon className="size-5" />
-            <span className="absolute top-1.5 right-1.5 flex rounded-full ring-2 ring-ink">
-              <Dot standing={standing} />
+      <div ref={root} className="contents">
+        <FloatingPill
+          label="Preview"
+          foldLabel="Fold the preview bar"
+          unfoldLabel={`Show the preview bar: ${name}, ${label}`}
+          storageKey="preview"
+          badge={<Dot standing={standing} />}
+          className="bottom-4 text-caption"
+          onFoldChange={() => setOpen(false)}
+          above={
+            open && (
+              <PagePicker
+                id={panelId}
+                title={title}
+                note={note}
+                searchLabel={searchLabel}
+                groups={groups}
+                onChoose={close}
+              />
+            )
+          }
+        >
+          <p className="flex min-w-0 items-center gap-2.5 pr-1">
+            <strong className="shrink-0 text-xs tracking-eyebrow uppercase">
+              Preview
+            </strong>
+            <span className="max-w-[16rem] min-w-0 truncate font-semibold max-sm:sr-only">
+              {name}
             </span>
+            <span className="flex shrink-0 items-center gap-1.5 text-white/85">
+              <Dot standing={standing} />
+              <span className="whitespace-nowrap max-sm:sr-only">{label}</span>
+            </span>
+          </p>
+          <span aria-hidden="true" className="mx-1 h-5 w-px bg-white/20" />
+          <button
+            ref={pagesButton}
+            type="button"
+            aria-expanded={open}
+            aria-controls={open ? panelId : undefined}
+            onClick={() => setOpen(!open)}
+            className={`${pillButtonClass} aria-expanded:bg-white/15`}
+          >
+            <FilesIcon className="max-sm:hidden" />
+            Pages
           </button>
-        ) : (
-          <div className="pointer-events-auto flex max-w-full items-center gap-1 rounded-full bg-ink py-1 pr-1 pl-4 shadow-overlay ring-1 ring-white/15">
-            <p className="flex min-w-0 items-center gap-2.5 pr-1">
-              <strong className="shrink-0 text-xs tracking-eyebrow uppercase">
-                Preview
-              </strong>
-              <span className="max-w-[16rem] min-w-0 truncate font-semibold max-sm:sr-only">
-                {name}
-              </span>
-              <span className="flex shrink-0 items-center gap-1.5 text-white/85">
-                <Dot standing={standing} />
-                <span className="whitespace-nowrap max-sm:sr-only">
-                  {label}
-                </span>
-              </span>
-            </p>
-            <span aria-hidden="true" className="mx-1 h-5 w-px bg-white/20" />
-            <button
-              ref={pagesButton}
-              type="button"
-              aria-expanded={open}
-              aria-controls={open ? panelId : undefined}
-              onClick={() => setOpen(!open)}
-              className={`${pillButton} aria-expanded:bg-white/15`}
-            >
-              <FilesIcon className="max-sm:hidden" />
-              Pages
-            </button>
-            <a href={editHref} className={pillButton}>
-              <PencilIcon className="max-sm:hidden" />
-              Edit
-            </a>
-            <button
-              ref={foldButton}
-              type="button"
-              aria-label="Fold the preview bar"
-              onClick={() => fold(true)}
-              className={`${pillButton} px-2`}
-            >
-              <ChevronDownIcon className="size-5" />
-            </button>
-          </div>
-        )}
-      </aside>
+          <a href={editHref} className={pillButtonClass}>
+            <PencilIcon className="max-sm:hidden" />
+            Edit
+          </a>
+        </FloatingPill>
+      </div>
     </>
   );
 }

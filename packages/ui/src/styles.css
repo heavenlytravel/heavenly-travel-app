@@ -215,6 +215,28 @@ html:has(dialog:modal) {
 }
 
 /*
+ * A `FloatingPill`'s body folding sideways into its round button, and
+ * widening back: the same grid trick as `.ui-fold`, across. The pill only
+ * moves when it is pressed (`data-moving`), not when a page opens folded.
+ */
+.ui-pill-body {
+  display: grid;
+  grid-template-columns: 0fr;
+  opacity: 0;
+}
+
+.ui-pill-body[data-open] {
+  grid-template-columns: 1fr;
+  opacity: 1;
+}
+
+.ui-pill-body[data-moving] {
+  transition-property: grid-template-columns, opacity;
+  transition-duration: 240ms, 180ms;
+  transition-timing-function: cubic-bezier(0.2, 0, 0, 1), ease-out;
+}
+
+/*
  * The room the dock at the foot of a phone's screen takes, which a toast
  * stands above. Nothing where there is no dock.
  */
@@ -232,6 +254,7 @@ html:has(dialog:modal) {
   .ui-pop::backdrop,
   .ui-pop-panel,
   .ui-fold,
+  .ui-pill-body[data-moving],
   .ui-nav-progress {
     transition: none;
   }

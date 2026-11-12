@@ -16,7 +16,7 @@ import {
   tripDetailRows,
   tripViewOfItem,
   untilPickup,
-  isUrgentTrip,
+  tripUrgencyOf,
 } from "@repo/db";
 import {
   bookingIdOfTrip,
@@ -27,13 +27,12 @@ import {
   type FulfilmentTrip,
 } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
-import { cx } from "@repo/ui/cx";
 import { Rows } from "@repo/ui/rows";
 import { Card, CardTitle } from "@repo/console/Card";
 import { DetailColumns } from "@repo/console/PageColumn";
 import { PageHeader } from "@repo/console/PageHeader";
 import { Streamed } from "@repo/console/Skeleton";
-import { AssignStateBadge } from "@repo/console/StatusBadges";
+import { AssignStateBadge, URGENCY_TEXT } from "@repo/console/StatusBadges";
 import { requireAdmin } from "../../../../_lib/access";
 import {
   assignTripHref,
@@ -49,7 +48,7 @@ import {
 import { scopedBooking } from "../../bookings/_lib/scoped-booking";
 import { QuickViewButton } from "../QuickView";
 import { TripReports } from "../TripReports";
-import { AssignForm } from "./AssignForm";
+import { AssignCards, type OpenRole } from "./AssignCards";
 import { PartCard } from "./PartCard";
 
 /**
@@ -120,7 +119,7 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
   // On the road or done, what the driver reports comes first.
   const reporting = state === "on-the-road" || state === "done";
   const until = untilPickup(trip.startsAt);
-  const urgent = isUrgentTrip({ startsAt: trip.startsAt, state });
+  const urgency = tripUrgencyOf({ startsAt: trip.startsAt, state });
 
   const facts: [string, string][] = details
     ? tripDetailRows(details).map(([label, value]) =>
@@ -129,11 +128,29 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
     : [];
   facts.unshift([
     "Kind",
-    view?.hours ? `Hourly, ${durationLabel(view.hours)}` : "One-way",
+    view?.hours ? `By the hour, ${durationLabel(view.hours)}` : "Transfer",
   ]);
   if (scope.slug === null && item.location) {
     facts.push(["Location", item.location.name]);
   }
+
+  // The roles still to assign on this trip, each card's question.
+  const openRoles: OpenRole[] = PART_ROLES.filter(
+    (role) =>
+      !trip.parts.some((p) => p.role === role) &&
+      (thisOpen?.roles.includes(role) ?? false),
+  ).map((role) => ({
+    role,
+    description:
+      role === "guide" && trip.guideLanguage
+        ? `Choose the vendor, then a guide who speaks ${trip.guideLanguage}, or Any to let them assign one.${trip.guideRequest ? ` ${trip.guideRequest} was asked for too: amend the trip if a guide is found.` : ""}`
+        : role === "vehicle"
+          ? "Choose the vendor, then their vehicle of the class booked, or Any to let them assign it. Tick Assign others for another class."
+          : `Choose the vendor, then their ${PART_ROLE_LABELS[role].toLowerCase()} or Any to let them assign it.`,
+    others: open.filter((t) => t.id !== trip.id && t.roles.includes(role)),
+    candidates: candidatesOf[role],
+    vendors: serving.filter((v) => suppliesIt(v, role)),
+  }));
 
   const reports = (
     <TripReports
@@ -159,7 +176,7 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
             {" · "}
             {formatLocalDateTime(trip.startsAt)}
             {" · "}
-            <span className={cx(urgent && "font-semibold text-danger")}>
+            <span className={urgency ? URGENCY_TEXT[urgency] : undefined}>
               {until.label}
             </span>
           </>
@@ -186,32 +203,15 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
               const part = trip.parts.find((p) => p.role === role);
               const candidates = candidatesOf[role];
               if (!part) {
-                if (!thisOpen?.roles.includes(role)) return null;
+                // The roles to assign, together where the first one stands.
+                if (!thisOpen || role !== openRoles[0]?.role) return null;
                 return (
-                  <Card key={role}>
-                    <CardTitle
-                      action={<AssignStateBadge state="to-assign" />}
-                      description={
-                        role === "guide" && trip.guideLanguage
-                          ? `Choose the vendor, then a guide who speaks ${trip.guideLanguage}, or Any to let them assign one.${trip.guideRequest ? ` ${trip.guideRequest} was asked for too: amend the trip if a guide is found.` : ""}`
-                          : role === "vehicle"
-                            ? "Choose the vendor, then their vehicle or Any to let them assign it. A vehicle of another class than booked asks why."
-                            : `Choose the vendor, then their ${PART_ROLE_LABELS[role].toLowerCase()} or Any to let them assign it.`
-                      }
-                    >
-                      {PART_ROLE_LABELS[role]}
-                    </CardTitle>
-                    <AssignForm
-                      bookingId={booking.id}
-                      role={role}
-                      trip={thisOpen}
-                      others={open.filter(
-                        (t) => t.id !== trip.id && t.roles.includes(role),
-                      )}
-                      candidates={candidates}
-                      vendors={serving.filter((v) => suppliesIt(v, role))}
-                    />
-                  </Card>
+                  <AssignCards
+                    key="to-assign"
+                    bookingId={booking.id}
+                    trip={thisOpen}
+                    roles={openRoles}
+                  />
                 );
               }
               const siblings = siblingsOf(live, part);
@@ -221,7 +221,6 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
                   bookingId={booking.id}
                   role={role}
                   part={part}
-                  classChange={role === "vehicle" ? trip.classChange : null}
                   partIds={siblings.map((s) => s.id)}
                   positions={siblings.map((s) => s.position)}
                   itemIds={siblings.map((s) => s.itemId)}
@@ -229,7 +228,6 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
                     (c) => c.vendor.id === part.offer.vendor.id,
                   )}
                   payLines={trip.payLines.filter((line) => line.role === role)}
-                  tripClassId={trip.vehicleClassId}
                 />
               );
             })}

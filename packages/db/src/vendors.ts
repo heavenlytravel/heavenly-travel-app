@@ -119,6 +119,8 @@ export type VendorOption = {
   id: string;
   name: string;
   isOurs: boolean;
+  /** "company" | "individual": an individual is their own driver. */
+  kind: string;
   status: string;
   locationIds: string[];
   /** What it offers, one of `VENDOR_SERVICES`: each part is asked of one that supplies it (`suppliesIt`). */
@@ -138,6 +140,7 @@ export async function listVendorOptions(): Promise<VendorOption[]> {
       id: true,
       name: true,
       isOurs: true,
+      kind: true,
       status: true,
       services: true,
       locations: { select: { id: true } },

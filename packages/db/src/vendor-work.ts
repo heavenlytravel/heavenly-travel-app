@@ -220,7 +220,6 @@ export async function nameForVendor(
   offerId: string,
   role: PartRole,
   recordId: string,
-  classReason: string | null = null,
 ): Promise<Change & { assigned?: string[] }> {
   const parts = (await openParts(vendorId, offerId)).get(offerId) ?? [];
   const ofRole = parts.filter((p) => p.role === role);
@@ -231,7 +230,6 @@ export async function nameForVendor(
     actor,
     ofRole.map((p) => p.id),
     recordId,
-    classReason,
   );
 }
 
@@ -368,6 +366,7 @@ export async function getVendorJob(
             select: {
               id: true,
               number: true,
+              quoteNumber: true,
               contactName: true,
               contactPhone: true,
             },

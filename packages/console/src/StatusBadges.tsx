@@ -16,6 +16,7 @@ import {
   isBusinessStatus,
   isVendorStatus,
   type AssignState,
+  type TripUrgency,
   type BookingStatus,
   type ItemStatus,
   type LocationState,
@@ -73,14 +74,25 @@ export function AssignStateBadge({ state }: { state: AssignState }) {
   );
 }
 
+/** A trip's time by how soon it needs Operation (`tripUrgencyOf`): red within the day, yellow within two. */
+export const URGENCY_TEXT: Record<TripUrgency, string> = {
+  urgent: "font-semibold text-danger",
+  near: "font-semibold text-warning",
+};
+
+const URGENCY_TONES: Record<TripUrgency, BadgeTone> = {
+  urgent: "red",
+  near: "amber",
+};
+
 /**
  * A role of a trip with no vendor asked to do it, on the Assign page and
- * the booking alike: grey while there is time, red once the trip is
- * urgent (`isUrgentTrip`), as its time is.
+ * the booking alike: grey while there is time, then in its time's colour
+ * (`tripUrgencyOf`): yellow within two days, red within the day.
  */
-export function NotAssignedBadge({ urgent }: { urgent: boolean }) {
+export function NotAssignedBadge({ urgency }: { urgency: TripUrgency | null }) {
   return (
-    <Badge dot tone={urgent ? "red" : "neutral"}>
+    <Badge dot tone={urgency ? URGENCY_TONES[urgency] : "neutral"}>
       Not assigned
     </Badge>
   );

@@ -1,4 +1,5 @@
 import { cancellationDeadline, formatLocalTime } from "./booking-rules";
+import { modelName } from "./vehicle-model-input";
 import { refuse, type Change } from "./change";
 import { guardFor } from "./const-enum";
 import { numberOf, type Parsed } from "./fields";
@@ -321,9 +322,10 @@ export function partWaitingLabel(waiting: PartWaiting, vendorName: string) {
 const DAY_MS = 24 * HOUR_MS;
 
 /**
- * How long until a pickup, in a few words: "Started", "in 40 min",
- * "in 3 h", "in 2 days"; and whether it is within the day, soon enough
- * that a trip not yet assigned needs Operation now.
+ * How long until a pickup, in a few words: "Started", "in 40 min", in
+ * hours up to two days ("in 3 h", "in 30 h"), then "in 3 days"; and
+ * whether it is within the day, soon enough that a trip not yet assigned
+ * needs Operation now.
  */
 export function untilPickup(
   startsAt: Date,
@@ -335,9 +337,11 @@ export function untilPickup(
   if (ms < HOUR_MS) {
     return { label: `in ${Math.max(1, Math.round(ms / MINUTE_MS))} min`, soon };
   }
-  if (ms < DAY_MS) return { label: `in ${Math.round(ms / HOUR_MS)} h`, soon };
-  const days = Math.round(ms / DAY_MS);
-  return { label: days === 1 ? "in 1 day" : `in ${days} days`, soon };
+  // Within two days, the hours, as the red and yellow of urgency count them.
+  if (ms < 2 * DAY_MS) {
+    return { label: `in ${Math.round(ms / HOUR_MS)} h`, soon };
+  }
+  return { label: `in ${Math.round(ms / DAY_MS)} days`, soon };
 }
 
 /** Whether a trip is assigned: every role it needs (`rolesOf`) named and accepted. */
@@ -390,18 +394,28 @@ export function assignStateOf(trip: {
 }
 
 /**
- * Whether a trip needs Operation now: it picks up within the day, or has
- * started, while still to assign or waiting to accept. Its time is red,
- * and so is a role no one is asked to do.
+ * How soon a trip still to assign or waiting to accept needs Operation:
+ * "urgent" within the day, or started, its time in red, and so is a role
+ * no one is asked to do; "near" within two days, its time in yellow; null
+ * later, or once assigned.
  */
+export type TripUrgency = "urgent" | "near";
+
+export function tripUrgencyOf(
+  trip: { startsAt: Date; state: AssignState },
+  now: Date = new Date(),
+): TripUrgency | null {
+  if (trip.state !== "to-assign" && trip.state !== "waiting") return null;
+  const ms = trip.startsAt.getTime() - now.getTime();
+  return ms < DAY_MS ? "urgent" : ms < 2 * DAY_MS ? "near" : null;
+}
+
+/** Whether a trip needs Operation now (`tripUrgencyOf` "urgent"). */
 export function isUrgentTrip(
   trip: { startsAt: Date; state: AssignState },
   now: Date = new Date(),
 ) {
-  return (
-    untilPickup(trip.startsAt, now).soon &&
-    (trip.state === "to-assign" || trip.state === "waiting")
-  );
+  return tripUrgencyOf(trip, now) === "urgent";
 }
 
 /**
@@ -490,14 +504,14 @@ export function owesAfterCancel(
 }
 
 // ---------------------------------------------------------------------------
-// The vehicle's class: the one booked, or another with a reason
+// The vehicle's class: the one booked, or another
 // ---------------------------------------------------------------------------
 
 /**
  * What a trip's class reads: the class booked and what is named on it
  * already, its vehicle's class and the classes its driver may drive.
- * Any vehicle may do a trip; one of another class than booked needs a
- * reason (`classChangeOf`), whoever names it, Operation or the vendor.
+ * Any vehicle may do a trip: Assign lists the class booked first and the
+ * others on asking (`isOtherClass`), with no reason asked.
  * The driver follows the vehicle named, not the class booked, and one who
  * does not drive its class is only warned about. Nothing is re-priced:
  * the customer pays what they booked.
@@ -511,17 +525,12 @@ export type ClassRule = {
   driver: { name: string; classIds: readonly string[] } | null;
 };
 
-/** The longest reason for another class than booked. */
-export const CLASS_REASON_MAX_LENGTH = 200;
-
-/** "MPV instead of Sedan" when a vehicle of this class is not the class booked; null when it is. */
-export function classChangeOf(
+/** A vehicle of this class on a trip booked in another class; false without a class booked. */
+export function isOtherClass(
   booked: ClassRule["booked"],
-  vehicleClass: { id: string; name: string } | null | undefined,
-): string | null {
-  return vehicleClass && booked && vehicleClass.id !== booked.id
-    ? `${vehicleClass.name} instead of ${booked.name}`
-    : null;
+  vehicleClass: { id: string } | null | undefined,
+): boolean {
+  return Boolean(vehicleClass && booked && vehicleClass.id !== booked.id);
 }
 
 /** The warning for a vehicle of this class whose trip's driver, named already, does not drive it; null when they do. */
@@ -551,33 +560,47 @@ export function driverClassWarning(
 
 /**
  * A candidate as a picker's option for some trips: its name, with the
- * first reason it cannot do one of them, greyed, else its class when not
- * the one booked ("VLE1234 · Toyota Innova · MPV instead of Sedan").
+ * first reason it cannot do one of them, greyed.
  */
 export function candidateOption(
   candidate: {
     id: string;
     name: string;
-    trips: Record<string, { reasons: string[]; classChange: string | null }>;
+    trips: Record<string, { reasons: string[] }>;
   },
   itemIds: readonly string[],
 ): { value: string; label: string; disabled: boolean } {
   const fits = itemIds.flatMap((id) => candidate.trips[id] ?? []);
   const reason = fits.flatMap((fit) => fit.reasons)[0];
-  const note = reason ?? fits.find((fit) => fit.classChange)?.classChange;
   return {
     value: candidate.id,
-    label: note ? `${candidate.name} · ${note}` : candidate.name,
+    label: reason ? `${candidate.name} · ${reason}` : candidate.name,
     disabled: reason !== undefined,
   };
 }
 
-/** "MPV instead of Sedan" when a candidate is of another class than booked on one of these trips, which then asks why; null otherwise. */
-export function classChangeFor(
-  candidate: { trips: Record<string, { classChange: string | null }> } | null,
-  itemIds: readonly string[],
-): string | null {
-  return (
-    itemIds.map((id) => candidate?.trips[id]?.classChange).find(Boolean) ?? null
-  );
+/**
+ * Whom a part names, in full: "VLE1234 · Toyota Alphard · White", "Ali
+ * bin Abu · +60 12-345 6789", a guide with the languages they speak; null
+ * while it is left to its vendor.
+ */
+export function partNamedOf(part: {
+  vehicle: {
+    plate: string;
+    colour: string;
+    vehicleModel: { brand: string; name: string };
+  } | null;
+  driver: { name: string; phone: string } | null;
+  guide: { name: string; phone: string; languages: readonly string[] } | null;
+}): string | null {
+  if (part.vehicle) {
+    return `${part.vehicle.plate} · ${modelName(part.vehicle.vehicleModel)} · ${part.vehicle.colour}`;
+  }
+  if (part.driver) return `${part.driver.name} · ${part.driver.phone}`;
+  if (part.guide) {
+    return [part.guide.name, part.guide.phone, part.guide.languages.join(", ")]
+      .filter(Boolean)
+      .join(" · ");
+  }
+  return null;
 }

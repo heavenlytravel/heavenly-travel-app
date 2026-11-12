@@ -7,20 +7,24 @@ import {
   formatLocalDateTime,
   formatLocalTime,
   isTripEventKind,
-  isUrgentTrip,
+  tripUrgencyOf,
   PART_ROLE_LABELS,
   PART_ROLES,
   partWaitingLabel,
   todayInMalaysia,
   addDays,
+  pickupInstant,
   TRIP_EVENT_LABELS,
   untilPickup,
   type AssignState,
+  type TripUrgency,
 } from "@repo/db";
 import {
   getAssignPage,
+  listOpenPastDays,
   type AssignPart,
   type AssignRow,
+  type OpenPastDay,
 } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
@@ -34,6 +38,7 @@ import {
   AssignStateBadge,
   NoGuideBadge,
   NotAssignedBadge,
+  URGENCY_TEXT,
 } from "@repo/console/StatusBadges";
 import { EmptyRow, Table, TBody, Td, Th, THead } from "@repo/console/Table";
 import { PickupDateFilter } from "../../../_components/BookingFilters";
@@ -93,8 +98,8 @@ const hrefOf = (scope: ScopeSlug, state: Shown, filter: AssignFilter) =>
 
 /**
  * Route: /[location]/assign?state=…&q=…&date=…&class=…&trip=…&only=….
- * Operation's page: every trip from today on, at every
- * location under `~` or at the one under its slug, in a table by pickup
+ * Operation's page: every trip from today on, or one day's, past or not,
+ * at every location under `~` or at the one under its slug, in a table by pickup
  * under a heading for each day, those to assign first. Figure tiles count
  * where the trips stand and narrow the list to one; the search, the
  * pick-up day and the Filters (service, class, kind of trip, urgent or
@@ -103,6 +108,8 @@ const hrefOf = (scope: ScopeSlug, state: Shown, filter: AssignFilter) =>
  * Each row says how soon it picks up, red within the day while not yet
  * assigned, and who does it or whose answer it waits for; its reference
  * opens a quick view of the booking, Assign or Open the trip's own page.
+ * Above them, the past days with trips left open, a link to each; a past
+ * day picked says it is past.
  * See docs/261028-fulfilment-vendors-and-connect.md, "Assigning a booking".
  */
 export default async function AssignPage({
@@ -214,6 +221,58 @@ function groupsOf(rows: readonly AssignRow[], view: AssignView) {
   return { groups, live };
 }
 
+/** A day, "2026-11-05", as its start in Malaysia, to write it out. */
+const pickupDay = (day: string) => pickupInstant(day, "00:00") ?? new Date();
+
+/**
+ * The past days with trips left open, newest first, a link to each: trips
+ * confirmed and never assigned, or assigned and never reported done.
+ * Hidden when there is none.
+ */
+function PastDays({
+  days,
+  hrefOf,
+  current,
+}: {
+  days: readonly OpenPastDay[];
+  hrefOf: (day: string) => string;
+  current?: string;
+}) {
+  if (days.length === 0) return null;
+  const total = days.reduce((sum, d) => sum + d.count, 0);
+  return (
+    <Card className="grid gap-2.5">
+      <p className="text-sm text-body">
+        <span className="font-semibold text-ink">
+          {total === 1
+            ? "1 past trip left open."
+            : `${total} past trips left open.`}
+        </span>{" "}
+        Assign them, report them done or cancel them.
+      </p>
+      <ul className="flex flex-wrap gap-1.5">
+        {days.map(({ day, count }) => (
+          <li key={day}>
+            <Link
+              href={hrefOf(day)}
+              aria-current={day === current ? "page" : undefined}
+              className={cx(
+                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-caption",
+                day === current
+                  ? "border-brand bg-brand-tint font-semibold text-brand"
+                  : "border-warning-edge bg-warning-tint text-warning-strong",
+              )}
+            >
+              {formatLocalDate(pickupDay(day))}
+              <span className="font-semibold tabular-nums">{count}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  );
+}
+
 /** "Today · Thu, 5 Nov", "Tomorrow · Fri, 6 Nov", or the day alone, for the heading over a day's trips. */
 function dayHeading(day: string, at: Date, today: string) {
   const date = formatLocalDate(at);
@@ -228,8 +287,12 @@ async function assignList(
   state: Shown,
   asked: AssignView,
 ) {
-  const rows = await getAssignPage(locationId);
+  // A day asked for is read on its own, so an old one is always found.
   const now = new Date();
+  const [rows, pastDays] = await Promise.all([
+    getAssignPage(locationId, asked.date, now),
+    listOpenPastDays(locationId, now),
+  ]);
   const { groups, live: view } = groupsOf(rows, asked);
   const inView = rowsInView(rows, view, now);
   const counts = Object.fromEntries([
@@ -245,9 +308,15 @@ async function assignList(
   const listed = hrefOf(scope, state, filter);
   const today = todayInMalaysia(now);
   const filtered = Object.values(filter).some(Boolean);
+  const past = view.date !== undefined && view.date < today;
 
   return (
     <>
+      <PastDays
+        days={pastDays}
+        hrefOf={(day) => hrefOf(scope, state, { ...filter, date: day })}
+        current={view.date}
+      />
       <FigureTiles
         label="Trips by where they stand"
         figures={stateFigures(scope, state, filter, counts)}
@@ -260,9 +329,24 @@ async function assignList(
             label="Search trips"
             placeholder="Booking, customer, place, plate or driver"
           />
-          <PickupDateFilter href={listed} value={view.date ?? ""} min={today} />
+          <PickupDateFilter href={listed} value={view.date ?? ""} />
           <ListFilters href={listed} groups={groups} />
         </ListToolbar>
+        {past ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-warning-edge bg-warning-tint px-5 py-2.5 text-sm text-warning-strong">
+            <span>
+              <span className="font-semibold">Past day.</span>{" "}
+              {formatLocalDate(pickupDay(view.date!))}: the trips as they were
+              left.
+            </span>
+            <Link
+              href={hrefOf(scope, state, { ...filter, date: undefined })}
+              className="font-medium text-link"
+            >
+              Back to upcoming
+            </Link>
+          </div>
+        ) : null}
         <FilterChips href={listed} groups={groups} />
         <Table bare>
           <THead>
@@ -326,7 +410,7 @@ function TripRow({
 }) {
   const { job, state } = row;
   const until = untilPickup(row.startsAt, now);
-  const urgent = isUrgentTrip(row, now);
+  const urgency = tripUrgencyOf(row, now);
   return (
     <tr className={cx(row.overdue && "bg-warning-tint")}>
       <Td className="whitespace-nowrap tabular-nums">
@@ -336,7 +420,7 @@ function TripRow({
         <span className="block text-xs text-muted">
           {formatLocalTime(row.startsAt)}
           {" · "}
-          <span className={cx(urgent && "font-semibold text-danger")}>
+          <span className={urgency ? URGENCY_TEXT[urgency] : undefined}>
             {until.label}
           </span>
         </span>
@@ -360,7 +444,7 @@ function TripRow({
         <span className="block text-xs text-muted">
           {[
             `Trip ${row.position}`,
-            row.hours ? durationLabel(row.hours) : "One-way",
+            row.hours ? durationLabel(row.hours) : "Transfer",
             row.className,
             `${row.passengers} pax`,
             scope === null ? row.locationName : null,
@@ -385,7 +469,7 @@ function TripRow({
           ) : (
             <PartCell
               part={row.parts.find((p) => p.role === role) ?? null}
-              urgent={urgent}
+              urgency={urgency}
             />
           )}
           {role === "guide" && row.guideLanguage ? (
@@ -421,13 +505,13 @@ function TripRow({
 /** Who does one role: whom it names and from which vendor, and whose answer it waits for, by when. */
 function PartCell({
   part,
-  urgent,
+  urgency,
 }: {
   part: AssignPart | null;
-  /** The trip is urgent: a role no one is asked to do is red. */
-  urgent: boolean;
+  /** How soon the trip needs Operation: a role no one is asked to do takes its colour. */
+  urgency: TripUrgency | null;
 }) {
-  if (!part) return <NotAssignedBadge urgent={urgent} />;
+  if (!part) return <NotAssignedBadge urgency={urgency} />;
   return (
     <>
       <span className="block text-body">

@@ -2,25 +2,18 @@
 
 import {
   candidateOption,
-  classChangeFor,
   DECLINE_NOTE_MAX_LENGTH,
   DECLINE_REASONS,
   DECLINE_REASON_LABELS,
   formatLocalDateTime,
   formatMyr,
-  modelName,
+  partNamedOf,
   PART_ROLE_LABELS,
   partWaitingLabel,
   partWaitingOf,
   type PartRole,
 } from "@repo/db";
-import type {
-  Candidate,
-  FulfilmentTrip,
-  PayLine,
-  TripPartView,
-} from "@repo/db/server";
-import { Notice } from "@repo/ui/notice";
+import type { Candidate, PayLine, TripPartView } from "@repo/db/server";
 import { useConfirm } from "@repo/ui/alert-dialog";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
@@ -30,27 +23,12 @@ import { Rows } from "@repo/ui/rows";
 import { Select } from "@repo/ui/select";
 import { useState, type ReactNode } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
-import { ClassReasonField } from "@repo/console/ClassReasonField";
 import { useActionForm } from "@repo/console/use-action-form";
 import {
   answerPartsAction,
   namePartsAction,
   releaseFulfilAction,
 } from "../actions";
-
-/** "VLE1234 · Toyota Alphard · Black", "Ali bin Abu · +60…", "Siti · +60… · English, Mandarin", or null while not named. */
-function namedOf(part: TripPartView) {
-  if (part.vehicle) {
-    return `${part.vehicle.plate} · ${modelName(part.vehicle.vehicleModel)} · ${part.vehicle.colour}`;
-  }
-  if (part.driver) return `${part.driver.name} · ${part.driver.phone}`;
-  if (part.guide) {
-    return [part.guide.name, part.guide.phone, part.guide.languages.join(", ")]
-      .filter(Boolean)
-      .join(" · ");
-  }
-  return null;
-}
 
 /**
  * One role of a trip already asked for: its vendor, whom it names, what
@@ -64,19 +42,15 @@ export function PartCard({
   bookingId,
   role,
   part,
-  classChange,
   partIds,
   positions,
   itemIds,
   candidates,
   payLines,
-  tripClassId,
 }: {
   bookingId: string;
   role: PartRole;
   part: TripPartView;
-  /** Its vehicle not of the class booked, "MPV instead of Sedan", and why; null otherwise. */
-  classChange: FulfilmentTrip["classChange"];
   /** This part and its siblings: the same ask on the booking's other live trips. */
   partIds: string[];
   /** The trips they are on, this one included. */
@@ -87,19 +61,9 @@ export function PartCard({
   candidates: Candidate[];
   /** What revisions added to this role's pay on this trip: a stop, a late charge. */
   payLines: readonly PayLine[];
-  /**
-   * The class the trip asks for now: a vehicle of another, after an amend,
-   * is warned of, unless it was sent as another class with a reason.
-   */
-  tripClassId: string | null;
 }) {
-  const otherClass =
-    part.vehicle !== null &&
-    tripClassId !== null &&
-    part.vehicle.vehicleModel.vehicleClass.id !== tripClassId &&
-    !classChange?.reason;
   const vendor = part.offer.vendor;
-  const named = namedOf(part);
+  const named = partNamedOf(part);
   const waiting = partWaitingOf(part, vendor.isOurs);
   const vendorWaits = waiting === "vendor" || waiting === "ours";
   const others = positions.length > 1 ? `trips ${positions.join(", ")}` : null;
@@ -115,16 +79,7 @@ export function PartCard({
     [
       PART_ROLE_LABELS[role],
       named ? (
-        <span key="n" className="grid gap-0.5">
-          {named}
-          {classChange ? (
-            <span className="text-caption font-normal text-muted">
-              {classChange.reason
-                ? `${classChange.label}: ${classChange.reason}`
-                : classChange.label}
-            </span>
-          ) : null}
-        </span>
+        <span key="n">{named}</span>
       ) : (
         <span key="n" className="font-normal text-muted">
           {vendor.isOurs
@@ -178,13 +133,6 @@ export function PartCard({
       >
         {PART_ROLE_LABELS[role]}
       </CardTitle>
-      {otherClass ? (
-        <Notice className="mb-3">
-          The trip was changed to another class: this vehicle is of the old one.
-          Release it and send one of the new class, or send this one again with
-          a reason.
-        </Notice>
-      ) : null}
       <Rows rows={rows} className="text-sm" />
       <div className="mt-4 flex flex-wrap items-start gap-2">
         {!named ? (
@@ -365,10 +313,6 @@ function NameControl({
   const [open, setOpen] = useState(false);
   const [chosen, setChosen] = useState("");
   const noun = PART_ROLE_LABELS[role].toLowerCase();
-  const classChange = classChangeFor(
-    candidates.find((c) => c.id === chosen) ?? null,
-    itemIds,
-  );
   const { pending, error, formProps } = useActionForm(namePartsAction, {
     done: `${PART_ROLE_LABELS[role]} named.`,
     onDone: () => setOpen(false),
@@ -407,7 +351,6 @@ function NameControl({
           options={candidates.map((c) => candidateOption(c, itemIds))}
         />
       </Field>
-      {classChange ? <ClassReasonField change={classChange} /> : null}
       <div className="flex items-center gap-2">
         <Button type="submit" size="sm" pending={pending}>
           Name {noun}

@@ -18,6 +18,7 @@ import {
   releaseAction,
   reportTripEvent,
   setPartCost,
+  undoNoShow,
   type PartAsk,
 } from "@repo/db/server";
 import { actorOf, getAdmin } from "../../../_lib/access";
@@ -33,7 +34,7 @@ import {
 /**
  * Assign's writes: asking vendors for a vehicle and a driver, recording
  * their answers, naming what a vendor chose, releasing a part, reporting
- * for a driver on the day, and what we owe for a cancelled trip.
+ * for a driver on the day or taking a no-show back, and what we owe for a cancelled trip.
  * Operation's (`bookings.fulfil`),
  * checked again in each. The writers in @repo/db check the rest. No
  * email goes out from here, not even the customer's driver email: the
@@ -62,8 +63,7 @@ const idsOf = (formData: FormData, name: string) =>
  * choose, or the id of a vehicle or driver named, its vendor beside it
  * under `<role>Vendor:<itemId>`. The cost of each trip is under
  * `<role>Cost:<itemId>`, in ringgit, and a coach driver's tip under
- * `<role>Tip:<itemId>`, and why a vehicle is not of the class booked
- * under `vehicleClassReason`. Trips with the same choice make one
+ * `<role>Tip:<itemId>`. Trips with the same choice make one
  * ask, so the same vehicle for every trip is one ask of them all.
  */
 function asksOf(
@@ -89,10 +89,6 @@ function asksOf(
       itemIds: [],
       costSen: {},
       tipSen: {},
-      classReason:
-        role === "vehicle"
-          ? textOf(formData.get("vehicleClassReason")) || null
-          : null,
     };
     ask.itemIds.push(itemId);
     const text = textOf(formData.get(`${role}Cost:${itemId}`));
@@ -216,14 +212,7 @@ export async function namePartsAction(
   const recordId = textOf(formData.get("recordId"));
   if (!bookingId || partIds.length === 0) return STALE;
   if (!recordId) return { error: "Choose which one.", field: "recordId" };
-  return finish(
-    await nameParts(
-      actorOf(admin),
-      partIds,
-      recordId,
-      textOf(formData.get("vehicleClassReason")) || null,
-    ),
-  );
+  return finish(await nameParts(actorOf(admin), partIds, recordId));
 }
 
 /** Lets one part go, or every part of the booking with `all`. */
@@ -288,7 +277,7 @@ export async function reportForDriverAction(
   if (!bookingId || !itemId || !isTripEventKind(kind)) return STALE;
   const next = nextTripStep(await listTripEvents([itemId]));
   if (next === null) return { error: "This trip has ended." };
-  if (kind !== next && kind !== "no-show" && kind !== "problem") {
+  if (kind !== next && kind !== "no-show") {
     return {
       error: `The next step is ${TRIP_EVENT_LABELS[next]}. Reload to see the latest report.`,
     };
@@ -307,4 +296,16 @@ export async function reportForDriverAction(
       },
     ),
   );
+}
+
+/** Takes a trip's no-show back, at any time: the passenger came after all. */
+export async function undoNoShowAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const admin = await getAdmin("bookings.fulfil");
+  if (!admin) return FORBIDDEN;
+  const itemId = textOf(formData.get("itemId"));
+  if (!itemId) return STALE;
+  return finish(await undoNoShow(actorOf(admin), { admin: true }, itemId));
 }

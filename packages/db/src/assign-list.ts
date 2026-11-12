@@ -1,5 +1,5 @@
 import { BOOKING_NUMBER_SELECT, bookingLabelOf } from "./booking-number";
-import { pickupInstant } from "./booking-rules";
+import { localDayRange, pickupInstant } from "./booking-rules";
 import { todayInMalaysia } from "./expiry";
 import { db } from "./client";
 import {
@@ -135,32 +135,78 @@ export type AssignRow = {
 };
 
 /**
- * What the Assign page lists, at one location (its id) or every one.
- * Offers past their time are expired first, so none shows still offered.
+ * What the Assign page lists, at one location (its id) or every one: the
+ * trips from today on, or one day's, past or not. Offers past their time
+ * are expired first, so none shows still offered.
  */
 export async function getAssignPage(
   locationId?: string,
+  /** A pick-up day, "2026-11-05": that day's trips alone, past or not. */
+  day?: string,
   now: Date = new Date(),
 ): Promise<AssignRow[]> {
   await expireOffers(now);
-  return listAssignTrips(locationId, now);
+  return listAssignTrips(locationId, day, now);
 }
 
+/** The trips Assign counts as live: confirmed, to assign or waiting, and assigned. */
+const OPEN_STATUSES = ["confirmed", "assigned"];
+
+/** A past day with trips left open, and how many. */
+export type OpenPastDay = { day: string; count: number };
+
+/** The most open past trips read for the days they fall on; more than this is a backlog to clear first. */
+const OPEN_PAST_LIMIT = 500;
+
 /**
- * Every trip from the start of today in Malaysia on, by pickup: those
- * confirmed, to assign or waiting, the assigned ones, and those done
- * today. A trip whose driver has tapped in Connect is on the road.
+ * The days before today with trips still open, newest first: confirmed and
+ * never assigned, or assigned and never reported done. What the Assign
+ * page's Past card links to, a day each. Reads their pickup times alone,
+ * on the status and pickup index, at most `OPEN_PAST_LIMIT` trips.
  */
-async function listAssignTrips(
-  locationId: string | undefined,
-  now: Date,
-): Promise<AssignRow[]> {
+export async function listOpenPastDays(
+  locationId?: string,
+  now: Date = new Date(),
+): Promise<OpenPastDay[]> {
   const from = pickupInstant(todayInMalaysia(now), "00:00") ?? now;
   const items = await db.bookingItem.findMany({
     where: {
-      status: { in: ["confirmed", "assigned", "completed"] },
-      startsAt: { gte: from },
+      status: { in: OPEN_STATUSES },
+      startsAt: { lt: from },
       ...(locationId ? { locationId } : {}),
+    },
+    orderBy: { startsAt: "desc" },
+    take: OPEN_PAST_LIMIT,
+    select: { startsAt: true },
+  });
+  const days = new Map<string, number>();
+  for (const item of items) {
+    const day = todayInMalaysia(item.startsAt);
+    days.set(day, (days.get(day) ?? 0) + 1);
+  }
+  return [...days].map(([day, count]) => ({ day, count }));
+}
+
+/**
+ * The trips confirmed, to assign or waiting, the assigned ones and those
+ * done: from the start of today in Malaysia on, by pickup; or one day
+ * asked for, however long ago, so an old day is always found. Either way
+ * a range of pickups on the status and pickup index. A trip whose driver
+ * has tapped in Connect is on the road.
+ */
+async function listAssignTrips(
+  locationId: string | undefined,
+  day: string | undefined,
+  now: Date,
+): Promise<AssignRow[]> {
+  const start = pickupInstant(day ?? todayInMalaysia(now), "00:00") ?? now;
+  const items = await db.bookingItem.findMany({
+    where: {
+      status: { in: [...OPEN_STATUSES, "completed"] },
+      ...(locationId ? { locationId } : {}),
+      startsAt: day
+        ? { gte: start, lt: localDayRange(start).end }
+        : { gte: start },
     },
     orderBy: [{ startsAt: "asc" }, { position: "asc" }],
     include: tripInclude,

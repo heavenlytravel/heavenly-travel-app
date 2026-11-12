@@ -13,8 +13,9 @@ import { serviceOf, type FilterClass } from "../../../_lib/trip-filters";
 /**
  * What narrows the Assign page besides where the trips stand: a search,
  * the day they pick up on, and the Filters button's choices, read from
- * the address and matched against the trips already loaded, so a filter
- * costs no query. See `assignHref` for the address.
+ * the address. A day is read on its own from the database, past or not;
+ * the rest are matched against the trips already loaded, so they cost no
+ * query. See `assignHref` for the address.
  */
 
 /** The trips that need Operation first: the time in red (`isUrgentTrip`), or the row past its end. */

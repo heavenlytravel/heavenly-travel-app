@@ -177,6 +177,26 @@ export function Section({
   );
 }
 
+/** A listing's intro under its heading, or in a preview the placeholder that stands for it. */
+export function Lead({ text, empty }: { text: string; empty?: EmptyPart }) {
+  if (text) {
+    return (
+      <div className="-mt-2 mb-8 grid max-w-[70ch] gap-4 text-lead leading-relaxed text-body">
+        {paragraphsOf(text).map((paragraph, i) => (
+          <p key={i}>{paragraph}</p>
+        ))}
+      </div>
+    );
+  }
+  if (!empty) return null;
+  return (
+    <MissingPart
+      part={empty}
+      className="-mt-2 mb-8 min-h-24 max-w-[70ch] rounded-card"
+    />
+  );
+}
+
 /** The intro: its title beside its paragraphs from lg up. */
 export function Intro({
   title,
@@ -453,15 +473,16 @@ export function Breadcrumbs({ crumbs }: { crumbs: readonly Crumb[] }) {
 }
 
 /** The breadcrumb of a page of the site's own, one step under the home page: "Home / About us". */
+export function homeCrumbsOf(current: string): Crumb[] {
+  return [
+    { name: "Home", path: "/" },
+    { name: current, path: "" },
+  ];
+}
+
+/** The same, as the breadcrumb shows it. */
 export function HomeCrumbs({ current }: { current: string }) {
-  return (
-    <Breadcrumbs
-      crumbs={[
-        { name: "Home", path: "/" },
-        { name: current, path: "" },
-      ]}
-    />
-  );
+  return <Breadcrumbs crumbs={homeCrumbsOf(current)} />;
 }
 
 /** A link at the foot of a page or beside a heading, with its arrow. */

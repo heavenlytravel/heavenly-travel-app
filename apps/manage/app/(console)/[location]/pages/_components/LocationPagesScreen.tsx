@@ -4,7 +4,6 @@ import {
   LOCATION_PAGE_LABELS,
   childrenCount,
   childrenOf,
-  formatLocalDate,
   heroLabelsOf,
   isPageInList,
   isPlace,
@@ -249,8 +248,7 @@ async function locationPages(id: string, filter: LocationPagesFilter) {
     ? location.pages.filter((page) => page.page === section)
     : location.pages;
   const children = section ? childrenOf(section) : null;
-  const isPlaces = children?.type === "entries" && children.kind === "place";
-  const isPosts = children?.type === "entries" && children.kind === "article";
+  const isPlaces = children?.type === "entries";
   const addressNames = new Map(
     location.addresses.map((address) => [address.id, address.name]),
   );
@@ -258,14 +256,14 @@ async function locationPages(id: string, filter: LocationPagesFilter) {
   const order = section
     ? listed.filter((page) => page.slug !== "" && shows(page))
     : [];
-  const ordered = children?.type === "entries" && children.ordered && !narrowed;
+  const ordered = isPlaces && !narrowed;
 
   /** What the list adds to a page's row: a section's plus, a place's order, the columns of a section's list. */
   const extend = (page: PageSummary): Omit<TreeRow, "row"> => {
     const own = childrenOf(page.page);
     if (page.slug === "") {
       return {
-        lead: isPlaces || isPosts ? [null] : undefined,
+        lead: isPlaces ? [null] : undefined,
         before:
           own?.type === "entries" ? (
             <AddEntryDialog
@@ -274,7 +272,7 @@ async function locationPages(id: string, filter: LocationPagesFilter) {
               page={page.page}
               one={own.one}
               titleLabel={heroLabelsOf(own.kind).headline}
-              places={own.kind === "place" ? choices : undefined}
+              places={choices}
             />
           ) : undefined,
       };
@@ -287,15 +285,7 @@ async function locationPages(id: string, filter: LocationPagesFilter) {
               {(page.addressId && addressNames.get(page.addressId)) ?? "—"}
             </span>,
           ]
-        : isPosts
-          ? [
-              <span key="first" className="text-muted tabular-nums">
-                {page.firstPublishedAt
-                  ? formatLocalDate(page.firstPublishedAt)
-                  : "Not yet"}
-              </span>,
-            ]
-          : undefined,
+        : undefined,
       before: ordered ? (
         <EntryOrder
           locationId={location.id}
@@ -367,9 +357,7 @@ async function locationPages(id: string, filter: LocationPagesFilter) {
               meta={
                 children.type === "classes"
                   ? `${childrenCount(children, under)}, a page for each class ${location.name} offers`
-                  : children.ordered
-                    ? `${childrenCount(children, under)}, shown on the site in this order`
-                    : `${childrenCount(children, under)}, shown on the site newest first`
+                  : `${childrenCount(children, under)}, shown on the site in this order`
               }
             >
               {LOCATION_PAGE_LABELS[section]}
@@ -391,9 +379,7 @@ async function locationPages(id: string, filter: LocationPagesFilter) {
                 value: section ?? "",
               },
             }}
-            lead={
-              isPlaces ? ["Saved address"] : isPosts ? ["First published"] : []
-            }
+            lead={isPlaces ? ["Saved address"] : []}
             empty={emptyOf(filter.q)}
           />
         </Card>

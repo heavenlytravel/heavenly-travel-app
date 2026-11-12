@@ -17,7 +17,7 @@ import { PERMISSIONS } from "./permissions";
 
 const langkawi = { id: "l1", name: "Langkawi", slug: "langkawi" };
 const mainPage: MediaPage = {
-  site: false,
+  scope: "location",
   location: langkawi,
   ref: { page: "landing", slug: "" },
   title: "Main page",
@@ -172,7 +172,7 @@ describe("mediaDeleteImpact", () => {
   it("names the past versions and the uploads it reaches, in one order whatever the choice's", () => {
     const aboutUs: MediaUse = {
       kind: "earlier",
-      on: { site: true, page: "about-us", title: "About us" },
+      on: { scope: "site", page: "about-us", title: "About us" },
       entryId: "e2",
     };
     const chosen = [

@@ -6,6 +6,8 @@ import {
 } from "@repo/db";
 import type { ActivityEntry } from "@repo/db/server";
 import {
+  blogPostHref,
+  blogPostPublishHref,
   bookingHref,
   classHref,
   dashboardHref,
@@ -42,6 +44,7 @@ const ACTIVITY_RECORD_NAMES: Record<ActivityEntityType, string> = {
   user: "User",
   admin: "Admin",
   "site-page": "Site page",
+  "blog-post": "Blog post",
   media: "Media",
   setting: "Setting",
   state: "State",
@@ -139,6 +142,12 @@ export function activityEntryHref(
         entry.action === "site.footer.published"
         ? sitePagePublishHref(entry.id)
         : sitePageHref(entry.entityId);
+    case "blog-post":
+      // A publish opens the post before and after; any other entry, its editor.
+      if (!may("pages.manage")) return null;
+      return entry.action === "blog.post.published"
+        ? blogPostPublishHref(entry.id)
+        : blogPostHref(entry.entityId);
     case "user":
     case "admin":
       // An admin entry is logged against the account's user id.

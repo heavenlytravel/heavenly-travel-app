@@ -1,4 +1,5 @@
 import { getActivityEntry, logActivity, type ActivityEntry } from "./activity";
+import { movedRow } from "./list-move";
 import type { ActivityEntityType, Actor } from "./activity-actions";
 import { refuse, type Change, type Refusal } from "./change";
 import { db } from "./client";
@@ -20,8 +21,10 @@ import {
 import {
   LANDING_PAGE,
   LANDING_REF,
-  childrenOf,
   checkEntrySlug,
+  checkEntryTitle,
+  childrenOf,
+  entryTitleOf,
   isChildPage,
   isEntrySlugLocked,
   isLocationPageRef,
@@ -48,7 +51,6 @@ import { deletedMediaRefusal } from "./media";
 import { isUniqueViolation } from "./prisma-errors";
 import {
   PAGE_KIND_RULES,
-  PAGE_LIMITS,
   PAGE_LOCALE,
   checkPageComplete,
   checkPageLimits,
@@ -78,7 +80,7 @@ import {
  * is keyed by its section and slug: the main page and a section's own page
  * have an empty slug. The pages under car with driver and coach charter
  * follow the classes the location offers; the pages under popular places,
- * attractions, hotels and the blog are added by Marketing. See
+ * attractions and hotels are added by Marketing. See
  * docs/261001-locations-and-pages.md and docs/261025-marketing-pages.md.
  */
 
@@ -253,33 +255,6 @@ export async function getLocationPreview(
     ...forSite,
   });
   return location ? previewLocationViewOf(location) : null;
-}
-
-/**
- * The text of a post or a document at the location, which a view leaves
- * out: the public copy, or with `preview` the draft. Empty for a page that
- * has none; the caller has found the page in its view first.
- */
-export async function getLocationPageBody(
-  slug: string,
-  ref: LocationPageRef,
-  preview: boolean,
-): Promise<string> {
-  const row = await db.locationPage.findFirst({
-    where: {
-      location: { slug },
-      page: ref.page,
-      slug: ref.slug,
-      locale: PAGE_LOCALE,
-    },
-    select: { isOn: true, draft: true, published: true },
-  });
-  if (!row) return "";
-  const kind = pageKindOf(ref);
-  const content = preview
-    ? pageContentOf(kind, row.draft)
-    : publicCopyOf(kind, row);
-  return content?.body ?? "";
 }
 
 /**
@@ -840,22 +815,6 @@ export type EntryFields = {
   addressId?: string | null;
 };
 
-/** The title is filled and within the headline's limit; `label` is what its editor calls it. */
-function checkEntryTitle(title: string, label: string): Change {
-  const what = label.toLowerCase();
-  if (title === "") return refuse(`Enter the ${what}.`, "title");
-  if (title.length > PAGE_LIMITS.heroHeadline) {
-    return refuse(
-      `The ${what} is at most ${PAGE_LIMITS.heroHeadline} characters.`,
-      "title",
-    );
-  }
-  return { ok: true };
-}
-
-/** A title as a page starts with it, its spaces tidied. */
-const entryTitleOf = (title: string) => title.replace(/\s+/g, " ").trim();
-
 /** Why the section takes no page with these fields, read off them alone; null when it may. */
 function entryFieldsRefusal(
   page: LocationPageKey,
@@ -892,7 +851,7 @@ export async function checkNewEntry(
 
 /**
  * Adds a page to a section that takes pages on demand: a popular place, an
- * attraction, a hotel or a post. It starts as a draft, its headline the
+ * attraction or a hotel. It starts as a draft, its headline the
  * title, last in the section's order. A section takes any number.
  */
 export async function createLocationEntry(
@@ -1049,8 +1008,7 @@ export async function deleteLocationEntry(
 }
 
 /**
- * Moves a page added on demand one place up or down in its section, one
- * shown in Marketing's order: the blog's posts are shown newest first. The
+ * Moves a page added on demand one place up or down in its section. The
  * places are written again as 0, 1, 2 with no gaps, and the order logged.
  */
 export async function moveLocationEntry(
@@ -1062,22 +1020,13 @@ export async function moveLocationEntry(
 ): Promise<Change> {
   const refused = addedPageRefusal({ page, slug });
   if (refused) return refused;
-  const children = childrenOf(page);
-  if (children?.type === "entries" && !children.ordered) {
-    return refuse(
-      `The ${children.many} here are shown newest first, not in an order.`,
-    );
-  }
   return db.$transaction(async (tx) => {
     const rows = await entriesOf(tx, locationId, page);
     const before = rows.map((row) => row.slug);
     const index = before.indexOf(slug);
     if (index < 0) return PAGE_GONE;
-    const other = index + by;
-    if (other < 0 || other >= rows.length) return { ok: true };
-    const after = [...before];
-    after.splice(index, 1);
-    after.splice(other, 0, slug);
+    const after = movedRow(before, index, by);
+    if (!after) return { ok: true };
     for (const row of rows) {
       const position = after.indexOf(row.slug);
       if (row.position === position) continue;

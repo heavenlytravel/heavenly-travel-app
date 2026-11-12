@@ -1,31 +1,20 @@
-import Link from "next/link";
-import {
-  CONNECT_FOOTER_KEY,
-  describeActivity,
-  footerEditorPath,
-  formatLocalDateTime,
-} from "@repo/db";
+import { CONNECT_FOOTER_KEY, footerEditorPath } from "@repo/db";
 import {
   SITE_URL,
   getFooterPublish,
   getSitePagePublish,
-  type ActivityEntry,
 } from "@repo/db/server";
-import { Button } from "@repo/ui/button";
-import { InfoTip } from "@repo/ui/info-tip";
 import { notFound } from "next/navigation";
-import type { ReactNode } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
-import { PageHeader } from "@repo/console/PageHeader";
 import { CardSkeleton, HeaderSkeleton, Streamed } from "@repo/console/Skeleton";
-import { PageContentView } from "../../../../../../_components/page-editor/PageContentView";
+import {
+  PagePublishCards,
+  PublishHeader,
+} from "../../../../../../_components/page-editor/PublishView";
 import { requireAdmin } from "../../../../../../_lib/access";
 import { sitePageHref } from "../../../../../../_lib/routes";
 import { scopeOf } from "../../../../../../_lib/scope";
 import { FooterContentView } from "../../../_components/footer/FooterContentView";
-
-/** A site page names no saved address. */
-const NO_ADDRESSES: ReadonlyMap<string, string> = new Map();
 
 /**
  * Route: /~/pages/website/history/[entryId]. One publish of a site page
@@ -105,59 +94,7 @@ async function publishDetails({ entryId }: { entryId: string }) {
       entry={entry}
       edit={{ href: sitePageHref(page), label: "Edit this page" }}
     >
-      <Card>
-        <CardTitle>Before</CardTitle>
-        {before ? (
-          <PageContentView
-            kind={kind}
-            content={before}
-            comparedTo={after}
-            addressNames={NO_ADDRESSES}
-          />
-        ) : (
-          <p className="text-sm text-muted">
-            Nothing: this was the page&apos;s first publish.
-          </p>
-        )}
-      </Card>
-      <Card>
-        <CardTitle>Published</CardTitle>
-        <PageContentView
-          kind={kind}
-          content={after}
-          comparedTo={before ?? undefined}
-          addressNames={NO_ADDRESSES}
-        />
-      </Card>
+      <PagePublishCards kind={kind} before={before} after={after} />
     </PublishHeader>
-  );
-}
-
-/** A publish's sentence as its title, who and when, the way to its editor, then `children` side by side. */
-function PublishHeader({
-  entry,
-  edit,
-  children,
-}: {
-  entry: ActivityEntry;
-  edit: { href: string; label: string };
-  children: ReactNode;
-}) {
-  return (
-    <>
-      <PageHeader
-        title={describeActivity(entry)}
-        badge={
-          <InfoTip text="To roll back, copy the old text into the editor and publish again." />
-        }
-        meta={`${entry.actorName}, ${formatLocalDateTime(entry.createdAt)}`}
-        action={
-          <Button asChild variant="secondary">
-            <Link href={edit.href}>{edit.label}</Link>
-          </Button>
-        }
-      />
-      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">{children}</div>
-    </>
   );
 }

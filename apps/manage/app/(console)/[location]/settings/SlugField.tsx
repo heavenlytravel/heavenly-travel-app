@@ -101,22 +101,28 @@ export function LocationSlugField({
   );
 }
 
-/** The slug of a page added to a section: the end of its address, which can change until its first publish. */
+/**
+ * The slug of a page added to a section, or of a blog post: the end of its
+ * address, which can change until its first publish.
+ */
 export function EntrySlugField({
   value,
   onChange,
   under,
+  check = checkEntrySlug,
 }: {
   value: string;
   onChange: (value: string) => void;
-  /** The section's address: "/langkawi/popular-places". */
+  /** The section's address: "/langkawi/popular-places", "/blog". */
   under: string;
+  /** The server's own check of it, when not a page's under a section: a post's. */
+  check?: (slug: string) => Change;
 }) {
   return (
     <SlugField
       value={value}
       onChange={onChange}
-      check={checkEntrySlug}
+      check={check}
       maxLength={ENTRY_LIMITS.slug}
       where={(slug) => `The page will be at ${under}/${slug}`}
       info="The end of the page's address. It can change until the page is first published, and is locked from then."

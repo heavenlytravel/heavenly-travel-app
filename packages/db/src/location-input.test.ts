@@ -234,7 +234,7 @@ describe("checkPageUnpublish", () => {
       for (const ref of [
         { page: "car-with-driver", slug: "" },
         { page: "car-with-driver", slug: "sedan" },
-        { page: "blog", slug: "a-day" },
+        { page: "hotels", slug: "the-datai" },
       ] as const) {
         assert.equal(checkPageUnpublish(state, ref).ok, true, state);
       }

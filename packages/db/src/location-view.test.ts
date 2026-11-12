@@ -268,28 +268,6 @@ describe("the preview of a location", () => {
     );
   });
 
-  it("orders posts newest first, drafts before them", () => {
-    const view = previewLocationViewOf(
-      rows({
-        pages: [
-          row("blog", "older", "Older", {
-            firstPublishedAt: new Date("2026-10-01T00:00:00Z"),
-          }),
-          row("blog", "newer", "Newer", {
-            firstPublishedAt: new Date("2026-10-10T00:00:00Z"),
-          }),
-          row("blog", "draft", "Draft", { firstPublishedAt: null }),
-        ],
-      }),
-    );
-    assert.deepEqual(
-      view.pages
-        .filter((page) => page.page === "blog" && page.slug !== "")
-        .map((page) => page.slug),
-      ["draft", "newer", "older"],
-    );
-  });
-
   it("reads a page never written as an empty one", () => {
     const view = previewLocationViewOf(rows({ pages: [], offerings: [] }));
     // The main page and the seven sections' own.

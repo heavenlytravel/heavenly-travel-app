@@ -1,6 +1,6 @@
 "use client";
 
-import { TOP_CHOICE_CAP, type TopChoiceChange } from "@repo/db";
+import { TOP_CHOICE_CAP, type PickChange } from "@repo/db";
 import type { TopChoice, TopChoiceCandidate } from "@repo/db/server";
 import { answerOf } from "@repo/ui/action-answer";
 import { Badge } from "@repo/ui/badge";
@@ -50,7 +50,7 @@ export function TopChoiceControl({
     (_, place) => choices[place] ?? null,
   );
 
-  function change(locationId: string, what: TopChoiceChange) {
+  function change(locationId: string, what: PickChange) {
     const name =
       choices.find((choice) => choice.id === locationId)?.name ??
       candidates.find((candidate) => candidate.id === locationId)?.name ??

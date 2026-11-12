@@ -17,6 +17,8 @@ import { db } from "./client";
 import type { ActivityLog, Prisma } from "./generated/prisma/client";
 import type { LocationPageRef } from "./location-page-input";
 import { fullName } from "./names";
+import { BLOG_POST_KIND } from "./blog-input";
+import { pageContentOf } from "./page-content";
 import {
   SITE_PAGES,
   SITE_PAGE_LABELS,
@@ -137,6 +139,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     vendor: idsOf(rows, "vendor"),
     business: idsOf(rows, "business"),
     invoice: idsOf(rows, "invoice"),
+    blogPost: idsOf(rows, "blog-post"),
   };
 
   const [
@@ -152,6 +155,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     vendors,
     businesses,
     invoices,
+    blogPosts,
   ] = await Promise.all([
     read([...userIds], () =>
       db.user.findMany({
@@ -225,6 +229,12 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
         select: { id: true, type: true, number: true },
       }),
     ),
+    read(ids.blogPost, () =>
+      db.blogPost.findMany({
+        where: { id: { in: ids.blogPost } },
+        select: { id: true, slug: true, draft: true },
+      }),
+    ),
   ]);
   const basedAt = new Map(
     [...vehicles, ...drivers, ...guides].map((record) => [
@@ -240,6 +250,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     deletedDrivers,
     deletedGuides,
     deletedUsers,
+    deletedPosts,
   ] = await Promise.all([
     deletedNames(
       "location.deleted",
@@ -271,6 +282,12 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
       idsOf(rows, "user"),
       new Set(emails.keys()),
     ),
+    deletedNames(
+      "blog.post.deleted",
+      "name",
+      ids.blogPost,
+      new Set(blogPosts.map((post) => post.id)),
+    ),
   ]);
   const withDeleted = (
     live: readonly (readonly [string, string])[],
@@ -286,6 +303,7 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     driver: deletedDrivers,
     guide: deletedGuides,
     user: deletedUsers,
+    "blog-post": deletedPosts,
   };
   const labels: Record<ActivityEntityType, Map<string, string>> = {
     booking: new Map(bookings.map((b) => [b.id, bookingLabelOf(b)])),
@@ -319,6 +337,16 @@ async function decorate(rows: ActivityLog[]): Promise<ActivityEntry[]> {
     vendor: new Map(vendors.map((v) => [v.id, v.name] as const)),
     business: new Map(businesses.map((b) => [b.id, b.name] as const)),
     invoice: new Map(invoices.map((i) => [i.id, documentLabelOf(i)] as const)),
+    "blog-post": withDeleted(
+      blogPosts.map(
+        (post) =>
+          [
+            post.id,
+            pageContentOf(BLOG_POST_KIND, post.draft).heroHeadline || post.slug,
+          ] as const,
+      ),
+      deletedPosts,
+    ),
   };
 
   return rows.map((row) => {
@@ -395,6 +423,7 @@ function entityLabelOf(
     case "guide":
     case "vendor":
     case "business":
+    case "blog-post":
       return labels[entityType].get(row.entityId) ?? row.entityId;
     case "invoice":
       // An open invoice dropped is gone: its entry says why.
@@ -598,6 +627,21 @@ export async function listFooterPublishes(
       entityType: "site-page",
       entityId: key,
       action: "site.footer.published",
+    },
+    select: { id: true },
+  });
+  return publishesById(rows.map((row) => row.id));
+}
+
+/** The publishes of a blog post, newest first, without their contents. */
+export async function listBlogPostPublishes(
+  postId: string,
+): Promise<ActivityEntry[]> {
+  const rows = await db.activityLog.findMany({
+    where: {
+      entityType: "blog-post",
+      entityId: postId,
+      action: "blog.post.published",
     },
     select: { id: true },
   });

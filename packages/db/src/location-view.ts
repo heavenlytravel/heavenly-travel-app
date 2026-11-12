@@ -38,9 +38,7 @@ import { slugify } from "./slug";
  * A location as the customer site shows it, pure and browser-safe. The
  * public pages and the staff preview render one set of components over one
  * shape; they differ in which copy of each page the shape holds. A view is
- * plain data, its dates as text, because the customer site caches it. It
- * holds every page's content but a post's or a document's text, which only
- * its own page reads (`locationPageBody`). See
+ * plain data, its dates as text, because the customer site caches it. See
  * docs/261001-locations-and-pages.md, "The customer site", and
  * docs/261025-marketing-pages.md.
  */
@@ -68,13 +66,12 @@ export type LocationViewClass = {
 /** One page of a view, with the content it shows. */
 export type LocationViewPage = LocationPageRef & {
   kind: PageKind;
-  /** Its content; a post's or a document's text is left out. */
   content: PageContent;
   /** Always "published" in the public view, which holds only published pages. */
   status: PageStatus;
   /** Its place among the pages Marketing added to its section. */
   position: number;
-  /** When it was first published, as ISO text; null before. A post shows it. */
+  /** When it was first published, as ISO text; null before. */
   firstPublishedAt: string | null;
   /** When the copy last published was, as ISO text; null before. */
   publishedAt: string | null;
@@ -180,10 +177,7 @@ const iso = (date: Date | null) => (date ? date.toISOString() : null);
  * still has a page), and the pages Marketing added, in their order.
  */
 export function pageSlotsOf<
-  Row extends Pick<
-    LocationPageRow,
-    "page" | "slug" | "position" | "firstPublishedAt"
-  >,
+  Row extends Pick<LocationPageRow, "page" | "slug" | "position">,
 >(
   pages: readonly Row[],
   classes: readonly LocationViewClass[],
@@ -220,13 +214,7 @@ export function pageSlotsOf<
       continue;
     }
     const sorted = [...rowsHere].sort(
-      children.ordered
-        ? (a, b) => a.position - b.position || a.slug.localeCompare(b.slug)
-        : // Newest first; a page never published, a draft, before them all.
-          (a, b) =>
-            (b.firstPublishedAt?.getTime() ?? Infinity) -
-              (a.firstPublishedAt?.getTime() ?? Infinity) ||
-            a.slug.localeCompare(b.slug),
+      (a, b) => a.position - b.position || a.slug.localeCompare(b.slug),
     );
     for (const row of sorted) {
       out.push({ ref: { page: section, slug: row.slug }, row });
@@ -250,10 +238,7 @@ function viewOf(
         {
           ...ref,
           kind,
-          content: {
-            ...withKnownAddress(shown.content, addresses),
-            body: "",
-          },
+          content: withKnownAddress(shown.content, addresses),
           status: shown.status,
           position: row?.position ?? 0,
           firstPublishedAt: iso(row?.firstPublishedAt ?? null),

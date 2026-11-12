@@ -14,6 +14,9 @@ export const VEHICLE_CLASSES_TAG = "vehicle-classes";
 /** The site's own pages: the home page's content, the documents, the footer's links. */
 export const SITE_PAGES_TAG = "site-pages";
 
+/** The blog's published posts: its home, its lists, each post, and the locations' lists of them. */
+export const BLOG_TAG = "blog";
+
 /** One location's pages, by the slug they are read at. */
 export function locationTag(slug: string) {
   return `location:${slug}`;

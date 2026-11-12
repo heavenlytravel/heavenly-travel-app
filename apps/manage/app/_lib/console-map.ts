@@ -237,8 +237,8 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
     label: "Pages",
     icon: "pages",
     group: "website",
-    // By the app a page is on: the customer site's own, Connect's, then
-    // the locations'. The first two exist under `~` alone.
+    // By the app a page is on: the customer site's own, its blog,
+    // Connect's, then the locations'. The first three exist under `~` alone.
     pages: [
       {
         key: "pages-website",
@@ -249,6 +249,16 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
         wide: true,
         words:
           "content home page top choices hubs about contact terms privacy footer",
+      },
+      {
+        key: "pages-blog",
+        label: "Blog",
+        path: "pages/blog",
+        icon: "blog",
+        // The locations' pages' team writes the posts, as it did under them.
+        permission: "pages.manage",
+        wide: true,
+        words: "posts articles highlighted stories guides",
       },
       {
         key: "pages-connect",
@@ -267,7 +277,7 @@ export const CONSOLE_SECTIONS: readonly ConsoleSection[] = [
         icon: "pages",
         permission: "pages.manage",
         step: "pages",
-        words: "content location pages places posts saved addresses",
+        words: "content location pages places saved addresses",
       },
     ],
   },

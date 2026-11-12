@@ -1,28 +1,16 @@
-import type { ReactNode } from "react";
-import {
-  ADMIN_URL,
-  SITE_PAGE_LABELS,
-  sitePageEditorPath,
-  sitePagePreviewPath,
-  type PageStatus,
-  type SitePageKey,
-} from "@repo/db/server";
+import type { ComponentProps, ReactNode } from "react";
 import { Footer } from "../_components/Footer";
 import { SiteHeader } from "../_components/SiteHeader";
 import { PreviewBar } from "../_components/PreviewBar";
 import { fontVars } from "../_home/fonts";
 import { headerDestinations } from "../_lib/locations";
 
-/** Where a site page stands. */
-type SitePageStanding = { page: SitePageKey; status: PageStatus };
-
 /**
- * What the site's own pages share: the home page's type and palette, the
- * header, and the footer, its draft on a staff preview. `overlay` floats
- * the header over the home page's hero. `preview` is the page a staff
- * preview shows, and floats the preview bar over it: where the page
- * stands, its editor, and the way to every site page, `pages`, each with
- * where it stands.
+ * What the site's own pages share, and the blog's: the home page's type
+ * and palette, the header, and the footer, its draft on a staff preview.
+ * `overlay` floats the header over the home page's hero. `preview` is
+ * the preview bar a staff preview floats over the page: where the page
+ * stands, its editor, and the way to the pages previewed with it.
  */
 export async function SiteFrame({
   overlay = false,
@@ -30,7 +18,7 @@ export async function SiteFrame({
   children,
 }: {
   overlay?: boolean;
-  preview?: SitePageStanding & { pages: readonly SitePageStanding[] };
+  preview?: ComponentProps<typeof PreviewBar>;
   children: ReactNode;
 }) {
   return (
@@ -40,22 +28,7 @@ export async function SiteFrame({
       <SiteHeader overlay={overlay} destinations={await headerDestinations()} />
       {children}
       <Footer preview={preview !== undefined} />
-      {preview && (
-        <PreviewBar
-          name={SITE_PAGE_LABELS[preview.page]}
-          standing={preview.status}
-          editHref={`${ADMIN_URL}${sitePageEditorPath(preview.page)}`}
-          title="Site pages"
-          searchLabel="Find a site page"
-          groups={preview.pages.map(({ page, status }) => ({
-            href: sitePagePreviewPath(page),
-            name: SITE_PAGE_LABELS[page],
-            standing: status,
-            current: page === preview.page,
-            children: [],
-          }))}
-        />
-      )}
+      {preview && <PreviewBar {...preview} />}
     </div>
   );
 }

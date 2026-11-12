@@ -1,7 +1,6 @@
 import "server-only";
 import {
   LANDING_REF,
-  PAGE_KIND_RULES,
   childrenOf,
   getAdminAccess,
   isLocationPageRef,
@@ -17,9 +16,7 @@ import { notFound, redirect } from "next/navigation";
 import {
   isLocationSlug,
   locationPreview,
-  previewPageBody,
   publicLocation,
-  publicPageBody,
 } from "../_lib/locations";
 import { signInHref } from "../_lib/routes";
 
@@ -33,8 +30,6 @@ import { signInHref } from "../_lib/routes";
 export type LocationRoute = {
   location: LocationView;
   page: LocationViewPage;
-  /** A post's text, which the view leaves out; empty on every other page. */
-  body: string;
 };
 
 /** The public location at the slug; a 404 when the public sees none there. */
@@ -90,10 +85,7 @@ export async function publicPageAt(
     }
     notFound();
   }
-  const body = PAGE_KIND_RULES[page.kind].body
-    ? await publicPageBody(slug, page.page, page.slug)
-    : "";
-  return { location, page, body };
+  return { location, page };
 }
 
 /**
@@ -121,8 +113,5 @@ export async function previewPageAt(
   const location = await locationPreview(slug);
   const page = location && pageOfView(location, ref);
   if (!location || !page) notFound();
-  const body = PAGE_KIND_RULES[page.kind].body
-    ? await previewPageBody(slug, page.page, page.slug)
-    : "";
-  return { location, page, body };
+  return { location, page };
 }

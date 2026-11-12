@@ -1,11 +1,14 @@
 import "server-only";
 import {
+  BLOG_TAG,
   CONNECT_URL,
   REVALIDATE_PATH,
   SITE_PAGES_TAG,
   SITE_URL,
   TOP_CHOICES_TAG,
   VEHICLE_CLASSES_TAG,
+  blogPostPath,
+  blogPostPreviewPath,
   getLocationSlug,
   locationPagePath,
   locationPreviewPath,
@@ -56,6 +59,16 @@ export function sitePageShownPath(page: SitePageKey) {
   return sitePageAppOf(page) === "connect"
     ? `${new URL(CONNECT_URL).host}/`
     : sitePagePath(page);
+}
+
+/** Where staff preview a blog post's draft on the customer site. */
+export function blogPostPreviewUrl(slug: string) {
+  return SITE_URL + blogPostPreviewPath(slug);
+}
+
+/** Where the public reads a blog post, once it is published. */
+export function blogPostPublicUrl(slug: string) {
+  return SITE_URL + blogPostPath(slug);
 }
 
 /** How long the refresh may take before it is given up. */
@@ -145,6 +158,14 @@ export function refreshTopChoicesAfter() {
 /** Refreshes the site's own pages: the home page, the documents and the footer's links. */
 export function refreshSitePagesAfter() {
   after(() => refreshSite([SITE_PAGES_TAG]));
+}
+
+/**
+ * Refreshes the blog on the customer site: its home, its lists, its posts,
+ * and the locations' lists of the posts tagged with them.
+ */
+export function refreshBlogAfter() {
+  after(() => refreshSite([BLOG_TAG]));
 }
 
 /** Refreshes the vehicle classes the product pages list. */

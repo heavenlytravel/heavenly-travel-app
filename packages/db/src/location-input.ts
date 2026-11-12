@@ -257,11 +257,6 @@ export function checkPageUnpublish(
 /** How many locations the home page shows as top choices. */
 export const TOP_CHOICE_CAP = 3;
 
-/** What Marketing does to a location's place among the top choices. */
-export const TOP_CHOICE_CHANGES = ["add", "remove", "up", "down"] as const;
-export type TopChoiceChange = (typeof TOP_CHOICE_CHANGES)[number];
-export const isTopChoiceChange = guardFor(TOP_CHOICE_CHANGES);
-
 export const LOCATION_LIMITS = {
   /** Characters. */
   name: 60,
@@ -284,6 +279,7 @@ const SITE_PATHS = [
   "sign-in",
   "sign-up",
   "api",
+  "blog",
   ...SITE_PAGE_PATHS,
 ];
 const LOCALE_CODES = ["en", "ms", "zh"];

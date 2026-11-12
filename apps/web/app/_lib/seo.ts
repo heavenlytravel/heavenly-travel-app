@@ -6,6 +6,7 @@ import {
   type PageContent,
 } from "@repo/db/server";
 import type { Metadata } from "next";
+import type { Crumb } from "../_components/page-parts";
 
 /**
  * What a marketing page tells search engines and link previews, a
@@ -89,6 +90,20 @@ export function faqDataOf(content: PageContent): object | null {
         "@type": "Answer",
         text: paragraphsOf(faq.answer).join("\n"),
       },
+    })),
+  };
+}
+
+/** The `BreadcrumbList` of a page's breadcrumb, its steps at their public addresses. */
+export function breadcrumbDataOf(crumbs: readonly Crumb[]): object {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: crumbs.map((crumb, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: crumb.name,
+      item: SITE_URL + crumb.path,
     })),
   };
 }

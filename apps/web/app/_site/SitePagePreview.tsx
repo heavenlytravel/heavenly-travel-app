@@ -1,7 +1,11 @@
 import {
+  ADMIN_URL,
   HOME_PAGE,
+  SITE_PAGE_LABELS,
   isHubPage,
   listSitePageSummaries,
+  sitePageEditorPath,
+  sitePagePreviewPath,
   type SitePageKey,
 } from "@repo/db/server";
 import { serviceLocationCards, topChoiceCards } from "../_lib/locations";
@@ -23,10 +27,21 @@ import { previewSitePageAt } from "./routes";
  */
 export async function SitePagePreview({ page }: { page: SitePageKey }) {
   const shown = await previewSitePageAt(page);
+  const pages = await listSitePageSummaries();
+  // Where the page stands, its editor, and the way to every site page.
   const preview = {
-    page,
-    status: shown.status,
-    pages: await listSitePageSummaries(),
+    name: SITE_PAGE_LABELS[page],
+    standing: shown.status,
+    editHref: `${ADMIN_URL}${sitePageEditorPath(page)}`,
+    title: "Site pages",
+    searchLabel: "Find a site page",
+    groups: pages.map(({ page: other, status }) => ({
+      href: sitePagePreviewPath(other),
+      name: SITE_PAGE_LABELS[other],
+      standing: status,
+      current: other === page,
+      children: [],
+    })),
   };
   if (page === HOME_PAGE) {
     return (

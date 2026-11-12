@@ -3,22 +3,28 @@
 import {
   formatLocalTime,
   nextTripStep,
+  noShowRefusal,
+  noShowUndoRefusal,
+  NO_SHOW_UNDO_MINUTES,
+  noShowEndsAt,
   TRIP_EVENT_LABELS,
   TRIP_EVENT_NOTE_MAX_LENGTH,
   type TripEventKind,
 } from "@repo/db";
 import type { TripEventView } from "@repo/db/server";
-import { useConfirm } from "@repo/ui/alert-dialog";
 import { Input, Textarea } from "@repo/ui/field";
 import { toast } from "@repo/ui/toast";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { FormError } from "@repo/ui/form-error";
 import { Button } from "@repo/ui/button";
-import { TriangleAlertIcon } from "@repo/ui/icons";
 import { Notice } from "@repo/ui/notice";
-import { CloudOff, PenLine, UserX } from "lucide-react";
-import { reportTapAction, type TapPayload } from "../../../actions";
+import { CloudOff, PenLine, Undo2, UserX } from "lucide-react";
+import {
+  reportTapAction,
+  undoNoShowAction,
+  type TapPayload,
+} from "../../../actions";
 import { SlideToConfirm } from "../../../_ui/SlideToConfirm";
 import { TripTimeline, type TimelineEvent } from "../../../_ui/TripTimeline";
 
@@ -42,17 +48,9 @@ function writeQueue(queue: readonly TapPayload[]) {
 const STEP_PROMPTS: Partial<
   Record<TripEventKind, { label: string; hint: string }>
 > = {
-  "on-the-way": {
-    label: "I'm on my way",
-    hint: "Slide when you leave for the pick-up.",
-  },
   arrived: {
     label: "I've arrived",
-    hint: "Slide when you are at the pick-up. Waiting time counts from here.",
-  },
-  "on-board": {
-    label: "Passenger on board",
-    hint: "Slide once everyone is in.",
+    hint: "Slide when you are at the pick-up.",
   },
   "dropped-off": {
     label: "Dropped off",
@@ -61,31 +59,45 @@ const STEP_PROMPTS: Partial<
 };
 
 /**
- * The driver's trip on the day: the steps so far, then one slider for the
- * next, so a pocket or a brushing thumb sends nothing. A note goes with
- * the next report; No-show (after a yes) and a problem (with what it is)
- * stand apart below. A tap is kept on the phone first, with an id made
- * here, then sent; without signal it waits and is sent again on the next
+ * The driver's trip on the day, two reports: Arrived, then Dropped off,
+ * each one slider, so a pocket or a brushing thumb sends nothing. A note
+ * goes with the next report. No-show stands apart below, once the driver
+ * has arrived and the pickup time has passed (`noShowRefusal`), in red. It
+ * asks why, then asks once more before it is sent; for its hour after
+ * (`noShowEndsAt`), the driver can take it back when the passenger turns
+ * up. A tap is kept on the phone first, with an id made here, then sent; without signal it waits and is sent again on the next
  * load or when the phone is back online. The server keeps a tap once,
  * however often it is sent.
  */
 export function TripTaps({
   itemId,
+  startsAt,
   events,
   open,
 }: {
   itemId: string;
+  /** The pickup: a no-show is reported once it has passed. */
+  startsAt: Date;
   events: TripEventView[];
   /** The trip can still be reported: accepted, not done, not cancelled. */
   open: boolean;
 }) {
   const router = useRouter();
-  const [dialog, confirm] = useConfirm();
   const [waiting, setWaiting] = useState<TapPayload[]>([]);
   const [note, setNote] = useState("");
   const [noting, setNoting] = useState(false);
-  const [problem, setProblem] = useState<string | null>(null);
+  // The no-show's reason while it is written; null while it is not.
+  const [noShow, setNoShow] = useState<string | null>(null);
+  // The reason is written: asked once more before it is sent.
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [undoing, startUndo] = useTransition();
+  // The time a no-show waits for, read again each half minute.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
 
   /** Sends every tap waiting on the phone, oldest first; keeps those that do not arrive. */
   const flush = useCallback(async () => {
@@ -130,30 +142,38 @@ export function TripTaps({
     setWaiting((current) => [...current, payload]);
     setNote("");
     setNoting(false);
-    setProblem(null);
+    setNoShow(null);
+    setConfirming(false);
     toast.success(
       `${TRIP_EVENT_LABELS[kind]}, ${formatLocalTime(new Date(payload.at))}.`,
     );
     void flush();
   }
 
-  async function noShow() {
-    const yes = await confirm({
-      title: "Report a no-show?",
-      description:
-        "This ends the trip. Call or WhatsApp the passenger first, and wait as Operation asks.",
-      action: "Report no-show",
-      danger: true,
+  function undo() {
+    setError(null);
+    startUndo(async () => {
+      const answer = await undoNoShowAction(itemId).catch(() => ({
+        ok: false as const,
+        error: "No signal. Try again, or call Operation.",
+      }));
+      if (!answer.ok) {
+        setError(answer.error);
+        return;
+      }
+      toast.success("No-show taken back. Report Dropped off at the end.");
+      router.refresh();
     });
-    if (yes) tap("no-show", note);
   }
 
-  function sendProblem() {
-    if (!problem?.trim()) {
-      setError("Say what the problem is, then send it.");
+  /** The reason checked, then asked once more. */
+  function askNoShow() {
+    if (!noShow?.trim()) {
+      setError("Say why: how long you waited and how you tried to reach them.");
       return;
     }
-    tap("problem", problem);
+    setError(null);
+    setConfirming(true);
   }
 
   const shown: TimelineEvent[] = [
@@ -174,6 +194,13 @@ export function TripTaps({
   ];
   const next = nextTripStep(shown);
   const prompt = next ? STEP_PROMPTS[next] : undefined;
+  const canNoShow =
+    open && next !== null && noShowRefusal(shown, startsAt, now) === null;
+  // Only once the no-show is sent: one still waiting for signal is not kept yet.
+  const canUndo =
+    open &&
+    !waiting.some((t) => t.kind === "no-show") &&
+    noShowUndoRefusal(events, now) === null;
 
   return (
     <div className="grid gap-6">
@@ -221,60 +248,89 @@ export function TripTaps({
           )}
         </div>
       ) : null}
-      {open ? (
-        problem === null ? (
-          <div className="grid grid-cols-2 gap-2">
-            <Button variant="secondary" size="lg" onClick={() => void noShow()}>
-              <UserX aria-hidden className="size-5" />
-              No-show
-            </Button>
-            <Button
-              variant="danger"
-              size="lg"
-              onClick={() => {
-                setError(null);
-                setProblem("");
-              }}
-            >
-              <TriangleAlertIcon className="size-5" />
-              Problem
-            </Button>
-          </div>
+      {canNoShow ? (
+        noShow === null ? (
+          <Button
+            variant="destructive"
+            size="lg"
+            onClick={() => {
+              setError(null);
+              setNoShow("");
+            }}
+          >
+            <UserX aria-hidden className="size-5" />
+            No-show
+          </Button>
         ) : (
           <div className="grid gap-3 rounded-card border border-danger-edge bg-danger-tint p-4">
             <label className="grid gap-1.5">
               <span className="text-sm font-bold text-danger-strong">
-                What is the problem?
+                Why is it a no-show?
+              </span>
+              <span className="text-sm text-body">
+                This ends the trip. Call or WhatsApp the passenger first, and
+                wait as Operation asks.
               </span>
               <Textarea
-                value={problem}
-                onChange={(event) => setProblem(event.target.value)}
+                value={noShow}
+                onChange={(event) => setNoShow(event.target.value)}
+                readOnly={confirming}
                 maxLength={TRIP_EVENT_NOTE_MAX_LENGTH}
                 rows={3}
                 autoFocus
-                placeholder="Flat tyre on the way, about 30 minutes late"
+                placeholder="Waited 45 minutes at arrivals, called twice, no answer"
               />
             </label>
+            {confirming ? (
+              <p className="text-sm font-semibold text-danger-strong">
+                Report a no-show now? The trip ends {NO_SHOW_UNDO_MINUTES}{" "}
+                minutes after. Until then you can take it back if the passenger
+                comes.
+              </p>
+            ) : null}
             <div className="grid grid-cols-[1fr_1.4fr] gap-2">
               <Button
                 variant="secondary"
                 size="lg"
                 onClick={() => {
                   setError(null);
-                  setProblem(null);
+                  if (confirming) setConfirming(false);
+                  else setNoShow(null);
                 }}
               >
                 Back
               </Button>
-              <Button variant="destructive" size="lg" onClick={sendProblem}>
-                Send to Operation
+              <Button
+                variant="destructive"
+                size="lg"
+                onClick={() =>
+                  confirming ? tap("no-show", noShow) : askNoShow()
+                }
+              >
+                {confirming ? "Yes, report no-show" : "Report no-show"}
               </Button>
             </div>
           </div>
         )
       ) : null}
+      {canUndo ? (
+        <div className="grid gap-1.5">
+          <Button
+            variant="secondary"
+            size="lg"
+            pending={undoing}
+            onClick={undo}
+          >
+            <Undo2 aria-hidden className="size-5" />
+            The passenger came: undo no-show
+          </Button>
+          <p className="text-center text-caption text-muted">
+            You can take it back until{" "}
+            {formatLocalTime(noShowEndsAt(events) ?? now)}. Then the trip ends.
+          </p>
+        </div>
+      ) : null}
       <FormError error={error} />
-      {dialog}
     </div>
   );
 }

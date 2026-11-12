@@ -31,6 +31,11 @@ export function tripBookingPath(category: TripCategory) {
   return `${TRIP_BOOKING_ROOT}/${category}`;
 }
 
+/** The add-ons step, between the vehicle and the details. */
+export function tripAddOnsPath(category: TripCategory) {
+  return `${tripBookingPath(category)}/add-ons`;
+}
+
 export function tripConfirmPath(category: TripCategory) {
   return `${tripBookingPath(category)}/confirm`;
 }

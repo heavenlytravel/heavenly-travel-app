@@ -10,6 +10,7 @@ import {
   mediaPageName,
   plural,
   type MediaStatus,
+  type MediaPage,
   type MediaUse,
 } from "@repo/db";
 import { Badge, type BadgeTone } from "@repo/ui/badge";
@@ -27,6 +28,8 @@ import { Choices } from "../../../_components/Choices";
 import { DeleteButton } from "@repo/console/DeleteButton";
 import {
   classHref,
+  blogPostHref,
+  blogPostPublishHref,
   locationPageHref,
   locationPublishHref,
   sitePageHref,
@@ -380,6 +383,30 @@ function UseList({ uses }: { uses: readonly MediaUse[] }) {
 const USE_CHIP =
   "block truncate rounded-md bg-shade px-2 py-0.5 text-xs text-body transition-colors hover:bg-brand-tint hover:text-navy focus-ring";
 
+/** A page's editor: a location's, a site page's or the footer's, a blog post's. */
+function pageHrefOf(on: MediaPage) {
+  switch (on.scope) {
+    case "location":
+      return locationPageHref(on.location.slug, on.ref);
+    case "site":
+      return sitePageHref(on.page);
+    case "blog":
+      return blogPostHref(on.postId);
+  }
+}
+
+/** One publish of a page, before and after, by its log entry. */
+function publishHrefOf(on: MediaPage, entryId: string) {
+  switch (on.scope) {
+    case "location":
+      return locationPublishHref(on.location.slug, entryId);
+    case "site":
+      return sitePagePublishHref(entryId);
+    case "blog":
+      return blogPostPublishHref(entryId);
+  }
+}
+
 /** Where a use is, as a link to it: the page or the footer in its editor, the class, the vehicle, the past version. */
 function UseLink({ use }: { use: MediaUse }) {
   switch (use.kind) {
@@ -391,28 +418,14 @@ function UseLink({ use }: { use: MediaUse }) {
             ? "published"
             : "draft";
       return (
-        <Link
-          href={
-            use.on.site
-              ? sitePageHref(use.on.page)
-              : locationPageHref(use.on.location.slug, use.on.ref)
-          }
-          className={USE_CHIP}
-        >
+        <Link href={pageHrefOf(use.on)} className={USE_CHIP}>
           {mediaPageName(use.on)}, {copies}
         </Link>
       );
     }
     case "earlier":
       return (
-        <Link
-          href={
-            use.on.site
-              ? sitePagePublishHref(use.entryId)
-              : locationPublishHref(use.on.location.slug, use.entryId)
-          }
-          className={USE_CHIP}
-        >
+        <Link href={publishHrefOf(use.on, use.entryId)} className={USE_CHIP}>
           {mediaPageName(use.on)}, a past version
         </Link>
       );

@@ -134,8 +134,10 @@ async function moveAgents() {
 async function numberBookings() {
   const last =
     (await db.booking.aggregate({ _max: { number: true } }))._max.number ?? 0;
+  // A quotation (HTQ) waits for its HTB until it is confirmed: never
+  // numbered here (docs/261111-catalogue-booking-flow-and-ops.md, part F).
   const unnumbered = await db.booking.findMany({
-    where: { number: null },
+    where: { number: null, quoteNumber: null },
     orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     select: { id: true },
   });

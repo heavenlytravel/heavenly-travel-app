@@ -1,9 +1,10 @@
 import Link from "next/link";
 import {
   getVehicleClass,
+  listClassKinds,
   listVehicles,
+  type ClassWithKinds,
   type ListedVehicle,
-  type VehicleClass,
 } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { InfoTip } from "@repo/ui/info-tip";
@@ -37,7 +38,16 @@ import { VehicleClassForm } from "./VehicleClassForm";
  */
 export function ClassEditor({ id }: { id: string }) {
   return id === "new" ? (
-    <VehicleClassScreen />
+    <Streamed
+      fallback={
+        <>
+          <HeaderSkeleton />
+          <FormSkeleton sections={3} fields={4} />
+        </>
+      }
+    >
+      {async () => <VehicleClassScreen kinds={await listClassKinds()} />}
+    </Streamed>
   ) : (
     <Streamed
       fallback={
@@ -51,16 +61,21 @@ export function ClassEditor({ id }: { id: string }) {
       }
     >
       {async () => {
-        const [vehicleClass, permissions] = await Promise.all([
+        const [vehicleClass, permissions, kinds] = await Promise.all([
           getVehicleClass(id),
           getPermissions(),
+          listClassKinds(),
         ]);
         if (!vehicleClass) notFound();
         const vehicles = permissions.includes("fleet.manage")
           ? await listVehicles({ vehicleClassId: id })
           : null;
         return (
-          <VehicleClassScreen vehicleClass={vehicleClass} vehicles={vehicles} />
+          <VehicleClassScreen
+            vehicleClass={vehicleClass}
+            vehicles={vehicles}
+            kinds={kinds}
+          />
         );
       }}
     </Streamed>
@@ -71,9 +86,12 @@ export function ClassEditor({ id }: { id: string }) {
 function VehicleClassScreen({
   vehicleClass,
   vehicles = null,
+  kinds,
 }: {
   /** Left out for a class that does not exist yet. */
-  vehicleClass?: VehicleClass;
+  vehicleClass?: ClassWithKinds;
+  /** The types and tiers there are, for the form. */
+  kinds: { types: string[]; tiers: string[] };
   /** Null for an admin who does not manage the fleet. */
   vehicles?: ListedVehicle[] | null;
 }) {
@@ -103,6 +121,7 @@ function VehicleClassScreen({
           <VehicleClassForm
             key={vehicleClass?.id ?? "new"}
             vehicleClass={vehicleClass}
+            kinds={kinds}
           />
         }
         side={

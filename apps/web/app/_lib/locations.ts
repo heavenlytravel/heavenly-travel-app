@@ -3,7 +3,6 @@ import {
   TOP_CHOICES_TAG,
   VEHICLE_CLASSES_TAG,
   checkLocationSlug,
-  getLocationPageBody,
   getLocationPreview,
   getLocationSearch,
   getPublicLocation,
@@ -15,7 +14,6 @@ import {
   listTopChoiceCards,
   locationTag,
   startingPriceSen,
-  type LocationPageRef,
   type LocationSearch,
   type LocationSection,
   type LocationView,
@@ -48,7 +46,7 @@ export function isLocationSlug(slug: string) {
  * deploy, so a change to its shape bumps this, or the pages read the old
  * shape until it expires.
  */
-const LOCATION_VIEW_VERSION = 2;
+const LOCATION_VIEW_VERSION = 3;
 
 /** The location at the slug as the public sees it, or null. Once per request. */
 export const publicLocation = cache(
@@ -64,25 +62,6 @@ export const publicLocation = cache(
 
 /** The location at the slug as staff preview it: the drafts, read fresh. Once per request. */
 export const locationPreview = cache(getLocationPreview);
-
-/**
- * The text of a public post at the location, which its view leaves out:
- * only the post's own page reads it. Tagged with the location, as the view.
- */
-export const publicPageBody = cache(
-  (slug: string, page: LocationPageRef["page"], entry: string) =>
-    unstable_cache(
-      () => getLocationPageBody(slug, { page, slug: entry }, false),
-      ["public-page-body", slug, page, entry],
-      { tags: [locationTag(slug)], revalidate: REFRESH_SECONDS },
-    )(),
-);
-
-/** The same for the staff preview: the draft's text, read fresh. */
-export const previewPageBody = cache(
-  (slug: string, page: LocationPageRef["page"], entry: string) =>
-    getLocationPageBody(slug, { page, slug: entry }, true),
-);
 
 /**
  * The version of `LocationSearch` the cache holds. A cached answer outlives

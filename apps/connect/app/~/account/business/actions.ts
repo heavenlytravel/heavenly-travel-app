@@ -1,11 +1,9 @@
 "use server";
 
-import { normalizeEmail } from "@repo/db";
 import {
-  normalizePhone,
-  readBankFields,
-  textOf,
+  parseVendorFields,
   updateVendor,
+  VENDOR_LOCATIONS_FIELD,
 } from "@repo/db/server";
 import { type ActionState, refusalOf } from "@repo/console/action-state";
 import { revalidatePath } from "next/cache";
@@ -16,10 +14,11 @@ const NOT_THE_OWNER: ActionState = {
 };
 
 /**
- * The owner saves the business's contact, address and bank details. The
- * name, the kind, the SSM or IC number, the services and the locations
- * were checked when it was approved, so they are not read here: the team
- * changes them. The writer logs what changed, the bank's number masked.
+ * The owner saves the business: company or individual, its name and
+ * registration, the contact, the address, the locations it serves and the
+ * bank. What it offers is not read here: the team changes it. The writer
+ * logs what changed, the bank's number masked, and refuses a location
+ * still holding one of its vehicles or drivers.
  */
 export async function saveBusinessAction(
   _previous: ActionState,
@@ -28,14 +27,19 @@ export async function saveBusinessAction(
   const member = await getMemberAccess();
   if (!member) return NOT_A_MEMBER;
   if (member.role !== "owner") return NOT_THE_OWNER;
-  const values = Object.fromEntries(formData);
-  const result = await updateVendor(actorOf(member.user), member.vendor.id, {
-    contactName: textOf(values.contactName),
-    contactPhone: normalizePhone(textOf(values.contactPhone)),
-    contactEmail: normalizeEmail(textOf(values.contactEmail)),
-    address: textOf(values.address),
-    ...readBankFields(values),
-  });
+  // Read as the staff form is, with the service it has, which is kept.
+  const parsed = parseVendorFields(
+    Object.fromEntries(formData),
+    member.vendor.services,
+    formData.getAll(VENDOR_LOCATIONS_FIELD),
+  );
+  if (!parsed.ok) return refusalOf(parsed);
+  // Its service is the one it has, so the writer sees no change to it.
+  const result = await updateVendor(
+    actorOf(member.user),
+    member.vendor.id,
+    parsed.value,
+  );
   if (!result.ok) return refusalOf(result);
   revalidatePath("/~/account/business");
   return { href: "/~/account/business" };

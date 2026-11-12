@@ -3,7 +3,7 @@
 import {
   assignStateOf,
   formatMyr,
-  isUrgentTrip,
+  tripUrgencyOf,
   modelName,
   PART_ROLE_LABELS,
   rolesOf,
@@ -117,16 +117,15 @@ export function TripCrew({
                 <dt className="text-muted">{PART_ROLE_LABELS[role]}</dt>
                 <dd className="text-body">
                   {part ? (
-                    [
-                      namedOf(part),
-                      part.offer.vendor.name,
-                      role === "vehicle" ? trip.classChange?.label : null,
-                    ]
+                    [namedOf(part), part.offer.vendor.name]
                       .filter(Boolean)
                       .join(" · ")
                   ) : (
                     <NotAssignedBadge
-                      urgent={isUrgentTrip({ startsAt: trip.startsAt, state })}
+                      urgency={tripUrgencyOf({
+                        startsAt: trip.startsAt,
+                        state,
+                      })}
                     />
                   )}
                   {part && waiting ? (

@@ -263,7 +263,7 @@ export function TripFields({
       {!hasGoogle ? (
         <p className="text-xs text-warning">
           Google is not set up on this server, so the list offers the districts
-          themselves and one-way trips cannot be priced.
+          themselves and transfers cannot be priced.
         </p>
       ) : null}
 

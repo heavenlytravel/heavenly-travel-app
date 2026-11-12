@@ -18,6 +18,7 @@ import {
   footerContentOf,
   footerImageKeys,
 } from "./footer-content";
+import { BLOG_POST_KIND } from "./blog-input";
 import { pageContentOf, pageImageKeys, type PageKind } from "./page-content";
 import {
   SITE_PAGE_LABELS,
@@ -36,7 +37,8 @@ import {
 
 /**
  * Where the console's uploaded files are used, for the Media screen: the
- * locations' pages, the site's and its footer, working and published, the vehicle
+ * locations' pages, the site's and its footer, the blog's posts, working
+ * and published, the vehicle
  * classes' pictures, the vehicles' photos, and the past versions a page's
  * History shows; the check before a delete, which leaves a file in use
  * alone; and the check that keeps a form opened before the delete from
@@ -67,7 +69,7 @@ function footerSnapshotKeys(snapshot: unknown): string[] {
 
 /** A footer, as a use names it. */
 const footerPageOf = (key: FooterKey): MediaPage => ({
-  site: true,
+  scope: "site",
   page: key,
   title: FOOTER_LABELS[key],
 });
@@ -79,12 +81,21 @@ function locationPageOf(
   content: unknown,
 ): MediaPage {
   const name = pageContentOf(pageKindOf(ref), content).heroHeadline;
-  return { site: false, location, ref, title: pageTitleOf(ref, name) };
+  return { scope: "location", location, ref, title: pageTitleOf(ref, name) };
+}
+
+/** A blog post as a use names it: by its title, else its slug. */
+function blogPostPageOf(
+  post: { id: string; slug: string },
+  content: unknown,
+): MediaPage {
+  const title = pageContentOf(BLOG_POST_KIND, content).heroHeadline;
+  return { scope: "blog", postId: post.id, title: title || post.slug };
 }
 
 /** The rows the uses are read from, in one read. */
 async function readSources(client: Prisma.TransactionClient) {
-  const [locations, pages, sitePages, publishes, classes, photos] =
+  const [locations, pages, sitePages, posts, publishes, classes, photos] =
     await Promise.all([
       client.location.findMany({
         select: { id: true, name: true, slug: true },
@@ -101,6 +112,9 @@ async function readSources(client: Prisma.TransactionClient) {
       client.sitePage.findMany({
         select: { page: true, draft: true, published: true },
       }),
+      client.blogPost.findMany({
+        select: { id: true, slug: true, draft: true, published: true },
+      }),
       client.activityLog.findMany({
         where: {
           action: {
@@ -108,6 +122,7 @@ async function readSources(client: Prisma.TransactionClient) {
               "location.page.published",
               "site.page.published",
               "site.footer.published",
+              "blog.post.published",
             ],
           },
         },
@@ -139,7 +154,7 @@ async function readSources(client: Prisma.TransactionClient) {
         },
       }),
     ]);
-  return { locations, pages, sitePages, publishes, classes, photos };
+  return { locations, pages, sitePages, posts, publishes, classes, photos };
 }
 
 type Sources = Awaited<ReturnType<typeof readSources>>;
@@ -151,7 +166,8 @@ type Sources = Awaited<ReturnType<typeof readSources>>;
  * a deleted location's history has no page.
  */
 function usesOf(sources: Sources): Map<string, MediaUse[]> {
-  const { locations, pages, sitePages, publishes, classes, photos } = sources;
+  const { locations, pages, sitePages, posts, publishes, classes, photos } =
+    sources;
   const locationById = new Map(locations.map((l) => [l.id, l]));
   const uses = new Map<string, MediaUse[]>();
   const add = (key: string | null, use: MediaUse) => {
@@ -196,11 +212,16 @@ function usesOf(sources: Sources): Map<string, MediaUse[]> {
     }
     if (!isSitePageKey(row.page)) continue;
     addPage(
-      { site: true, page: row.page, title: SITE_PAGE_LABELS[row.page] },
+      { scope: "site", page: row.page, title: SITE_PAGE_LABELS[row.page] },
       pageKeysOf(sitePageKindOf(row.page)),
       row,
     );
   }
+  for (const post of posts) {
+    addPage(blogPostPageOf(post, post.draft), pageKeysOf(BLOG_POST_KIND), post);
+  }
+  // A deleted post's history has no page, as a deleted location's has none.
+  const postById = new Map(posts.map((post) => [post.id, post]));
 
   // Newest first, so the first entry seen for a file on a page names it.
   const seen = new Set<string>();
@@ -219,11 +240,16 @@ function usesOf(sources: Sources): Map<string, MediaUse[]> {
       if (entry.action === "site.page.published") {
         if (!isSitePageKey(entry.entityId)) continue;
         on = {
-          site: true,
+          scope: "site",
           page: entry.entityId,
           title: SITE_PAGE_LABELS[entry.entityId],
         };
         kind = sitePageKindOf(entry.entityId);
+      } else if (entry.action === "blog.post.published") {
+        const post = postById.get(entry.entityId);
+        if (!post) continue;
+        on = blogPostPageOf(post, post.draft);
+        kind = BLOG_POST_KIND;
       } else {
         const location = locationById.get(entry.entityId);
         const ref = loggedPageRef(entry.after);

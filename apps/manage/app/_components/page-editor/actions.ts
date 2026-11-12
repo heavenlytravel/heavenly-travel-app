@@ -1,13 +1,17 @@
 "use server";
 
 import {
+  BLOG_POST_KIND,
   pageContentOf,
   pageKindOf,
+  publishBlogPost,
   publishLocationPage,
   publishSitePage,
+  saveBlogPostDraft,
   saveLocationPageDraft,
   saveSitePageDraft,
   sitePageKindOf,
+  unpublishBlogPost,
   unpublishLocationPage,
   unpublishSitePage,
   type PageSaved,
@@ -23,14 +27,18 @@ import {
   stateOf,
   type ActionState,
 } from "@repo/console/action-state";
-import { refreshLocationAfter, refreshSitePagesAfter } from "../../_lib/site";
+import {
+  refreshBlogAfter,
+  refreshLocationAfter,
+  refreshSitePagesAfter,
+} from "../../_lib/site";
 import { pageTargetOf, type PageTarget } from "./target";
 
 /**
- * The page editor's writes, for a location's page and a site page alike:
- * save the draft, publish, unpublish. Each checks the target's permission
- * again (`pages.manage` for a location's page, `website.manage` for a
- * site page) and reads the target and the version for their type, since an action is
+ * The page editor's writes, for a location's page, a site page and a blog
+ * post alike: save the draft, publish, unpublish. Each checks the target's
+ * permission again (`pages.manage` for a location's page and a post,
+ * `website.manage` for a site page) and reads the target and the version for their type, since an action is
  * reachable by direct POST; the writers in @repo/db check the rest. A
  * change the public can see refreshes the customer site after the answer.
  * `version` names the content the editor was opened with, so a page
@@ -47,12 +55,13 @@ function refreshAfter(target: PageTarget, publicChange: boolean) {
   revalidateLocation();
   if (!publicChange) return;
   if (target.scope === "location") refreshLocationAfter(target.locationId);
+  else if (target.scope === "blog") refreshBlogAfter();
   else refreshSitePagesAfter();
 }
 
-/** Who may write the target: Marketing a location's page, SUPER a site page. */
+/** Who may write the target: the locations' pages' team a location's page and a post, the website's a site page. */
 function permissionOf(target: PageTarget): Permission {
-  return target.scope === "location" ? "pages.manage" : "website.manage";
+  return target.scope === "site" ? "website.manage" : "pages.manage";
 }
 
 async function writePage(
@@ -85,6 +94,11 @@ async function writePage(
           version,
           draft,
         );
+  } else if (target.scope === "blog") {
+    const draft = pageContentOf(BLOG_POST_KIND, content);
+    result = publish
+      ? await publishBlogPost(actorOf(admin), target.postId, version, draft)
+      : await saveBlogPostDraft(target.postId, version, draft);
   } else {
     const draft = pageContentOf(sitePageKindOf(target.page), content);
     result = publish
@@ -130,7 +144,9 @@ export async function unpublishPageAction(
           target.locationId,
           target.ref,
         )
-      : await unpublishSitePage(actorOf(admin), target.page);
+      : target.scope === "blog"
+        ? await unpublishBlogPost(actorOf(admin), target.postId)
+        : await unpublishSitePage(actorOf(admin), target.page);
   if (result.ok) refreshAfter(target, true);
   return stateOf(result);
 }

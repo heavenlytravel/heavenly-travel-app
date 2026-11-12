@@ -3,7 +3,7 @@ import Link from "next/link";
 
 /**
  * Fleet's lists as a switch on the band, in its glass: Vehicles, Drivers
- * and, for a vendor with tour guides, Guides, each with its count.
+ * and Guides, each with its count, those the vendor supplies or has.
  */
 export function FleetTabs({
   current,
@@ -12,9 +12,9 @@ export function FleetTabs({
   guides,
 }: {
   current: "vehicles" | "drivers" | "guides";
-  vehicles: number;
-  drivers: number;
-  /** Null for a vendor that neither offers tour guides nor has any: no tab. */
+  /** Each null for a vendor that neither supplies it nor has any: no tab. */
+  vehicles: number | null;
+  drivers: number | null;
   guides: number | null;
 }) {
   const tabs = [
@@ -25,10 +25,11 @@ export function FleetTabs({
       count: vehicles,
     },
     { key: "drivers", href: "/~/drivers", label: "Drivers", count: drivers },
-    ...(guides === null
-      ? []
-      : [{ key: "guides", href: "/~/guides", label: "Guides", count: guides }]),
-  ];
+    { key: "guides", href: "/~/guides", label: "Guides", count: guides },
+  ].flatMap((tab) =>
+    tab.count === null ? [] : [{ ...tab, count: tab.count }],
+  );
+  if (tabs.length < 2) return null;
   return (
     <nav
       aria-label="Fleet"

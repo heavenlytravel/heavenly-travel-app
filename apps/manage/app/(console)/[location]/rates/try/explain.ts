@@ -571,7 +571,7 @@ export function breakdownText(answer: Answered, className: string): string {
   const hire = answer.quote?.hire;
   const head = answer.dropoff
     ? `${answer.pickup.label} to ${answer.dropoff.label}, ${className}`
-    : `${hire ? hourlyChoiceLabel(hire) : "Hourly"} from ${answer.pickup.label}, ${className}`;
+    : `${hire ? hourlyChoiceLabel(hire) : "By the hour"} from ${answer.pickup.label}, ${className}`;
   if (answer.refused) return `${head}\n${answer.refused.message}`;
   const quote = answer.quote;
   if (!quote?.price) {

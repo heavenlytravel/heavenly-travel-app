@@ -3,8 +3,7 @@ import { describe, it } from "node:test";
 import {
   assignStateOf,
   candidateOption,
-  classChangeFor,
-  classChangeOf,
+  isOtherClass,
   driverClassWarning,
   vehicleDriverWarning,
   type ClassRule,
@@ -387,7 +386,7 @@ describe("untilPickup", () => {
   const now = at("2026-11-03T00:00:00Z");
   const later = (ms: number) => new Date(now.getTime() + ms);
 
-  it("says minutes, hours, then days, soon within the day", () => {
+  it("says minutes, hours up to two days, then days, soon within the day", () => {
     assert.deepEqual(untilPickup(later(40 * 60 * 1000), now), {
       label: "in 40 min",
       soon: true,
@@ -397,7 +396,11 @@ describe("untilPickup", () => {
       soon: true,
     });
     assert.deepEqual(untilPickup(later(30 * HOUR), now), {
-      label: "in 1 day",
+      label: "in 30 h",
+      soon: false,
+    });
+    assert.deepEqual(untilPickup(later(47 * HOUR), now), {
+      label: "in 47 h",
       soon: false,
     });
     assert.deepEqual(untilPickup(later(72 * HOUR), now), {
@@ -424,11 +427,11 @@ describe("the class given: booked, or another with a reason", () => {
     ...over,
   });
 
-  it("names another class than booked, up or down", () => {
-    assert.equal(classChangeOf(sedan, mpv), "MPV instead of Sedan");
-    assert.equal(classChangeOf(mpv, sedan), "Sedan instead of MPV");
-    assert.equal(classChangeOf(sedan, sedan), null);
-    assert.equal(classChangeOf(null, mpv), null);
+  it("tells another class than booked, up or down", () => {
+    assert.equal(isOtherClass(sedan, mpv), true);
+    assert.equal(isOtherClass(mpv, sedan), true);
+    assert.equal(isOtherClass(sedan, sedan), false);
+    assert.equal(isOtherClass(null, mpv), false);
   });
 
   it("warns, never refuses, when the driver named does not drive the vehicle", () => {
@@ -453,18 +456,19 @@ describe("the class given: booked, or another with a reason", () => {
       id: "v1",
       name: "VLE1234 · Toyota Innova",
       trips: {
-        a: { reasons: [], classChange: "MPV instead of Sedan" },
-        b: { reasons: ["Road tax expired"], classChange: null },
+        a: { reasons: [] },
+        b: { reasons: ["Road tax expired"] },
       },
     };
     assert.deepEqual(candidateOption(candidate, ["a"]), {
       value: "v1",
-      label: "VLE1234 · Toyota Innova · MPV instead of Sedan",
+      label: "VLE1234 · Toyota Innova",
       disabled: false,
     });
-    assert.equal(candidateOption(candidate, ["a", "b"]).disabled, true);
-    assert.equal(classChangeFor(candidate, ["b"]), null);
-    assert.equal(classChangeFor(candidate, ["b", "a"]), "MPV instead of Sedan");
-    assert.equal(classChangeFor(null, ["a"]), null);
+    assert.deepEqual(candidateOption(candidate, ["a", "b"]), {
+      value: "v1",
+      label: "VLE1234 · Toyota Innova · Road tax expired",
+      disabled: true,
+    });
   });
 });

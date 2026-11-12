@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
     "akieez-h510m",
     "akieez-h510m.tail4436c5.ts.net",
   ],
+  // The PDFs (app/_pdf) are rendered by react-pdf on the server, as a
+  // Node package rather than bundled.
+  serverExternalPackages: ["@react-pdf/renderer"],
   transpilePackages: [
     "@repo/auth",
     "@repo/console",

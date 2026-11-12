@@ -6,10 +6,15 @@ import {
   type CustomerActor,
 } from "./activity-actions";
 import { settleBilling } from "./billing";
-import { suggestedPriceOf } from "./billing-rules";
+import { isCredit, suggestedPriceOf } from "./billing-rules";
 import type { ContactFields } from "./booking-contact";
 import { nextBookingNumber } from "./booking-counter";
-import { BOOKING_NUMBER_SELECT, parseDocumentNumber } from "./booking-number";
+import {
+  BOOKING_NUMBER_SELECT,
+  bookingWhereOf,
+  parseDocumentNumber,
+  type BookingRef,
+} from "./booking-number";
 import { checkPriceOverride, type PriceOverride } from "./booking-input";
 import { rateLimitDecision, rateLimitWindows } from "./booking-limits";
 import type { BookingOrder } from "./booking-order";
@@ -173,6 +178,12 @@ export type CreateBookingInput = {
    * invoice; false saves it as received, for confirming later.
    */
   confirm?: boolean;
+  /**
+   * Staff only: agreed that it is paid later, by this day ("2026-11-30"),
+   * as the booking page's Pay later sets it; null or left out for none.
+   * Refused on a credit agent's booking, which pays later on its terms.
+   */
+  payLaterDueOn?: string | null;
 };
 
 /** Holds a booking's row to the end of the transaction: its changes, revisions and bills go one at a time. */
@@ -181,8 +192,8 @@ async function lockBooking(tx: Prisma.TransactionClient, bookingId: string) {
 }
 
 /**
- * Creates a booking with its items in one transaction, numbered HTB by
- * the counter, with its Rev 1, and when it belongs to an account,
+ * Creates a booking with its items in one transaction, numbered by the
+ * counters (HTB when made confirmed, else HTQ until it is), with its Rev 1, and when it belongs to an account,
  * remembers the phone number on it for next time. The actor is the
  * customer or the guest on the website, or the admin entering a booking
  * for them. An item with an agreed price is charged that price and
@@ -203,9 +214,10 @@ export async function createBooking(
   const confirmed = staff && input.confirm === true;
   const businessId = input.businessId ?? null;
   const legacy = input.legacyInvoiceNumber ?? null;
-  if ((legacy !== null || businessId !== null) && !staff) {
+  const payLater = input.payLaterDueOn ?? null;
+  if ((legacy !== null || businessId !== null || payLater !== null) && !staff) {
     throw new Error(
-      "Only staff may give a booking an agent or an old invoice number.",
+      "Only staff may give a booking an agent, an old invoice number or Pay later.",
     );
   }
   const now = new Date();
@@ -224,16 +236,37 @@ export async function createBooking(
         data: { phone: input.contactPhone },
       });
     }
+    let onCredit = false;
     if (businessId !== null) {
       const bookable = await checkBookableBusiness(tx, businessId);
       if (!bookable.ok) throw new BookingRefusal(bookable.error);
+      onCredit = isCredit(
+        (
+          await tx.business.findUniqueOrThrow({
+            where: { id: businessId },
+            select: { paymentTerms: true },
+          })
+        ).paymentTerms,
+      );
     }
+    if (payLater !== null && onCredit) {
+      throw new BookingRefusal(
+        "A credit agent's booking pays later on its terms already: it takes no date.",
+        "payLater",
+      );
+    }
+    const payLaterDueOn =
+      payLater !== null ? new Date(`${payLater}T00:00:00Z`) : null;
     const booking = await tx.booking.create({
       data: {
-        number: await nextBookingNumber(tx, "booking"),
+        // Received, it is a quotation, HTQ, until confirmed gives its HTB.
+        ...(confirmed
+          ? { number: await nextBookingNumber(tx, "booking") }
+          : { quoteNumber: await nextBookingNumber(tx, "quote") }),
         userId: input.userId,
         businessId,
         legacyInvoiceNumber: legacy,
+        payLaterDueOn,
         status: status satisfies BookingStatus,
         confirmedAt: confirmed ? now : null,
         contactName: input.contactName,
@@ -274,6 +307,14 @@ export async function createBooking(
         ...(legacy !== null ? { legacyInvoiceNumber: legacy } : {}),
       },
     });
+    if (payLaterDueOn) {
+      await logActivity(tx, actor, {
+        action: "booking.pay-later.set",
+        entityId: booking.id,
+        before: { dueOn: null },
+        after: { dueOn: payLater },
+      });
+    }
     for (const [index, item] of input.items.entries()) {
       if (!item.override) continue;
       await logActivity(tx, actor, {
@@ -307,7 +348,14 @@ export async function createBooking(
 }
 
 /** Why a booking could not be made as asked: its message is for staff. */
-export class BookingRefusal extends Error {}
+export class BookingRefusal extends Error {
+  /** The form field it is about: "agent" (the default) or "payLater". */
+  readonly field: "agent" | "payLater";
+  constructor(message: string, field: "agent" | "payLater" = "agent") {
+    super(message);
+    this.field = field;
+  }
+}
 
 /**
  * How many website bookings one email, or one address, has made since an
@@ -356,12 +404,15 @@ export function listBookingsForUser(
   });
 }
 
-/** Owner only, by its number (HTB-1042): null when unknown or someone else's. */
+/** Owner only, by its number (HTB-1042, or HTQ-0012 while received or since): null when unknown or someone else's. */
 export function getBookingForUser(
-  number: number,
+  ref: BookingRef,
   userId: string,
 ): Promise<BookingWithItems | null> {
-  return db.booking.findFirst({ where: { number, userId }, ...withItems });
+  return db.booking.findFirst({
+    where: { ...bookingWhereOf(ref), userId },
+    ...withItems,
+  });
 }
 
 /**
@@ -419,9 +470,12 @@ function whereOf(filter: BookingFilter): Prisma.BookingWhereInput | undefined {
       },
     });
     where.OR = [
-      // "HTB-1042", "HTI-0012", "HTC-0003", or digits for any of them.
+      // "HTB-1042", "HTQ-0012", "HTI-0012", "HTC-0003", or digits for any of them.
       ...(number && (number.kind === null || number.kind === "booking")
         ? [{ number: number.number }]
+        : []),
+      ...(number && (number.kind === null || number.kind === "quote")
+        ? [{ quoteNumber: number.number }]
         : []),
       ...(number && (number.kind === null || number.kind === "invoice")
         ? [onDocument("invoice", number.number)]
@@ -572,9 +626,16 @@ async function refreshBooking(
   });
   const live = booking.items.filter(isLive);
   const status = bookingStatusOf(booking.items);
+  // Confirmed, a quotation takes its booking number, HTB, kept from then;
+  // its HTQ stays for reference. Before the bill, which names it.
+  const numbered =
+    booking.number === null && status !== "received" && status !== "cancelled"
+      ? { number: await nextBookingNumber(tx, "booking") }
+      : {};
   await tx.booking.update({
     where: { id: bookingId },
     data: {
+      ...numbered,
       status,
       // What the customer pays now: the live trips and every charge, so
       // a cancelled booking pays its fees alone.
@@ -1508,12 +1569,12 @@ export function cancelBookingAsAdmin(
  */
 export function cancelBookingAsCustomer(
   customer: CustomerActor,
-  number: number,
+  ref: BookingRef,
   now: Date = new Date(),
 ): Promise<BookingChange> {
   return db.$transaction(async (tx) => {
     const found = await tx.booking.findFirst({
-      where: { number, userId: customer.userId },
+      where: { ...bookingWhereOf(ref), userId: customer.userId },
       select: { id: true },
     });
     if (!found) return refuse(GONE_BOOKING);
@@ -1547,13 +1608,16 @@ export function cancelBookingAsCustomer(
  */
 export function cancelTripAsCustomer(
   customer: CustomerActor,
-  number: number,
+  ref: BookingRef,
   itemId: string,
   now: Date = new Date(),
 ): Promise<BookingChange> {
   return db.$transaction(async (tx) => {
     const found = await tx.bookingItem.findFirst({
-      where: { id: itemId, booking: { number, userId: customer.userId } },
+      where: {
+        id: itemId,
+        booking: { ...bookingWhereOf(ref), userId: customer.userId },
+      },
       select: { id: true },
     });
     if (!found) return refuse(GONE_ITEM);

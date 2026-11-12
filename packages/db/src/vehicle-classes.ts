@@ -1,13 +1,15 @@
 import { changedFields, logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
-import { refuse, type Change, type Created } from "./change";
+import { refuse, type Change, type Created, type Refusal } from "./change";
 import { db } from "./client";
 import type { Prisma, VehicleClass } from "./generated/prisma/client";
-import { slugify } from "./slug";
+import { movedRow } from "./list-move";
 import { madeOrderBy, type MadeOrder } from "./list-order";
 import { byCategory } from "./offering-input";
 import {
   checkVehicleClassFields,
+  classNameOf,
+  classSlugOf,
   type VehicleClassFields,
 } from "./vehicle-class-input";
 import { deletedMediaRefusal } from "./media";
@@ -103,54 +105,198 @@ export async function listClassOptions(): Promise<ClassOption[]> {
   return rows.sort(byCategory);
 }
 
-export function getVehicleClass(id: string): Promise<VehicleClass | null> {
-  return db.vehicleClass.findUnique({ where: { id } });
+const withKinds = {
+  include: {
+    type: { select: { name: true } },
+    tier: { select: { name: true } },
+  },
+} satisfies Prisma.VehicleClassDefaultArgs;
+
+/** A class with the names of its type and tier, as its form shows them. */
+export type ClassWithKinds = Prisma.VehicleClassGetPayload<typeof withKinds>;
+
+export function getVehicleClass(id: string): Promise<ClassWithKinds | null> {
+  return db.vehicleClass.findUnique({ where: { id }, ...withKinds });
 }
 
 const sameList = (a: readonly string[], b: readonly string[]) =>
   a.length === b.length && a.every((each, i) => each === b[i]);
 
-/** A new class, its slug from its name. */
+/** The types and the tiers there are, by name: what the class form suggests as they are typed. */
+export async function listClassKinds(): Promise<{
+  types: string[];
+  tiers: string[];
+}> {
+  const [types, tiers] = await Promise.all([
+    db.vehicleType.findMany({
+      select: { name: true },
+      orderBy: { name: "asc" },
+    }),
+    db.vehicleTier.findMany({
+      select: { name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+  return {
+    types: types.map((type) => type.name),
+    tiers: tiers.map((tier) => tier.name),
+  };
+}
+
+type Tx = Prisma.TransactionClient;
+
+/**
+ * The type and tier as they are kept: each typed name spelled as the one
+ * there is, however it was typed ("Mpv" reads "MPV" once MPV exists), so
+ * a class's name always matches its type's and tier's; a new one as typed.
+ */
+async function keptKinds(
+  tx: Tx,
+  kinds: { type: string; tier: string },
+): Promise<{ type: string; tier: string }> {
+  const [type, tier] = await Promise.all([
+    kinds.type
+      ? tx.vehicleType.findFirst({
+          where: { name: { equals: kinds.type, mode: "insensitive" } },
+          select: { name: true },
+        })
+      : null,
+    kinds.tier
+      ? tx.vehicleTier.findFirst({
+          where: { name: { equals: kinds.tier, mode: "insensitive" } },
+          select: { name: true },
+        })
+      : null,
+  ]);
+  return { type: type?.name ?? kinds.type, tier: tier?.name ?? kinds.tier };
+}
+
+/** The type of this name (as `keptKinds` spells it), added when new; one statement, so two adding it at once both get it. */
+function typeFor(tx: Tx, name: string) {
+  return tx.vehicleType.upsert({
+    where: { name },
+    create: { name },
+    update: {},
+  });
+}
+
+/** The tier of this name, as `typeFor`; none for no name. */
+async function tierFor(tx: Tx, name: string) {
+  if (!name) return null;
+  return tx.vehicleTier.upsert({
+    where: { name },
+    create: { name },
+    update: {},
+  });
+}
+
+/** A type and a tier no class is of any more go, so a typo leaves nothing behind. */
+async function dropKindsIfUnused(
+  tx: Tx,
+  kinds: { typeId: string | null; tierId: string | null },
+) {
+  if (kinds.typeId) {
+    await tx.vehicleType.deleteMany({
+      where: { id: kinds.typeId, classes: { none: {} } },
+    });
+  }
+  if (kinds.tierId) {
+    await tx.vehicleTier.deleteMany({
+      where: { id: kinds.tierId, classes: { none: {} } },
+    });
+  }
+}
+
+/** The refusal of a name another class has: one class per tier and type. */
+function takenRefusal(name: string) {
+  return refuse(
+    `${name} is in the catalogue already. Choose another tier or type, or edit that class.`,
+    "tier",
+  );
+}
+
+/**
+ * Adds a class to the catalogue inside the caller's transaction: its type
+ * and tier found or added, its name and slug made from them, last in its
+ * category. The catalogue's "Add class" and a location's new class both
+ * add one here.
+ */
+export async function createClassIn(
+  tx: Tx,
+  actor: Actor,
+  fields: VehicleClassFields,
+): Promise<{ ok: true; vehicleClass: VehicleClass } | Refusal> {
+  const check = checkVehicleClassFields(fields);
+  if (!check.ok) return check;
+  const kinds = await keptKinds(tx, fields);
+  const name = classNameOf(kinds);
+  const slug = classSlugOf(kinds);
+  const taken = await tx.vehicleClass.findUnique({ where: { slug } });
+  if (taken) return takenRefusal(taken.name);
+  const gone = await deletedMediaRefusal(
+    tx,
+    fields.imageUrls,
+    "A picture",
+    "imageUrls",
+  );
+  if (gone) return gone;
+
+  // Its own columns; the type and tier are rows of their own.
+  const {
+    description,
+    category,
+    minPassengers,
+    maxPassengers,
+    luggage,
+    imageUrls,
+    isActive,
+  } = fields;
+  const type = await typeFor(tx, kinds.type);
+  const tier = await tierFor(tx, kinds.tier);
+  const last = await tx.vehicleClass.aggregate({
+    where: { category: fields.category },
+    _max: { sortOrder: true },
+  });
+  const vehicleClass = await tx.vehicleClass.create({
+    data: {
+      description,
+      category,
+      minPassengers,
+      maxPassengers,
+      luggage,
+      imageUrls,
+      isActive,
+      slug,
+      name,
+      typeId: type.id,
+      tierId: tier?.id ?? null,
+      sortOrder: (last._max.sortOrder ?? 0) + 1,
+    },
+  });
+  await logActivity(tx, actor, {
+    action: "vehicle-class.created",
+    entityId: vehicleClass.id,
+    after: { slug, name, ...fields },
+  });
+  return { ok: true, vehicleClass };
+}
+
+/** A new class, its name and slug from its tier and type. */
 export async function createVehicleClass(
   actor: Actor,
   fields: VehicleClassFields,
 ): Promise<Created> {
-  const check = checkVehicleClassFields(fields);
-  if (!check.ok) return check;
-  const slug = slugify(fields.name);
-  if (!slug) return refuse("Enter a name with a letter or digit.", "name");
-
   return db.$transaction(async (tx) => {
-    const taken = await tx.vehicleClass.findUnique({ where: { slug } });
-    if (taken) {
-      return refuse(
-        `${taken.name} is in the catalogue already. Name this class differently.`,
-        "name",
-      );
-    }
-    const gone = await deletedMediaRefusal(
-      tx,
-      fields.imageUrls,
-      "A picture",
-      "imageUrls",
-    );
-    if (gone) return gone;
-    const vehicleClass = await tx.vehicleClass.create({
-      data: { slug, ...fields },
-    });
-    await logActivity(tx, actor, {
-      action: "vehicle-class.created",
-      entityId: vehicleClass.id,
-      after: { slug, ...fields },
-    });
-    return { ok: true, id: vehicleClass.id };
+    const made = await createClassIn(tx, actor, fields);
+    return made.ok ? { ok: true, id: made.vehicleClass.id } : made;
   });
 }
 
 /**
- * Changes any of the editable fields. The slug and the category's snapshot
- * on old bookings stay as they are. Saving what is already there logs
- * nothing.
+ * Changes any of the editable fields. A new type or tier renames the class
+ * and its slug, and the class pages of the locations' sites follow the
+ * slug; a booking keeps the name it was made with. Saving what is already
+ * there logs nothing.
  */
 export async function updateVehicleClass(
   actor: Actor,
@@ -161,11 +307,35 @@ export async function updateVehicleClass(
   if (!check.ok) return check;
 
   return db.$transaction(async (tx) => {
-    const vehicleClass = await tx.vehicleClass.findUnique({ where: { id } });
+    const vehicleClass = await tx.vehicleClass.findUnique({
+      where: { id },
+      include: { type: true, tier: true },
+    });
     if (!vehicleClass) return NOT_FOUND;
 
+    const {
+      imageUrls,
+      type: typePatch,
+      tier: tierPatch,
+      ...columnsPatch
+    } = patch;
+    const kindsBefore = {
+      type: vehicleClass.type?.name ?? "",
+      tier: vehicleClass.tier?.name ?? "",
+    };
+    const kindsAfter = await keptKinds(tx, {
+      type: typePatch ?? kindsBefore.type,
+      tier: tierPatch ?? kindsBefore.tier,
+    });
+    const kindsChanged =
+      kindsAfter.type !== kindsBefore.type ||
+      kindsAfter.tier !== kindsBefore.tier;
+    // A class from before types keeps its typed name until it is given one.
+    const named = kindsAfter.type !== "";
+    const name = named ? classNameOf(kindsAfter) : vehicleClass.name;
+    const slug = named ? classSlugOf(kindsAfter) : vehicleClass.slug;
+
     // The pictures are a list, compared as one; the rest field by field.
-    const { imageUrls, ...fieldsPatch } = patch;
     const pictures =
       imageUrls !== undefined && !sameList(vehicleClass.imageUrls, imageUrls)
         ? {
@@ -173,11 +343,22 @@ export async function updateVehicleClass(
             after: { imageUrls },
           }
         : null;
-    const fieldsChanged = changedFields(vehicleClass, fieldsPatch);
-    if (!fieldsChanged && !pictures) return { ok: true };
+    const fieldsChanged = changedFields(vehicleClass, {
+      ...columnsPatch,
+      name,
+      slug,
+    });
+    if (!fieldsChanged && !pictures && !kindsChanged) return { ok: true };
+    const kinds = kindsChanged
+      ? { before: kindsBefore, after: kindsAfter }
+      : null;
     const changed = {
-      before: { ...fieldsChanged?.before, ...pictures?.before },
-      after: { ...fieldsChanged?.after, ...pictures?.after },
+      before: {
+        ...kinds?.before,
+        ...fieldsChanged?.before,
+        ...pictures?.before,
+      },
+      after: { ...kinds?.after, ...fieldsChanged?.after, ...pictures?.after },
     };
     if (pictures) {
       const gone = await deletedMediaRefusal(
@@ -189,17 +370,79 @@ export async function updateVehicleClass(
       if (gone) return gone;
     }
 
-    await tx.vehicleClass.update({
-      where: { id },
+    const data: Prisma.VehicleClassUncheckedUpdateInput = {
+      ...fieldsChanged?.after,
+      ...pictures?.after,
       // The list saved, the old one picture is spent: db:set-class-pictures
       // never brings back a picture taken out of the list.
-      data: pictures ? { ...changed.after, imageUrl: null } : changed.after,
-    });
+      ...(pictures ? { imageUrl: null } : {}),
+    };
+    if (kindsChanged) {
+      if (slug !== vehicleClass.slug) {
+        const taken = await tx.vehicleClass.findUnique({ where: { slug } });
+        if (taken && taken.id !== id) return takenRefusal(taken.name);
+        // A location's page of the class is found by its slug.
+        await tx.locationPage.updateMany({
+          where: { page: vehicleClass.category, slug: vehicleClass.slug },
+          data: { slug },
+        });
+      }
+      data.typeId = (await typeFor(tx, kindsAfter.type)).id;
+      data.tierId = (await tierFor(tx, kindsAfter.tier))?.id ?? null;
+    }
+
+    await tx.vehicleClass.update({ where: { id }, data });
+    if (kindsChanged) await dropKindsIfUnused(tx, vehicleClass);
     await logActivity(tx, actor, {
       action: "vehicle-class.updated",
       entityId: id,
       before: changed.before,
       after: changed.after,
+    });
+    return { ok: true };
+  });
+}
+
+/**
+ * Moves a class one place earlier or later among its category's, the
+ * catalogue's order, which a location's own order starts from. The
+ * category's places are written again as 1, 2, 3 from the order on
+ * screen, and the order logged against the class moved.
+ */
+export async function moveVehicleClass(
+  actor: Actor,
+  id: string,
+  by: -1 | 1,
+): Promise<Change> {
+  return db.$transaction(async (tx) => {
+    const vehicleClass = await tx.vehicleClass.findUnique({ where: { id } });
+    if (!vehicleClass) return NOT_FOUND;
+    const rows = await tx.vehicleClass.findMany({
+      where: { category: vehicleClass.category },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+      select: { id: true, name: true, sortOrder: true },
+    });
+    const after = movedRow(
+      rows,
+      rows.findIndex((row) => row.id === id),
+      by,
+    );
+    if (!after) return { ok: true };
+    for (const [place, row] of after.entries()) {
+      if (row.sortOrder === place + 1) continue;
+      await tx.vehicleClass.update({
+        where: { id: row.id },
+        data: { sortOrder: place + 1 },
+      });
+    }
+    await logActivity(tx, actor, {
+      action: "vehicle-classes.ordered",
+      entityId: id,
+      before: { order: rows.map((row) => row.name) },
+      after: {
+        order: after.map((row) => row.name),
+        moved: vehicleClass.name,
+      },
     });
     return { ok: true };
   });

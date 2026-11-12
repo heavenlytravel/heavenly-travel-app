@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   clashesOf,
@@ -40,11 +40,13 @@ import {
   useTripPlan,
 } from "../../../../_lib/trip-plan-store";
 import {
+  tripAddOnsPath,
   tripBookingPath,
   tripConfirmPath,
 } from "../../../../_lib/transportation-booking";
 import { useNavigate } from "../../../../_lib/useNavigate";
 import { surface, panel, Pending, Stop } from "../../../_components/Page";
+import { guideAddOnOf } from "./plan-add-ons";
 import { BookingStepTitle, FoldedTripsBones } from "./StepParts";
 import { usePlanPricing } from "./usePlanPricing";
 
@@ -67,8 +69,10 @@ export type VehicleSeed = { search: TripSearch; passengers: number | null };
  * come first, which pins under the header as the page scrolls; on a
  * large screen a thin bar keeps them in view once the list scrolls away. One vehicle does
  * every trip, so it is chosen once, from cards like a location's class
- * cards, each with its own Continue and the total for all the trips; it
- * goes straight to the confirm page. A class too small for the group, or
+ * cards, each with the total for all the trips and its own Book now,
+ * narrowed by a chip per type (Sedan, MPV) when there are several. Book
+ * now goes to the add-ons step, or to the details when the trips can take
+ * no add-on. A class too small for the group, or
  * one that cannot take a trip under its own rules, is not shown, and a
  * line says which and why. A trip that cannot be booked at all says so,
  * and the vehicles wait until it is changed or removed. A group larger
@@ -86,6 +90,8 @@ export function VehicleStep({
 }) {
   const plan = useTripPlan();
   const router = useRouter();
+  // The type the cards are narrowed to; null for every type.
+  const [typeShown, setTypeShown] = useState<string | null>(null);
   // Continue opens the confirm page; until it is on screen the button says so.
   const { pending: continuing, go } = useNavigate();
   const newBooking = useNewBooking();
@@ -178,11 +184,26 @@ export function VehicleStep({
     ),
   ];
   const isCar = category === "car-with-driver";
+  // One chip per type, in the order the cards come; none for one type.
+  const types = [...new Set(shown.map(({ card }) => typeOf(card)))];
+  const chips = types.length > 1 ? types : [];
+  const filtered =
+    typeShown && chips.includes(typeShown)
+      ? shown.filter(({ card }) => typeOf(card) === typeShown)
+      : shown;
+  const hasAddOns =
+    guideAddOnOf({
+      category,
+      trips,
+      priced,
+      complete,
+      guide: plan.guide,
+    }).offers.length > 0;
 
   function choose(id: string) {
     if (continuing) return;
     updatePlan((now) => ({ ...now, classId: id }));
-    go(tripConfirmPath(category));
+    go(hasAddOns ? tripAddOnsPath(category) : tripConfirmPath(category));
   }
 
   function toCoaches() {
@@ -331,9 +352,18 @@ export function VehicleStep({
                 Not shown: {notShown.join("; ")}.
               </p>
             ) : null}
-            {shown.length > 0 ? (
+            {chips.length > 0 ? (
+              <TypeChips
+                types={chips}
+                shown={
+                  typeShown && chips.includes(typeShown) ? typeShown : null
+                }
+                onShow={setTypeShown}
+              />
+            ) : null}
+            {filtered.length > 0 ? (
               <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {shown.map(({ card, fit }) => {
+                {filtered.map(({ card, fit }) => {
                   const total = fit.ok ? fit.totalSen : 0;
                   const oddHoursSen = quotes.reduce(
                     (sum, quote) =>
@@ -362,15 +392,26 @@ export function VehicleStep({
                           {several ? "pick-ups" : "a pick-up"} in odd hours
                         </p>
                       ) : null}
-                      <div className="mt-auto pt-5">
+                      <div className="mt-auto grid gap-3 pt-5">
+                        <p className="flex items-baseline justify-between gap-3">
+                          <span className="text-copy text-muted">
+                            {several
+                              ? `For all ${trips.length} trips`
+                              : "For the trip"}
+                          </span>
+                          <span className="font-serif text-2xl leading-none text-ink tabular-nums">
+                            {formatMyr(total)}
+                          </span>
+                        </p>
                         <Button
                           size="lg"
                           onClick={() => choose(card.id)}
                           pending={opening}
                           aria-disabled={continuing || undefined}
+                          aria-label={`Book now, ${card.name}, ${formatMyr(total)}`}
                           className="w-full aria-disabled:cursor-wait"
                         >
-                          Continue · {formatMyr(total)}
+                          Book now
                         </Button>
                       </div>
                     </ClassCard>
@@ -467,6 +508,55 @@ function VehicleCardsSkeleton({ className = "" }: { className?: string }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/** A card's type, the chip it is under: its name on a class from before types, or a plan priced before them. */
+function typeOf(card: { type?: string; name: string }) {
+  return card.type || card.name;
+}
+
+/**
+ * The chips over the vehicle cards, "All" then one per type, which narrow
+ * the cards to that type's tiers: "Sedan" shows Standard and Deluxe.
+ */
+function TypeChips({
+  types,
+  shown,
+  onShow,
+}: {
+  types: readonly string[];
+  /** The type the cards are narrowed to; null for all. */
+  shown: string | null;
+  onShow: (type: string | null) => void;
+}) {
+  const chip = (label: string, type: string | null) => {
+    const on = shown === type;
+    return (
+      <button
+        key={label}
+        type="button"
+        aria-pressed={on}
+        onClick={() => onShow(type)}
+        className={`rounded-full border px-4 py-1.5 text-copy font-medium transition-colors focus-ring ${
+          on
+            ? "border-brand bg-brand-tint text-brand"
+            : "border-hairline bg-white text-ink hover:border-brand hover:text-brand"
+        }`}
+      >
+        {label}
+      </button>
+    );
+  };
+  return (
+    <div
+      role="group"
+      aria-label="Filter by type"
+      className="mx-1 mb-4 flex flex-wrap gap-2"
+    >
+      {chip("All", null)}
+      {types.map((type) => chip(type, type))}
+    </div>
   );
 }
 

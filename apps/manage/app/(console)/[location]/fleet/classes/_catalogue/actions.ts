@@ -2,6 +2,7 @@
 
 import {
   createVehicleClass,
+  moveVehicleClass,
   parseVehicleClassFields,
   textOf,
   updateVehicleClass,
@@ -69,6 +70,19 @@ export async function setVehicleClassActiveAction(
   if (!admin) return FORBIDDEN;
   if (typeof id !== "string" || typeof isActive !== "boolean") return STALE;
   const result = await updateVehicleClass(actorOf(admin), id, { isActive });
+  if (result.ok) revalidateClasses();
+  return stateOf(result);
+}
+
+/** Moves a class one place earlier or later in its category, the catalogue's order. */
+export async function moveVehicleClassAction(
+  id: string,
+  by: -1 | 1,
+): Promise<ActionState> {
+  const admin = await getAdmin("coverage.manage");
+  if (!admin) return FORBIDDEN;
+  if (typeof id !== "string" || (by !== -1 && by !== 1)) return STALE;
+  const result = await moveVehicleClass(actorOf(admin), id, by);
   if (result.ok) revalidateClasses();
   return stateOf(result);
 }

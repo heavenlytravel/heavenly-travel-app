@@ -93,6 +93,7 @@ export const ACTIVITY_ENTITY_TYPES = [
   "guide",
   "media",
   "site-page",
+  "blog-post",
   "vendor",
   "business",
   "invoice",
@@ -143,6 +144,15 @@ const ACTIONS = {
    * kind, when it happened by the phone, the note, the driver's name.
    */
   "booking.trip.reported": { entityType: "booking", customerVisible: false },
+  /**
+   * A no-show taken back, the passenger came after all: before, the
+   * trip's position and status, the no-show's time and reason; after, its
+   * status now and the driver's name when they took it back.
+   */
+  "booking.trip.no-show.undone": {
+    entityType: "booking",
+    customerVisible: false,
+  },
   /** A driver opened a job showing the customer's details: the trip's position and the driver's name. PDPA. */
   "booking.contact.viewed": { entityType: "booking", customerVisible: false },
   /** What we owe a vendor for a part, before and after, with the reason. */
@@ -252,6 +262,11 @@ const ACTIONS = {
     entityType: "vehicle-class",
     customerVisible: false,
   },
+  /** The catalogue's order of a category's classes, logged against the class moved (`moved`). */
+  "vehicle-classes.ordered": {
+    entityType: "vehicle-class",
+    customerVisible: false,
+  },
   /** A model the vehicle form added to the class, by its name in `modelName`. */
   "vehicle-class.model.created": {
     entityType: "vehicle-class",
@@ -333,6 +348,27 @@ const ACTIONS = {
   "site.page.updated": { entityType: "site-page", customerVisible: false },
   /** A footer's whole content, before and after. Logged against its key, `FOOTER_KEY` or `CONNECT_FOOTER_KEY`. */
   "site.footer.published": { entityType: "site-page", customerVisible: false },
+  /** A blog post added: its slug and title, in `after`. Blog entries log against the post's id. */
+  "blog.post.created": { entityType: "blog-post", customerVisible: false },
+  /**
+   * A post's slug and title, and its whole content, before and after, as a
+   * location's page logs a publish. The content before is null on the
+   * first publish.
+   */
+  "blog.post.published": { entityType: "blog-post", customerVisible: false },
+  /** A post's slug and title, and whether it is published: an unpublish. */
+  "blog.post.updated": { entityType: "blog-post", customerVisible: false },
+  /** A post given another slug, before its first publish: the slug before and after. */
+  "blog.post.renamed": { entityType: "blog-post", customerVisible: false },
+  /** A post deleted: its slug, its title and whether it was published, in `before`. */
+  "blog.post.deleted": { entityType: "blog-post", customerVisible: false },
+  /** The names of the locations a post is tagged with, before and after. */
+  "blog.post.tagged": { entityType: "blog-post", customerVisible: false },
+  /** A post's place among the highlighted posts, `highlightOrder`, before and after; null for none. */
+  "blog.post.highlighted": {
+    entityType: "blog-post",
+    customerVisible: false,
+  },
   /**
    * The name, the slug, the state codes and the state it had, in
    * `before`: the row is gone, and its other entries are named from this one.
@@ -594,13 +630,17 @@ function vehicleClassChanges(after: unknown) {
   }
   // Entries from before the rates and the rules moved to the location's
   // offering name the class's old fields, which the offering's labels
-  // still spell.
+  // still spell; entries from before the arrows, its sort order.
   const labelOf = (key: string) =>
     key in VEHICLE_CLASS_FIELD_LABELS
       ? VEHICLE_CLASS_FIELD_LABELS[key as VehicleClassField]
-      : (OFFERING_ENTRY_LABELS[key] ?? null);
+      : key === "sortOrder"
+        ? "Sort order"
+        : (OFFERING_ENTRY_LABELS[key] ?? null);
+  // A new type or tier is the new name, said once.
+  const saidByName = ["name", "slug", "type", "tier", "isActive"];
   const others = keysOf(after)
-    .filter((key) => key !== "name" && key !== "isActive")
+    .filter((key) => !saidByName.includes(key))
     .flatMap((key) => {
       const label = labelOf(key);
       return label ? [`the ${label.toLowerCase()}`] : [];
@@ -936,6 +976,27 @@ function pageName(json: unknown) {
   );
 }
 
+/** A post's tags as the entry records them: "Tagged the post with Langkawi and Penang". */
+function blogTags(after: unknown) {
+  const names = field(after, "locations");
+  const tags = Array.isArray(names)
+    ? names.filter((name): name is string => typeof name === "string")
+    : [];
+  return tags.length === 0
+    ? "Took every location tag off the post"
+    : `Tagged the post with ${andList(tags)}`;
+}
+
+/** A post's highlight as the entry records it: highlighted, taken off, or moved. */
+function blogHighlight(before: unknown, after: unknown) {
+  const was = field(before, "highlightOrder");
+  const now = field(after, "highlightOrder");
+  if (typeof now !== "number") return "Took the post off the highlights";
+  return typeof was === "number"
+    ? `Moved the post to highlight ${now}`
+    : `Highlighted the post, at place ${now}`;
+}
+
 /** "About us", or "a site page" when the entry names none we know. */
 function sitePageName(json: unknown) {
   const page = field(json, "page");
@@ -1033,6 +1094,11 @@ export function describeActivity(entry: DescribableActivity): string {
         : "A report";
       return `${label}, ${itemName(entry.after)}${said}`;
     }
+    case "booking.trip.no-show.undone": {
+      const driver = field(entry.after, "driverName");
+      const who = typeof driver === "string" ? ` by ${driver}` : "";
+      return `Took back the no-show of ${itemName(entry.after)}${who}: the passenger came`;
+    }
     case "booking.contact.viewed": {
       const driver = field(entry.after, "driverName");
       const vendor = field(entry.after, "vendorName");
@@ -1126,6 +1192,8 @@ export function describeActivity(entry: DescribableActivity): string {
       return "Created the class";
     case "vehicle-class.updated":
       return vehicleClassChanges(entry.after);
+    case "vehicle-classes.ordered":
+      return "Moved the class in the catalogue's order";
     case "vehicle-class.model.created":
       return `Added the model ${modelName(entry.after)}`;
     case "vehicle-class.model.deleted":
@@ -1208,6 +1276,24 @@ export function describeActivity(entry: DescribableActivity): string {
       return `Unpublished ${sitePageName(entry.after)}`;
     case "site.footer.published":
       return "Published the footer";
+    case "blog.post.created":
+      return "Added the post";
+    case "blog.post.published":
+      return "Published the post";
+    case "blog.post.updated":
+      return "Unpublished the post";
+    case "blog.post.renamed": {
+      const slug = field(entry.after, "slug");
+      return typeof slug === "string"
+        ? `Changed the post's address to /blog/${slug}`
+        : "Changed the post's address";
+    }
+    case "blog.post.deleted":
+      return "Deleted the post";
+    case "blog.post.tagged":
+      return blogTags(entry.after);
+    case "blog.post.highlighted":
+      return blogHighlight(entry.before, entry.after);
     case "location.offering.created":
       return `Started selling ${className(entry.after)}`;
     case "location.offering.updated":

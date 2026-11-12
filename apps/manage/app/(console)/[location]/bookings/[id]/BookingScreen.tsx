@@ -76,6 +76,8 @@ import {
   HistoryCard,
   HistoryLink,
 } from "../../../../_components/RecordHistory";
+import { PdfLink } from "../../../../_components/PdfLink";
+import { BOOKING_PDF_STATUSES } from "../../../../_pdf/statuses";
 import { getPermissions } from "../../../../_lib/access";
 import { bookingLocations } from "../../../../_lib/booking-locations";
 import {
@@ -87,6 +89,7 @@ import {
   recordHistoryHref,
   revisionHref,
   type ScopeSlug,
+  bookingPdfHref,
 } from "../../../../_lib/routes";
 import type { ConsoleScope } from "../../../../_lib/scope";
 import { scopedBooking } from "../_lib/scoped-booking";
@@ -312,6 +315,9 @@ export async function bookingScreen({
         action={
           <>
             <HistoryLink href={recordHistoryHref(href)} />
+            {BOOKING_PDF_STATUSES.includes(booking.status) ? (
+              <PdfLink href={bookingPdfHref(scope.slug, booking.id)} />
+            ) : null}
             {cancelled ? (
               manage ? (
                 <ReinstateBookingButton bookingId={booking.id} label={label} />

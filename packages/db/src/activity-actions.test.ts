@@ -374,6 +374,7 @@ describe("activityActionMeta", () => {
     "booking.part.released",
     "booking.part.cost.changed",
     "booking.trip.reported",
+    "booking.trip.no-show.undone",
     "booking.contact.viewed",
     "booking.contact.updated",
     "booking.invoiced",

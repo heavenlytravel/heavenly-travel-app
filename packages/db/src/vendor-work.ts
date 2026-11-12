@@ -3,6 +3,7 @@ import { logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
 import { refuse, type Change } from "./change";
 import { db } from "./client";
+import { completeNoShows } from "./no-shows";
 import {
   DONE_DAYS,
   jobInclude,
@@ -220,7 +221,6 @@ export async function nameForVendor(
   offerId: string,
   role: PartRole,
   recordId: string,
-  classReason: string | null = null,
 ): Promise<Change & { assigned?: string[] }> {
   const parts = (await openParts(vendorId, offerId)).get(offerId) ?? [];
   const ofRole = parts.filter((p) => p.role === role);
@@ -231,7 +231,6 @@ export async function nameForVendor(
     actor,
     ofRole.map((p) => p.id),
     recordId,
-    classReason,
   );
 }
 
@@ -293,6 +292,7 @@ export async function listVendorJobs(
   vendorId: string,
   now: Date = new Date(),
 ): Promise<VendorJobs> {
+  await completeNoShows(now);
   const parts = await db.tripPart.findMany({
     where: {
       vendorAcceptedAt: { not: null },
@@ -353,6 +353,7 @@ export async function getVendorJob(
   itemId: string,
   now: Date = new Date(),
 ): Promise<VendorJob | null> {
+  await completeNoShows(now);
   const parts = await db.tripPart.findMany({
     where: {
       itemId,
@@ -368,6 +369,7 @@ export async function getVendorJob(
             select: {
               id: true,
               number: true,
+              quoteNumber: true,
               contactName: true,
               contactPhone: true,
             },

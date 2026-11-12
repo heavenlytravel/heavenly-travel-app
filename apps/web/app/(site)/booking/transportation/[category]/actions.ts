@@ -69,6 +69,7 @@ export async function quoteTripsAction(
         maxPassengers: vehicleClass.maxPassengers,
         imageUrls: vehicleClass.imageUrls,
         category: vehicleClass.category,
+        type: vehicleClass.type?.name ?? vehicleClass.name,
       });
     }
     return {

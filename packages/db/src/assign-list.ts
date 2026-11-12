@@ -1,5 +1,5 @@
 import { BOOKING_NUMBER_SELECT, bookingLabelOf } from "./booking-number";
-import { pickupInstant } from "./booking-rules";
+import { localDayRange, pickupInstant } from "./booking-rules";
 import { todayInMalaysia } from "./expiry";
 import { db } from "./client";
 import {
@@ -14,6 +14,7 @@ import {
   type PartWaiting,
 } from "./fulfilment-rules";
 import { expireOffers, jobOf } from "./fulfilment";
+import { completeNoShows } from "./no-shows";
 import type { Prisma } from "./generated/prisma/client";
 import { isOnTheRoad } from "./trip-events-input";
 import { modelName } from "./vehicle-model-input";
@@ -135,32 +136,41 @@ export type AssignRow = {
 };
 
 /**
- * What the Assign page lists, at one location (its id) or every one.
- * Offers past their time are expired first, so none shows still offered.
+ * What the Assign page lists, at one location (its id) or every one: the
+ * trips from today on, or one day's, past or not. Offers past their time
+ * are expired first, so none shows still offered.
  */
 export async function getAssignPage(
   locationId?: string,
+  /** A pick-up day, "2026-11-05": that day's trips alone, past or not. */
+  day?: string,
   now: Date = new Date(),
 ): Promise<AssignRow[]> {
   await expireOffers(now);
-  return listAssignTrips(locationId, now);
+  await completeNoShows(now);
+  return listAssignTrips(locationId, day, now);
 }
 
 /**
- * Every trip from the start of today in Malaysia on, by pickup: those
- * confirmed, to assign or waiting, the assigned ones, and those done
- * today. A trip whose driver has tapped in Connect is on the road.
+ * The trips confirmed, to assign or waiting, the assigned ones and those
+ * done: from the start of today in Malaysia on, by pickup; or one day
+ * asked for, however long ago, so an old day is always found. Either way
+ * a range of pickups on the status and pickup index. A trip whose driver
+ * has tapped in Connect is on the road.
  */
 async function listAssignTrips(
   locationId: string | undefined,
+  day: string | undefined,
   now: Date,
 ): Promise<AssignRow[]> {
-  const from = pickupInstant(todayInMalaysia(now), "00:00") ?? now;
+  const start = pickupInstant(day ?? todayInMalaysia(now), "00:00") ?? now;
   const items = await db.bookingItem.findMany({
     where: {
       status: { in: ["confirmed", "assigned", "completed"] },
-      startsAt: { gte: from },
       ...(locationId ? { locationId } : {}),
+      startsAt: day
+        ? { gte: start, lt: localDayRange(start).end }
+        : { gte: start },
     },
     orderBy: [{ startsAt: "asc" }, { position: "asc" }],
     include: tripInclude,
@@ -213,7 +223,9 @@ async function listAssignTrips(
           respondBy: vendorWaits ? part.offer.respondBy : null,
         };
       }),
+      // A no-show waiting its hour ended the trip: never overdue.
       overdue:
+        !item.events.some((e) => e.kind === "no-show") &&
         (state === "assigned" || state === "on-the-road") &&
         tripWindow(job).end.getTime() < now.getTime(),
       lastEvent,

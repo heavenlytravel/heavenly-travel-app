@@ -23,6 +23,8 @@ export type FilterGroup = {
   options: readonly { value: string; label: string }[];
   /** The value in force, one of the options'; "" for any. */
   value: string;
+  /** What "" reads as, "Upcoming"; "Any" when left out. */
+  anyLabel?: string;
 };
 
 /** Up to this many options show as a segmented choice; more, as a list. */
@@ -124,7 +126,10 @@ export function FiltersButton({
                 label={group.label}
                 size="sm"
                 value={group.value}
-                options={[{ value: "", label: "Any" }, ...group.options]}
+                options={[
+                  { value: "", label: group.anyLabel ?? "Any" },
+                  ...group.options,
+                ]}
                 onChange={(value) =>
                   onChange({ [group.param]: value || undefined })
                 }
@@ -133,7 +138,10 @@ export function FiltersButton({
               <Select
                 aria-label={group.label}
                 value={group.value}
-                options={[{ value: "", label: "Any" }, ...group.options]}
+                options={[
+                  { value: "", label: group.anyLabel ?? "Any" },
+                  ...group.options,
+                ]}
                 onValueChange={(value) =>
                   onChange({ [group.param]: value || undefined })
                 }

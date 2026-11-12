@@ -101,6 +101,8 @@ export type ClassCard = {
   /** The catalogue's pictures of it, the first its cover; empty for none. */
   imageUrls: string[];
   category: string;
+  /** Its type, "Sedan", which the vehicle step filters by; its name on a class from before types. */
+  type: string;
 };
 
 /** What pricing a list answers: each trip in the list's order, and the classes they offer. */

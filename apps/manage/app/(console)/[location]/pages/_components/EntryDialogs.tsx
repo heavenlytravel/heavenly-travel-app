@@ -18,7 +18,7 @@ import {
 import { EntrySlugField } from "../../settings/SlugField";
 
 /**
- * "Add popular place", "Add post" and the like: a plus by the section on
+ * "Add popular place", "Add hotel" and the like: a plus by the section on
  * Pages and its section's list. The dialog adds a page to that section
  * alone: its title, and its slug made from the title until Marketing edits
  * it; a place may point at a saved address at once, one of the location's
@@ -39,7 +39,7 @@ export function AddEntryDialog({
   page: string;
   /** What one page of it is called: "popular place". */
   one: string;
-  /** What its editor calls the title: "Name" for a place, "Title" for a post. */
+  /** What its editor calls the title: "Name" for a place. */
   titleLabel: string;
   /** For a section of places: the saved addresses, and where a new one may lie. */
   places?: { addresses: readonly PickableAddress[]; area: AddressArea };

@@ -12,6 +12,9 @@ import { usePortalContainer } from "./portal-container.js";
 /** The value of the "Create" row in the list, apart from any option's. */
 const CREATE = "\u0000create";
 
+/** The value of the "none" row (`none`), apart from any option's. */
+const NONE = "\u0000none";
+
 /** Text as a name is kept: trimmed, one space between its words. */
 const squash = (text: string) => text.replace(/\s+/g, " ").trim();
 
@@ -29,7 +32,8 @@ const row =
  * takes the text as typed when no option is that text already, whatever
  * its case. The arrows and Enter as in a menu. Controlled with `value` and
  * `onValueChange`. With `name` it posts with its form, and `required`
- * refuses an empty value as a text field would.
+ * refuses an empty value as a text field would. An optional one names its
+ * empty value with `none` ("No tier"), first in the list.
  */
 export function Combobox({
   name,
@@ -40,6 +44,7 @@ export function Combobox({
   searchPlaceholder,
   maxLength,
   required,
+  none,
 }: {
   name?: string;
   value: string;
@@ -53,6 +58,8 @@ export function Combobox({
   /** The longest a new value may be. */
   maxLength?: number;
   required?: boolean;
+  /** The row that empties the value, first while nothing is typed: "No tier". */
+  none?: string;
 }) {
   const field = useFieldControl({});
   const [open, setOpen] = useState(false);
@@ -100,7 +107,7 @@ export function Combobox({
           <span
             className={cx("ui:min-w-0 ui:truncate", !value && "ui:text-muted")}
           >
-            {value || placeholder}
+            {value || none || placeholder}
           </span>
           <ChevronDownIcon className="ui:shrink-0 ui:text-muted" />
         </Popover.Trigger>
@@ -118,7 +125,11 @@ export function Combobox({
               label={searchPlaceholder}
               shouldFilter={false}
               loop
-              defaultValue={listed.find((option) => sameText(option, value))}
+              defaultValue={
+                none && !value
+                  ? NONE
+                  : listed.find((option) => sameText(option, value))
+              }
             >
               <Command.Input
                 value={search}
@@ -134,6 +145,18 @@ export function Combobox({
                 <Command.Empty className="ui:px-2 ui:py-4 ui:text-center ui:text-sm ui:text-muted">
                   None yet. Type one to add it.
                 </Command.Empty>
+                {none && typed === "" ? (
+                  <Command.Item
+                    value={NONE}
+                    onSelect={() => choose("")}
+                    className={row}
+                  >
+                    <span className="ui:min-w-0 ui:flex-1 ui:truncate ui:text-muted">
+                      {none}
+                    </span>
+                    {!value ? <CheckIcon className="ui:shrink-0" /> : null}
+                  </Command.Item>
+                ) : null}
                 {shown.map((option) => (
                   <Command.Item
                     key={option}

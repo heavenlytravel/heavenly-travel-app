@@ -272,7 +272,7 @@ export function GuideRates({
         </p>
         <p className="leading-relaxed">
           A customer sees a language only while it is on the website and the
-          trip&apos;s price is set: One-way for a one-way trip, the hire&apos;s
+          trip&apos;s price is set: Transfer for a transfer, the hire&apos;s
           duration for an hourly one, and Extra hour too when they add hours.
           They see the languages in this order. Any other language they may ask
           for, free; Operation amends the trip once a guide is found. A

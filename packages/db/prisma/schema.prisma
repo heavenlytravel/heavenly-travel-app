@@ -357,6 +357,8 @@ model Location {
   guides           Guide[]
   /// The vendors that serve it.
   vendors          Vendor[]
+  /// The blog's posts tagged with it, which its blog page lists.
+  blogPosts        BlogPost[]
 
   @@index([state])
 }
@@ -587,6 +589,36 @@ model SitePage {
   @@unique([page, locale])
 }
 
+/// A post of the site's blog, at /blog/[slug]: the site's, not a
+/// location's. Its content is a page of the "article" kind, written as a
+/// location's page is: Marketing edits `draft`, the public reads
+/// `published` while `isOn`. See src/blog-input.ts and
+/// docs/261111-catalogue-booking-flow-and-ops.md, "C. The blog".
+model BlogPost {
+  id               String     @id @default(cuid())
+  /// Its address under /blog: "a-day-in-langkawi". Locked at its first publish.
+  slug             String     @unique
+  /// Whether the post is published: true from a publish until it is unpublished.
+  isOn             Boolean    @default(false)
+  /// The working copy.
+  draft            Json
+  /// What the public sees; kept through an unpublish, null until the first publish.
+  published        Json?
+  publishedAt      DateTime?
+  /// Set once, at the first publish: the date the post shows, and from
+  /// then its slug is locked.
+  firstPublishedAt DateTime?
+  /// Its place among the blog's highlighted posts, from 1, in Marketing's
+  /// order; null when it is not one.
+  highlightOrder   Int?
+  createdAt        DateTime   @default(now())
+  /// As LocationPage.updatedAt: names the content a form was opened with.
+  /// Its tags and its highlight leave it.
+  updatedAt        DateTime   @updatedAt
+  /// The locations it is tagged with: each lists it on its blog page.
+  locations        Location[]
+}
+
 /// A place most customers go to in a location: "Kuah Jetty". The drop-off
 /// offers the list before anything is typed. An exact spot, never an area.
 model LocationAddress {
@@ -617,27 +649,40 @@ model LocationAddress {
 /// deleted, only deactivated. A booking snapshots what it shows, so
 /// editing or retiring a class never changes one.
 model VehicleClass {
-  id            String   @id @default(cuid())
-  slug          String   @unique
+  id            String       @id @default(cuid())
+  /// Made from its name, so unique by tier and type: "deluxe-sedan". Set
+  /// again when its type or tier changes.
+  slug          String       @unique
   /// "car-with-driver" | "coach-charter"
   category      String
+  /// Made from its tier and type, tier first: "Deluxe - Sedan", or the type
+  /// alone without a tier. Typed by hand only on a class from before types,
+  /// until db:set-class-types gives it one.
   name          String
+  /// What it is: Sedan, MPV, Coach. Required by the next schema change,
+  /// once every class has one.
+  typeId        String?
+  type          VehicleType? @relation(fields: [typeId], references: [id])
+  /// Its level: Standard, Deluxe, VIP; none for a class that is its type
+  /// alone.
+  tierId        String?
+  tier          VehicleTier? @relation(fields: [tierId], references: [id])
   description   String
-  isActive      Boolean  @default(true)
-  sortOrder     Int      @default(0)
+  isActive      Boolean      @default(true)
+  sortOrder     Int          @default(0)
   /// Information only ("from 15 seats"): fit is by maxPassengers alone.
   minPassengers Int
   maxPassengers Int
   luggage       String
   /// Its pictures, files on UploadThing (src/images.ts), in order, the
   /// first its cover: the same at every location; none for none.
-  imageUrls     String[] @default([])
+  imageUrls     String[]     @default([])
   /// Its one picture before it had several: copied into `imageUrls` by
   /// db:set-class-pictures and read by nothing since. Dropped at the next
   /// schema change.
   imageUrl      String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
   tripItems        TripItemDetails[]
   offerings        LocationVehicleClass[]
@@ -651,6 +696,28 @@ model VehicleClass {
   @@index([category, isActive])
 }
 
+/// What a class of vehicle is: Sedan, SUV, MPV, Van, Coach. A list the
+/// class form adds to as a name is typed, as the vehicle form adds models;
+/// one no class is of any more goes. The website filters its vehicles by
+/// it. See docs/261111-catalogue-booking-flow-and-ops.md, part A.
+model VehicleType {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  classes VehicleClass[]
+}
+
+/// A class's level, one list for every type: Standard, Deluxe, VIP. Added
+/// and dropped as `VehicleType` is.
+model VehicleTier {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+
+  classes VehicleClass[]
+}
+
 /// A model of a class, the Toyota Alphard in MPV VIP: what a vehicle is,
 /// by brand and name, one catalogue for every location. The vehicle form
 /// adds one the first time a vehicle of it is entered, and suggests the
@@ -662,7 +729,7 @@ model VehicleModel {
   vehicleClassId String
   vehicleClass   VehicleClass @relation(fields: [vehicleClassId], references: [id])
   /// "Toyota". Empty only on a model named before brands were kept, until
-  /// db:set-class-list splits its name.
+  /// its name was split (the old db:set-class-list).
   brand          String       @default("")
   /// The model alone: "Alphard". The screens show "Toyota Alphard".
   name           String
@@ -837,6 +904,8 @@ model TripEvent {
   createdAt DateTime    @default(now())
 
   @@index([itemId, at])
+  /// completeNoShows: the no-shows whose hour is over.
+  @@index([kind, createdAt])
 }
 
 /// A business we sell to on account. Only agents for now; corporates and
@@ -880,18 +949,22 @@ model Business {
 /// and docs/261108-billing-and-revisions.md.
 model Booking {
   id                  String    @id @default(cuid())
-  /// The booking number, HTB-1042: its id everywhere, one running count by
-  /// `BookingNumberCounter` ("booking"), given when it is made. Null only
-  /// on rows from before it, until db:set-billing numbers them; required
-  /// by the next schema change. See src/booking-number.ts.
+  /// The booking number, HTB-1042: its id everywhere once confirmed, one
+  /// running count by `BookingNumberCounter` ("booking"), given when it is
+  /// confirmed (made confirmed, by staff, at once). Null while it is
+  /// received, and on rows from before numbers. See src/booking-number.ts.
   number              Int?      @unique
   /// Old: the random reference (HT-7K3QZM), written only by the code
   /// before booking numbers. Dropped by the next schema change.
   reference           String?   @unique
-  /// Old, dropped by the next schema change: the quotation number (never
-  /// given), the invoice before `InvoiceLine`, its line on an agent's, the
-  /// agent as a vendor and the invoice number before `invoiceId`.
+  /// The quotation number, HTQ-0012: its id while it is received, from its
+  /// own count ("quote"), given when it is made received; kept once it is
+  /// confirmed and has its HTB. Null for one made confirmed. See
+  /// docs/261111-catalogue-booking-flow-and-ops.md, part F.
   quoteNumber         Int?      @unique
+  /// Old, dropped by the next schema change: the invoice before
+  /// `InvoiceLine`, its line on an agent's, the agent as a vendor and the
+  /// invoice number before `invoiceId`.
   invoiceId           String?
   invoice             Invoice?  @relation("OldBookingInvoice", fields: [invoiceId], references: [id])
   invoiceLine         Int?

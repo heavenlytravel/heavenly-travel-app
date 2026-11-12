@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   getOffering,
+  listClassKinds,
   listClassesNotOffered,
   listVehicles,
   type LocationName,
@@ -57,7 +58,10 @@ export function OfferingEditor({
 
 /** The form for a class the location does not offer yet, with the catalogue to pick from. */
 async function newOffering(location: LocationName, from: OfferingFrom) {
-  const candidates = await listClassesNotOffered(location.id);
+  const [candidates, kinds] = await Promise.all([
+    listClassesNotOffered(location.id),
+    listClassKinds(),
+  ]);
   return (
     <>
       <PageHeader title="Add Class" />
@@ -65,6 +69,7 @@ async function newOffering(location: LocationName, from: OfferingFrom) {
         locationId={location.id}
         locationSlug={location.slug}
         candidates={candidates}
+        kinds={kinds}
         from={from}
       />
     </>

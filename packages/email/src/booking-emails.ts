@@ -1,6 +1,7 @@
 import {
   accountBookingPath,
   bookingLabelOf,
+  formatDocumentNumber,
   bookingPath,
   consoleBookingPath,
   customerEmailOf,
@@ -260,6 +261,11 @@ function confirmed(
   key: string,
 ): BookingEmail[] {
   const ref = bookingLabelOf(booking);
+  // Received as a request, HTQ, it now has its booking number: both named.
+  const was =
+    booking.quoteNumber != null
+      ? ` (your request ${formatDocumentNumber("quote", booking.quoteNumber)})`
+      : "";
   return toCustomer(booking, key, settings, {
     subject: `Booking ${ref} confirmed`,
     heading: "Your booking is confirmed",
@@ -267,8 +273,8 @@ function confirmed(
       {
         type: "paragraph",
         text: severalLive(booking)
-          ? `Hi ${booking.contactName}, booking ${ref} is confirmed. Your first pick-up is on ${formatLocalDateTime(booking.startsAt)}, and each trip's time is below. Please be reachable on ${booking.contactPhone} around those times.`
-          : `Hi ${booking.contactName}, booking ${ref} is confirmed. Your driver will be ready at the pick-up on ${formatLocalDateTime(booking.startsAt)}. Please be reachable on ${booking.contactPhone} around that time.`,
+          ? `Hi ${booking.contactName}, booking ${ref}${was} is confirmed. Your first pick-up is on ${formatLocalDateTime(booking.startsAt)}, and each trip's time is below. Please be reachable on ${booking.contactPhone} around those times.`
+          : `Hi ${booking.contactName}, booking ${ref}${was} is confirmed. Your driver will be ready at the pick-up on ${formatLocalDateTime(booking.startsAt)}. Please be reachable on ${booking.contactPhone} around that time.`,
       },
       ...itemBlocks(booking),
       totalBlock(booking),

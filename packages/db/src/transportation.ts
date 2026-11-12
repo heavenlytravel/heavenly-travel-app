@@ -372,14 +372,14 @@ async function quoteOne(
   const choice = request.mode === "hourly" ? request.hourly : null;
   if (request.mode === "oneway") {
     if (!request.dropoff) {
-      return fail("dropoff-required", "Choose a drop-off for a one-way trip.");
+      return fail("dropoff-required", "Choose a drop-off for a transfer.");
     }
   } else if (
     !choice ||
     !isHourlyPackage(choice.packageHours) ||
     !isExtraHours(choice.extraHours)
   ) {
-    return fail("hours", "Choose how long you need the hourly hire.");
+    return fail("hours", "Choose how many hours you need the car.");
   } else if (side === "customer" && choice.extraHours > 0) {
     // The website sells the 4, 8 and 12-hour packages alone for now; the
     // console may still add hours past one.
@@ -446,7 +446,7 @@ async function quoteOne(
     if (row.includedHours + choice.extraHours > HOURLY_LIMITS.maxTripHours) {
       return fail(
         "hours",
-        `An hourly hire runs at most ${HOURLY_LIMITS.maxTripHours} hours. Choose fewer extra hours.`,
+        `A booking by the hour runs at most ${HOURLY_LIMITS.maxTripHours} hours. Choose fewer extra hours.`,
       );
     }
     hire = {

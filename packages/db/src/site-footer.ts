@@ -3,6 +3,7 @@ import type { Actor } from "./activity-actions";
 import { db } from "./client";
 import {
   CONNECT_FOOTER_KEY,
+  addressLinesOf,
   FOOTER_KEY,
   checkFooterComplete,
   checkFooterLimits,
@@ -257,4 +258,32 @@ export async function publishFooter(
 function ownFooterOf(key: FooterKey, draft: unknown): FooterContent {
   const content = footerContentOf(draft);
   return key === FOOTER_KEY ? { ...content, sameAsWebsite: false } : content;
+}
+
+/** The company as its documents head them: from the website's footer, as SUPER keeps it. */
+export type CompanyDetails = {
+  /** "Heavenly Travel Sdn Bhd". */
+  legalName: string;
+  /** The SSM number; empty when not given. */
+  registration: string;
+  /** The office, a line each. */
+  address: string[];
+  phone: string;
+  email: string;
+};
+
+/**
+ * The company's details for a document's head (a booking's or an
+ * invoice's PDF): the website's footer as published, else its default,
+ * so a change there reaches every document made after it.
+ */
+export async function getCompanyDetails(): Promise<CompanyDetails> {
+  const footer = await websiteFooter();
+  return {
+    legalName: footer.legalName,
+    registration: footer.registration,
+    address: addressLinesOf(footer),
+    phone: footer.phone || footer.whatsapp,
+    email: footer.email,
+  };
 }

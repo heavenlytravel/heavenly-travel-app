@@ -1,6 +1,7 @@
 "use server";
 
-import { changeTopChoice, isTopChoiceChange } from "@repo/db/server";
+import { isPickChange } from "@repo/db";
+import { changeTopChoice } from "@repo/db/server";
 import { revalidateLocation } from "../../../../_lib/revalidate";
 import { actorOf, getAdmin } from "../../../../_lib/access";
 import {
@@ -25,7 +26,7 @@ export async function changeTopChoiceAction(
   const admin = await getAdmin("website.manage");
   if (!admin) return FORBIDDEN;
   if (typeof locationId !== "string" || locationId === "") return STALE;
-  if (!isTopChoiceChange(change)) return STALE;
+  if (!isPickChange(change)) return STALE;
 
   const result = await changeTopChoice(actorOf(admin), locationId, change);
   if (result.ok) {

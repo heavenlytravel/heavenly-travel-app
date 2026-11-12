@@ -52,7 +52,7 @@ export function ClassRates({
           <ThGroup>
             <span className="inline-flex items-center gap-1.5">
               One-way
-              <InfoTip text="A one-way trip costs its cell on the rate grid. An address outside every zone adds its road to the nearest zone's edge at this rate, when the trip runs past the edge." />
+              <InfoTip text="A transfer costs its cell on the rate grid. An address outside every zone adds its road to the nearest zone's edge at this rate, when the trip runs past the edge." />
             </span>
           </ThGroup>
           <ThGroup />

@@ -10,9 +10,9 @@ import { BandHeading, Screen } from "../../../_ui/Screen";
 
 /**
  * Route: /account/business. The vendor's details for its people, every sensitive
- * one blurred until clicked. Its owner edits the contact, the address and
- * the bank (/account/business/edit); what was checked at approval, the team
- * changes. See docs/261103-tour-guide.md, "Pay and bank details".
+ * one blurred until clicked. Its owner edits all of it but what it offers
+ * (/account/business/edit), which the team changes. See
+ * docs/261103-tour-guide.md, "Pay and bank details".
  */
 export default async function BusinessPage() {
   const member = await requireMember();
@@ -27,7 +27,7 @@ export default async function BusinessPage() {
       band={
         <BandHeading eyebrow={vendor.name} title="Business">
           {owner
-            ? "Keep your contact and bank details up to date: we pay your vehicles' jobs into this account."
+            ? "Keep your details up to date: we pay your jobs into this account."
             : "Your business as we know it. Its owner keeps it up to date."}
         </BandHeading>
       }
@@ -40,8 +40,7 @@ export default async function BusinessPage() {
               <Link href="/~/account/business/edit">Edit details</Link>
             </Button>
             <p className="text-xs text-muted">
-              The name, the SSM or IC number, what you offer and the locations
-              were checked when you were approved. To change one, WhatsApp the
+              What you offer is set by the team. To change it, WhatsApp the
               team.
             </p>
           </div>

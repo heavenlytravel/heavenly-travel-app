@@ -9,10 +9,7 @@ import {
   formatMyr,
   guideChoiceOf,
   guideEntries,
-  guideOfferIssue,
-  guideOffersOnAll,
   isAirportPlace,
-  needsGuide,
   plural,
   tripItemField,
   CHARGE_LABELS,
@@ -51,6 +48,7 @@ import {
   useTripPlan,
 } from "../../../../../_lib/trip-plan-store";
 import {
+  tripAddOnsPath,
   tripBookingPath,
   tripConfirmPath,
 } from "../../../../../_lib/transportation-booking";
@@ -63,7 +61,7 @@ import {
 } from "../../../../_components/Page";
 import { BookingStepTitle, FoldedTripsBones } from "../StepParts";
 import { usePlanPricing } from "../usePlanPricing";
-import { AddOns } from "./AddOns";
+import { forWhichOf, guideAddOnOf } from "../plan-add-ons";
 import { ConfirmForm } from "./ConfirmForm";
 import { CONFIRM_FIELDS } from "./fields";
 
@@ -111,8 +109,8 @@ function tripsNote(on: readonly number[], count: number): string | null {
  * added. "Your vehicle" has the class for all the trips, pictured as
  * on the vehicle page (any of its models is sent, whichever is free on
  * the day: choosing a model is not offered for now), the group, and
- * under it the add-ons: the tour guide in a language on sale
- * for every trip, priced into each, and another asked for (./AddOns). The
+ * under it the add-ons chosen at the step before, the tour guide priced
+ * into each trip, with "Change" back to that step (../add-ons). The
  * details ask the contact, the flights for the trips at an
  * airport, and one note for the drivers, and end in the one button, with
  * the total and the cancellation terms; it says which trip to fix while
@@ -236,28 +234,21 @@ export function ConfirmStep({
   }
 
   const several = trips.length > 1;
-  const forWhich =
-    trips.length === 2
-      ? "both trips"
-      : several
-        ? `all ${trips.length} trips`
-        : "the trip";
+  const forWhich = forWhichOf(trips.length);
   const card = chosen?.card ?? null;
-  // The guide languages every trip sells, once every trip is priced.
-  const views = trips.map((trip) => quoteOf(priced, trip)?.view);
-  const guideOffers =
-    complete && views.every((view) => view?.ok)
-      ? guideOffersOnAll(views.map((view) => (view?.ok ? view.guides : [])))
-      : [];
-  // A coach takes a guide: the first language on sale until one is chosen.
-  const guideRequired = needsGuide(category) && guideOffers.length > 0;
-  const guide =
-    guideRequired && plan.guide.language === null
-      ? { ...plan.guide, language: guideOffers[0]!.language }
-      : plan.guide;
-  const guideIssue = complete
-    ? guideOfferIssue(guide.language, guideOffers)
-    : null;
+  // The guide chosen at the add-ons step, once every trip is priced.
+  const {
+    views,
+    offers: guideOffers,
+    guide,
+    issue: guideIssue,
+  } = guideAddOnOf({
+    category,
+    trips,
+    priced,
+    complete,
+    guide: plan.guide,
+  });
   /** What the guide adds to a trip; 0 without one. */
   const guideOn = (index: number) => {
     const view = views[index];
@@ -468,18 +459,22 @@ export function ConfirmStep({
           </p>
         </div>
       </div>
-      <AddOns
-        offers={guideOffers}
-        guide={guide}
-        required={guideRequired}
-        forWhich={`for ${forWhich}`}
-        onGuide={(change) =>
-          updatePlan((now) => ({
-            ...now,
-            guide: { ...now.guide, ...change },
-          }))
-        }
-      />
+      {guideOffers.length > 0 ? (
+        <div className="flex items-baseline justify-between gap-4 border-t border-hairline pt-4">
+          <div className="grid gap-0.5">
+            <h3 className="text-ink">Add-ons</h3>
+            <p className="text-copy text-body">
+              {guide.language
+                ? `Tour guide in ${guide.language}`
+                : "No tour guide"}
+              {guide.request ? `; a guide in ${guide.request} asked for` : ""}
+            </p>
+          </div>
+          <Link href={tripAddOnsPath(category)} className="text-copy text-link">
+            Change
+          </Link>
+        </div>
+      ) : null}
     </section>
   ) : null;
 

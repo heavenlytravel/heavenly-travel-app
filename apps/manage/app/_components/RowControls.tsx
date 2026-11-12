@@ -1,3 +1,4 @@
+import { movedRow as movedRowIn } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { Tooltip } from "@repo/ui/tooltip";
 import { ArrowDownIcon, ArrowUpIcon } from "@repo/ui/icons";
@@ -65,10 +66,7 @@ export function RowControls({
   );
 }
 
-/** The rows with the one at `index` moved one place up or down. */
+/** The rows with the one at `index` moved one place up or down; the same rows when it cannot go that way. */
 export function movedRow<T>(rows: readonly T[], index: number, by: -1 | 1) {
-  const next = [...rows];
-  const [row] = next.splice(index, 1);
-  if (row !== undefined) next.splice(index + by, 0, row);
-  return next;
+  return movedRowIn(rows, index, by) ?? [...rows];
 }

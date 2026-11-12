@@ -1,6 +1,6 @@
 "use client";
 
-import type { VehicleClass } from "@repo/db/server";
+import type { ClassWithKinds } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { FormFoot } from "@repo/console/FormFoot";
 import { classesHref } from "../../../../../_lib/routes";
@@ -17,9 +17,12 @@ import { FORM_WIDTH } from "@repo/console/PageColumn";
  */
 export function VehicleClassForm({
   vehicleClass,
+  kinds,
 }: {
   /** Absent on the "new" page. */
-  vehicleClass?: VehicleClass;
+  vehicleClass?: ClassWithKinds;
+  /** The types and tiers there are, suggested as they are typed. */
+  kinds: { types: string[]; tiers: string[] };
 }) {
   const isNew = !vehicleClass;
   const { pending, error, formProps, leaveDialog } = useActionForm(
@@ -39,7 +42,7 @@ export function VehicleClassForm({
         {vehicleClass ? (
           <input type="hidden" name="id" value={vehicleClass.id} />
         ) : null}
-        <VehicleClassFieldset vehicleClass={vehicleClass} />
+        <VehicleClassFieldset vehicleClass={vehicleClass} kinds={kinds} />
         <FormFoot
           submit={
             <Button type="submit" pending={pending || uploads.uploading}>

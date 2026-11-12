@@ -312,11 +312,7 @@ export function ConfirmForm({
           disabled={blocked !== null}
           className="w-full"
         >
-          {pending ? (
-            "Booking…"
-          ) : (
-            <>Confirm booking&nbsp;· {formatMyr(totalSen)}</>
-          )}
+          {pending ? "Booking…" : <>Book now&nbsp;· {formatMyr(totalSen)}</>}
         </Button>
       </div>
       <div className="grid gap-1 text-caption">

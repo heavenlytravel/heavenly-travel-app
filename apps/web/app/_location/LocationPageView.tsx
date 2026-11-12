@@ -12,7 +12,6 @@ import {
   locationPagePath,
   locationPreviewPath,
   pageNameInView,
-  paragraphsOf,
   pageOfView,
   servicePagesOf,
   type LocationPageRef,
@@ -26,19 +25,17 @@ import { ProductIcon } from "../_components/Brand";
 import { ClassCard } from "../_components/ClassCard";
 import {
   Breadcrumbs,
-  Cover,
   Faqs,
   Intro,
   JsonLd,
   MissingMark,
+  Lead,
   MissingPart,
   MoreLink,
   PageCards,
-  Prose,
   Section,
   column,
   emptyPartsOf,
-  formatPageDate,
   gutter,
   missingBlock,
   missingLook,
@@ -48,7 +45,10 @@ import {
   PhotoBadge,
   photoZoom,
 } from "../_components/page-parts";
-import { ArticleHeading, HeroHeading } from "../_components/page-headings";
+import { ArticleHeader } from "../_components/ArticleHeader";
+import { HeroHeading } from "../_components/page-headings";
+import { BlogCards } from "../_blog/BlogCards";
+import { blogPostsAt } from "../_lib/blog";
 import { ServiceTabsSearch } from "../_components/search/ServiceTabsSearch";
 import styles from "../_home/home.module.css";
 import { SEARCH_CARD_ID, type ProductKey } from "../_lib/search";
@@ -58,14 +58,15 @@ import { crumbsOf, structuredDataOf } from "./seo";
 
 /**
  * One page of a location, laid out by its kind. Every page but the blog's
- * opens with the hero and the search card on its floor; the blog reads as
- * a blog, its pages opening with their title and cover and no card.
- * Then by kind: the main page offers the services, the intro, the popular
- * places, the newest posts and the FAQs; a service's page its classes or
- * its places, the intro and the FAQs; a page that lists others, its cards;
- * a class's page the class; a place its intro and FAQs and other places; a
- * post its text, its FAQs and other posts. The public pages and the staff
- * preview both render this; `preview` keeps the links inside the preview.
+ * opens with the hero and the search card on its floor; the blog's reads
+ * as a blog, opening with its title and cover and no card. Then by kind:
+ * the main page offers the services, the intro, the popular places, the
+ * newest posts tagged with the location and the FAQs; a service's page its
+ * classes or its places, the intro and the FAQs; a page that lists others,
+ * its cards, the blog's the posts tagged with the location, each opening
+ * the post on the site's blog; a class's page the class; a place its intro
+ * and FAQs and other places. The public pages and the staff preview both
+ * render this; `preview` keeps the links inside the preview.
  * Links to other pages follow the public rule (`isLinkedPage`). A part
  * with nothing in it is left out of a public page, so a half-written draft
  * still reads; the preview keeps the part's frame and heading and shows a
@@ -75,8 +76,11 @@ import { crumbsOf, structuredDataOf } from "./seo";
 
 /** How many posts the main page shows before "All posts". */
 const LANDING_POSTS = 3;
-/** How many others a place or a post offers at its foot. */
+/** How many others a place offers at its foot. */
 const MORE_OF_THE_SAME = 3;
+
+/** What a preview shows in place of the posts while none tagged with the location is published. */
+const NO_POSTS: EmptyPart = "No posts tagged with this location yet";
 
 /** The search card tab of each service's section. */
 const SERVICE_PRODUCTS: Partial<Record<LocationSection, ProductKey>> = {
@@ -90,46 +94,37 @@ const SERVICE_PRODUCTS: Partial<Record<LocationSection, ProductKey>> = {
 type ViewProps = {
   location: LocationView;
   page: LocationViewPage;
-  /** A post's text; empty on every other page. */
-  body: string;
   preview?: boolean;
 };
 
 export async function LocationPageView({
   location,
   page,
-  body,
   preview = false,
 }: ViewProps) {
   const pathOf = (ref: LocationPageRef = LANDING_REF) =>
     (preview ? locationPreviewPath : locationPagePath)(location.slug, ref);
-  const isBlog = page.page === "blog";
   return (
     <>
       <JsonLd data={structuredDataOf(location, page)} />
-      {page.kind === "article" ? (
-        <ArticleView
-          location={location}
-          page={page}
-          body={body}
+      {page.page === "blog" ? (
+        <ArticleHeader
+          crumbs={crumbsOf(location, page, preview)}
+          eyebrow={eyebrowOf(location, page)}
+          kind={page.kind}
+          content={page.content}
+          name={pageNameInView(location, page)}
           preview={preview}
-          pathOf={pathOf}
         />
       ) : (
-        <>
-          {isBlog ? (
-            <BlogHeader location={location} page={page} preview={preview} />
-          ) : (
-            <Hero location={location} page={page} preview={preview} />
-          )}
-          <PageBody
-            location={location}
-            page={page}
-            preview={preview}
-            pathOf={pathOf}
-          />
-        </>
+        <Hero location={location} page={page} preview={preview} />
       )}
+      <PageBody
+        location={location}
+        page={page}
+        preview={preview}
+        pathOf={pathOf}
+      />
     </>
   );
 }
@@ -155,7 +150,7 @@ function noCardsYet(
   return `No ${children.many} published yet`;
 }
 
-/** The parts of every page but a post under its hero, by kind. */
+/** The parts of every page under its hero, by kind. */
 async function PageBody({
   location,
   page,
@@ -180,7 +175,8 @@ async function PageBody({
 
   if (page.page === LANDING_PAGE) {
     const places = linkedChildrenOf(location, "popular-places");
-    const posts = linkedChildrenOf(location, "blog");
+    const posts = await blogPostsAt(location.slug);
+    const blogPage = pageOfView(location, { page: "blog", slug: "" });
     return (
       <>
         <Services
@@ -202,14 +198,16 @@ async function PageBody({
           all
           empty={noCardsYet("popular-places", preview)}
         />
-        <EntryCards
-          location={location}
-          section="blog"
-          entries={posts.slice(0, LANDING_POSTS)}
-          pathOf={pathOf}
+        <BlogCards
+          id="blog-cards"
+          eyebrow={SECTIONS.blog.label}
           title="From the blog"
-          all
-          empty={noCardsYet("blog", preview)}
+          posts={posts.slice(0, LANDING_POSTS)}
+          action={
+            blogPage && <MoreLink href={pathOf(blogPage)}>All posts</MoreLink>
+          }
+          empty={preview ? NO_POSTS : undefined}
+          preview={preview}
         />
         {faqs}
       </>
@@ -273,6 +271,25 @@ async function PageBody({
     );
   }
 
+  if (section === "blog") {
+    return (
+      <>
+        <BlogCards
+          id="blog-cards"
+          eyebrow={def.label}
+          title="Latest posts"
+          posts={await blogPostsAt(location.slug)}
+          lead={content.intro}
+          emptyLead={empty.intro}
+          empty={preview ? NO_POSTS : undefined}
+          preview={preview}
+        />
+        {faqs}
+        <FootLinks location={location} page={page} pathOf={pathOf} />
+      </>
+    );
+  }
+
   // A section's own page: a service, or a page that lists others.
   const children = childrenOf(section);
   return (
@@ -294,11 +311,9 @@ async function PageBody({
           entries={linkedChildrenOf(location, section)}
           pathOf={pathOf}
           title={
-            section === "blog"
-              ? "Latest posts"
-              : page.kind === "listing"
-                ? `${def.label} in ${location.name}`
-                : `${def.label} we recommend`
+            page.kind === "listing"
+              ? `${def.label} in ${location.name}`
+              : `${def.label} we recommend`
           }
           lead={page.kind === "listing" ? content.intro : ""}
           emptyLead={page.kind === "listing" ? empty.intro : undefined}
@@ -576,7 +591,7 @@ function Services({
   );
 }
 
-/** The cards of a section's pages Marketing added: places with "Take me here", posts with their date. */
+/** The cards of a section's pages Marketing added: places, with "Take me here". */
 function EntryCards({
   location,
   section,
@@ -616,10 +631,7 @@ function EntryCards({
       key: `${entry.page}/${entry.slug}`,
       href: pathOf(entry),
       title: pageNameInView(location, entry),
-      text:
-        entry.kind === "article" && entry.firstPublishedAt
-          ? `${formatPageDate(entry.firstPublishedAt)} · ${entry.content.heroSubheadline}`
-          : entry.content.heroSubheadline,
+      text: entry.content.heroSubheadline,
       image: entry.content.heroImage,
       extra: address ? <TakeMeHere address={address} /> : undefined,
     };
@@ -635,20 +647,7 @@ function EntryCards({
         ) : undefined
       }
     >
-      {lead ? (
-        <div className="-mt-2 mb-8 grid max-w-[70ch] gap-4 text-lead leading-relaxed text-body">
-          {paragraphsOf(lead).map((paragraph, i) => (
-            <p key={i}>{paragraph}</p>
-          ))}
-        </div>
-      ) : (
-        emptyLead && (
-          <MissingPart
-            part={emptyLead}
-            className="-mt-2 mb-8 min-h-24 max-w-[70ch] rounded-card"
-          />
-        )
-      )}
+      <Lead text={lead} empty={emptyLead} />
       {cards.length > 0 ? (
         <PageCards cards={cards} />
       ) : (
@@ -798,100 +797,5 @@ function FootLinks({
           ))}
       </ul>
     </nav>
-  );
-}
-
-/**
- * The top of the blog's pages, its own and a post's: the breadcrumb, the
- * eyebrow, the title and summary, a post's dates, and the cover.
- */
-function BlogHeader({
-  location,
-  page,
-  preview,
-}: {
-  location: LocationView;
-  page: LocationViewPage;
-  preview: boolean;
-}) {
-  const { content } = page;
-  const empty = emptyPartsOf(page.kind, preview);
-  const published = page.kind === "article" ? page.firstPublishedAt : null;
-  const updated =
-    page.publishedAt &&
-    published &&
-    page.publishedAt.slice(0, 10) !== published.slice(0, 10)
-      ? page.publishedAt
-      : null;
-  return (
-    <header className={`pt-7 ${gutter}`}>
-      <div className="mx-auto w-full max-w-[900px]">
-        <Breadcrumbs crumbs={crumbsOf(location, page, preview)} />
-        <ArticleHeading
-          eyebrow={eyebrowOf(location, page)}
-          line={content.heroSubheadline}
-          emptyLine={empty.subheadline}
-        >
-          {content.heroHeadline || pageNameInView(location, page)}
-          {!content.heroHeadline && empty.headline && (
-            <MissingMark part={empty.headline} />
-          )}
-        </ArticleHeading>
-        {published && (
-          <p className="mt-5 text-copy text-muted">
-            <time dateTime={published}>{formatPageDate(published)}</time>
-            {updated && (
-              <>
-                {" · Updated "}
-                <time dateTime={updated}>{formatPageDate(updated)}</time>
-              </>
-            )}
-          </p>
-        )}
-      </div>
-      <Cover image={content.heroImage} empty={empty.heroImage} />
-    </header>
-  );
-}
-
-/** A post: its header, its text and FAQs, then the newest other posts. */
-function ArticleView({
-  location,
-  page,
-  body,
-  preview,
-  pathOf,
-}: {
-  location: LocationView;
-  page: LocationViewPage;
-  body: string;
-  preview: boolean;
-  pathOf: PathOf;
-}) {
-  const others = linkedChildrenOf(location, "blog")
-    .filter((other) => other.slug !== page.slug)
-    .slice(0, MORE_OF_THE_SAME);
-  const empty = emptyPartsOf(page.kind, preview);
-  return (
-    <>
-      <article>
-        <BlogHeader location={location} page={page} preview={preview} />
-        <div className={`pt-10 sm:pt-14 ${gutter}`}>
-          <div className="mx-auto w-full max-w-[900px]">
-            <Prose text={body} empty={empty.body} />
-          </div>
-        </div>
-      </article>
-      <Faqs title="Good to know" faqs={page.content.faqs} empty={empty.faqs} />
-      <EntryCards
-        location={location}
-        section="blog"
-        entries={others}
-        pathOf={pathOf}
-        title="More from the blog"
-        all
-      />
-      <FootLinks location={location} page={page} pathOf={pathOf} />
-    </>
   );
 }

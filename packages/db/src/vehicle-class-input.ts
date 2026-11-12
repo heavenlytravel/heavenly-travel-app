@@ -3,22 +3,30 @@ import { refuse, type Change } from "./change";
 import { flagOf, numberOf, textOf, type Parsed } from "./fields";
 import { isUploadUrl } from "./images";
 import { PHOTO_LIMITS } from "./photos-input";
+import { slugify } from "./slug";
+import { squashName } from "./vehicle-model-input";
 
 /**
  * What the Vehicle classes screen edits of a catalogue class and the rules
  * it checks, pure and browser-safe: the form displays the messages, the
  * writers in ./vehicle-classes apply the same checks before they write.
  * The rates and rules a location sells a class under are ./offering-input.
- * See docs/261015-locations-as-operation-areas.md, "Vehicle classes", and
- * docs/261018-location-work-and-class-catalogue.md.
+ * See docs/261015-locations-as-operation-areas.md, "Vehicle classes",
+ * docs/261018-location-work-and-class-catalogue.md and
+ * docs/261111-catalogue-booking-flow-and-ops.md, part A.
  */
 
-/** Every editable column of `VehicleClass`. */
+/**
+ * What the class form edits: the class's type and tier by name, as typed
+ * or chosen (`tier` empty for none), and its own columns. Its name and
+ * slug are made from the type and the tier (`classNameOf`); its place in
+ * the list is moved with arrows.
+ */
 export type VehicleClassFields = {
-  name: string;
+  type: string;
+  tier: string;
   description: string;
   category: TripCategory;
-  sortOrder: number;
   minPassengers: number;
   maxPassengers: number;
   luggage: string;
@@ -31,16 +39,34 @@ export type VehicleClassField = keyof VehicleClassFields;
 
 /** How the screen and the activity log name each field. */
 export const VEHICLE_CLASS_FIELD_LABELS: Record<VehicleClassField, string> = {
-  name: "Name",
+  type: "Type",
+  tier: "Tier",
   description: "Description",
   category: "Category",
-  sortOrder: "Sort order",
   minPassengers: "Seats from",
   maxPassengers: "Seats to",
   luggage: "Luggage",
   imageUrls: "Pictures",
   isActive: "Active",
 };
+
+/** The longest a type or a tier may be. */
+export const CLASS_KIND_LIMIT = 40;
+
+/**
+ * A class's name from its tier and type, tier first: "Deluxe - Sedan";
+ * the type alone without a tier: "Truck".
+ */
+export function classNameOf(kind: { type: string; tier: string }) {
+  const type = squashName(kind.type);
+  const tier = squashName(kind.tier);
+  return tier ? `${tier} - ${type}` : type;
+}
+
+/** A class's slug from its tier and type: "deluxe-sedan". */
+export function classSlugOf(kind: { type: string; tier: string }) {
+  return slugify(classNameOf(kind));
+}
 
 /** How many a class seats, as a customer reads it: "Up to 6 passengers". */
 export function seatsLabel(vehicleClass: {
@@ -53,7 +79,7 @@ export function seatsLabel(vehicleClass: {
     : `${minPassengers} to ${maxPassengers} passengers`;
 }
 
-const TEXT_FIELDS = ["name", "description", "luggage"] as const;
+const TEXT_FIELDS = ["type", "description", "luggage"] as const;
 
 const isWhole = (n: number) => Number.isInteger(n);
 
@@ -70,11 +96,20 @@ export function checkVehicleClassFields(
       return refuse(`Enter the ${lowerLabel(key)}.`, key);
     }
   }
+  for (const key of ["type", "tier"] as const) {
+    const value = fields[key];
+    if (value !== undefined && squashName(value).length > CLASS_KIND_LIMIT) {
+      return refuse(
+        `A ${lowerLabel(key)} is at most ${CLASS_KIND_LIMIT} characters.`,
+        key,
+      );
+    }
+  }
+  if (fields.type !== undefined && !slugify(fields.type)) {
+    return refuse("Enter a type with a letter or digit.", "type");
+  }
   if (fields.category !== undefined && !isTripCategory(fields.category)) {
     return refuse("Choose a category.", "category");
-  }
-  if (fields.sortOrder !== undefined && !isWhole(fields.sortOrder)) {
-    return refuse("The sort order is a whole number.", "sortOrder");
   }
   for (const key of ["minPassengers", "maxPassengers"] as const) {
     const value = fields[key];
@@ -136,10 +171,10 @@ export function parseVehicleClassFields(
   }
 
   const fields: VehicleClassFields = {
-    name: textOf(values.name),
+    type: squashName(textOf(values.type)),
+    tier: squashName(textOf(values.tier)),
     description: textOf(values.description),
     category,
-    sortOrder: numberOf(values.sortOrder),
     minPassengers: numberOf(values.minPassengers),
     maxPassengers: numberOf(values.maxPassengers),
     luggage: textOf(values.luggage),

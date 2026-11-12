@@ -97,12 +97,63 @@ export function suppliesIt(
   );
 }
 
+/** The order Assign lists vendors in, by what each offers, after ours. */
+const GROUP_ORDER: readonly VendorService[] = [
+  "vehicle-driver",
+  "vehicle",
+  "driver",
+  "tour-guide",
+];
+
+/**
+ * Vendors grouped as Assign lists them: ours first, then by what each
+ * offers (Vehicle and driver, Vehicle only, Driver only, Tour guide), so
+ * an individual who is their own driver sits under Driver only. Each
+ * group keeps the order given; an empty one is left out.
+ */
+export function vendorGroupsOf<
+  V extends { isOurs: boolean; services: readonly string[] },
+>(vendors: readonly V[]): { label: string; vendors: V[] }[] {
+  const groups = [
+    { label: "Ours", vendors: vendors.filter((v) => v.isOurs) },
+    ...GROUP_ORDER.map((service) => ({
+      label: VENDOR_SERVICE_LABELS[service],
+      vendors: vendors.filter((v) => !v.isOurs && v.services[0] === service),
+    })),
+    {
+      label: "Other",
+      vendors: vendors.filter(
+        (v) =>
+          !v.isOurs &&
+          !GROUP_ORDER.some((service) => v.services[0] === service),
+      ),
+    },
+  ];
+  return groups.filter((group) => group.vendors.length > 0);
+}
+
 /** What a vendor adds: vehicles, drivers and tour guides. */
 export type VendorAdds = {
   vehicles: boolean;
   drivers: boolean;
   guides: boolean;
 };
+
+/**
+ * What a vendor's fleet lists, in Connect and on its page in Manage: each
+ * part it supplies (`adds`) or has some of from before, which it sees and
+ * cannot add to.
+ */
+export function vendorShowsOf(
+  adds: VendorAdds,
+  has: { vehicles: number; drivers: number; guides: number },
+): VendorAdds {
+  return {
+    vehicles: adds.vehicles || has.vehicles > 0,
+    drivers: adds.drivers || has.drivers > 0,
+    guides: adds.guides || has.guides > 0,
+  };
+}
 
 /** What a vendor may add, by what it offers (`suppliesIt`). */
 export function vendorAddsOf(vendor: {
@@ -333,11 +384,13 @@ export function parseVendorFields(
   locationIds: readonly unknown[],
 ): Parsed<VendorFields> {
   const kind = textOf(values.kind);
+  const name = textOf(values.name);
   const fields: VendorFields = {
-    name: textOf(values.name),
+    name,
     kind: isVendorKind(kind) ? kind : ("" as VendorKind),
     registrationNo: textOf(values.registrationNo).toUpperCase(),
-    contactName: textOf(values.contactName),
+    // An individual is their own contact: no contact person is asked.
+    contactName: kind === "individual" ? name : textOf(values.contactName),
     contactPhone: normalizePhone(textOf(values.contactPhone)),
     contactEmail: normalizeEmail(textOf(values.contactEmail)),
     address: textOf(values.address),

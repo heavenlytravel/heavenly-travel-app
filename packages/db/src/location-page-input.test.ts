@@ -9,6 +9,8 @@ import {
   SECTIONS,
   SERVICE_SECTIONS,
   checkEntrySlug,
+  checkEntryTitle,
+  entryTitleOf,
   isEntrySlugLocked,
   isLocationPageKey,
   isLocationPageRef,
@@ -50,14 +52,18 @@ describe("the pages of a location", () => {
   it("have pages under a section only where the section takes them", () => {
     assert.equal(isLocationPageRef(LANDING_REF), true);
     assert.equal(isLocationPageRef({ page: "blog", slug: "" }), true);
-    assert.equal(isLocationPageRef({ page: "blog", slug: "a-day" }), true);
+    // A post is the site's blog's, not a page under a location's blog.
+    assert.equal(isLocationPageRef({ page: "blog", slug: "a-day" }), false);
     assert.equal(
       isLocationPageRef({ page: "car-with-driver", slug: "sedan" }),
       true,
     );
     assert.equal(isLocationPageRef({ page: "landing", slug: "x" }), false);
     assert.equal(isLocationPageRef({ page: "car-rental", slug: "x" }), false);
-    assert.equal(isLocationPageRef({ page: "blog", slug: "A Day" }), false);
+    assert.equal(
+      isLocationPageRef({ page: "hotels", slug: "The Datai" }),
+      false,
+    );
     assert.equal(isLocationPageRef({ page: "hotel", slug: "" }), false);
     assert.equal(isLocationPageRef({ page: "blog", slug: 3 }), false);
   });
@@ -69,7 +75,7 @@ describe("the pages of a location", () => {
     assert.equal(pageKindOf({ page: "popular-places", slug: "" }), "listing");
     assert.equal(pageKindOf({ page: "coach-charter", slug: "coach" }), "class");
     assert.equal(pageKindOf({ page: "hotels", slug: "the-datai" }), "place");
-    assert.equal(pageKindOf({ page: "blog", slug: "a-day" }), "article");
+    assert.equal(pageKindOf({ page: "blog", slug: "" }), "listing");
   });
 
   it("are named as a heading and a sentence name them", () => {
@@ -101,8 +107,8 @@ describe("the pages of a location", () => {
       "/langkawi/blog",
     );
     assert.equal(
-      locationPagePath("langkawi", { page: "blog", slug: "a-day" }),
-      "/langkawi/blog/a-day",
+      locationPagePath("langkawi", { page: "hotels", slug: "the-datai" }),
+      "/langkawi/hotels/the-datai",
     );
     assert.equal(
       locationPreviewPath("langkawi", { page: "car-with-driver", slug: "" }),
@@ -117,10 +123,10 @@ describe("loggedPageRef", () => {
       page: "coach-charter",
       slug: "",
     });
-    assert.deepEqual(loggedPageRef({ page: "blog", slug: "a-day", x: 1 }), {
-      page: "blog",
-      slug: "a-day",
-    });
+    assert.deepEqual(
+      loggedPageRef({ page: "hotels", slug: "the-datai", x: 1 }),
+      { page: "hotels", slug: "the-datai" },
+    );
     assert.equal(loggedPageRef({ page: "landing", slug: "x" }), null);
     assert.equal(loggedPageRef(null), null);
     assert.equal(loggedPageRef("landing"), null);
@@ -208,5 +214,18 @@ describe("the slug of a page added on demand", () => {
   it("is locked once the page has been published", () => {
     assert.equal(isEntrySlugLocked({ firstPublishedAt: null }), false);
     assert.equal(isEntrySlugLocked({ firstPublishedAt: new Date() }), true);
+  });
+});
+
+describe("checkEntryTitle", () => {
+  it("asks for a tidied title within the headline's limit, by its editor's name", () => {
+    assert.equal(entryTitleOf("  Eagle   Square "), "Eagle Square");
+    assert.deepEqual(checkEntryTitle("", "Title"), {
+      ok: false,
+      error: "Enter the title.",
+      field: "title",
+    });
+    assert.equal(checkEntryTitle("x".repeat(81), "Name").ok, false);
+    assert.equal(checkEntryTitle("Eagle Square", "Name").ok, true);
   });
 });

@@ -8,18 +8,15 @@ import {
   type SitePageKey,
 } from "@repo/db/server";
 import { eyebrow } from "../(site)/_components/Page";
+import { ArticleHeader, PageDate } from "../_components/ArticleHeader";
 import {
-  Cover,
   Faqs,
-  HomeCrumbs,
   JsonLd,
-  MissingMark,
   Prose,
   emptyPartsOf,
-  formatPageDate,
   gutter,
+  homeCrumbsOf,
 } from "../_components/page-parts";
-import { ArticleHeading } from "../_components/page-headings";
 import { faqDataOf } from "../_lib/seo";
 
 /**
@@ -52,30 +49,23 @@ export function SiteDocumentView({
     <main className="pb-[60px] sm:pb-[88px]">
       {faqData && <JsonLd data={[faqData]} />}
       <article>
-        <header className={`pt-7 ${gutter}`}>
-          <div className="mx-auto w-full max-w-[900px]">
-            <HomeCrumbs current={label} />
-            <ArticleHeading
-              eyebrow="Heavenly Travel"
-              line={content.heroSubheadline}
-              emptyLine={empty.subheadline}
-            >
-              {content.heroHeadline || label}
-              {!content.heroHeadline && empty.headline && (
-                <MissingMark part={empty.headline} />
-              )}
-            </ArticleHeading>
-            {publishedAt && page !== "about-us" && page !== "contact-us" && (
-              <p className="mt-5 text-copy text-muted">
-                Last updated{" "}
-                <time dateTime={publishedAt}>
-                  {formatPageDate(publishedAt)}
-                </time>
-              </p>
-            )}
-          </div>
-          <Cover image={content.heroImage} empty={empty.heroImage} />
-        </header>
+        <ArticleHeader
+          crumbs={homeCrumbsOf(label)}
+          eyebrow="Heavenly Travel"
+          kind="document"
+          content={content}
+          name={label}
+          dates={
+            publishedAt &&
+            page !== "about-us" &&
+            page !== "contact-us" && (
+              <>
+                Last updated <PageDate iso={publishedAt} />
+              </>
+            )
+          }
+          preview={preview}
+        />
         <div className={`pt-10 sm:pt-14 ${gutter}`}>
           <div className="mx-auto grid w-full max-w-[900px] gap-12">
             <Prose text={content.body} empty={empty.body} />

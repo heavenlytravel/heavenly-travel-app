@@ -6,6 +6,7 @@ import {
   VENDOR_ROLE_LABELS,
   VENDOR_SERVICE_LABELS,
   vendorAddsOf,
+  vendorShowsOf,
   vendorServicesOf,
 } from "@repo/db";
 import {
@@ -132,8 +133,12 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
   const takesFleet = status === "active" || status === "suspended";
   // It adds only what it offers: an attraction adds nothing.
   const adds = vendorAddsOf(vendor);
-  // Guides show for ours and a vendor offering them, or one that has some.
-  const showsGuides = adds.guides || guides.length > 0;
+  // Each part shows when it supplies it, or has some from before.
+  const shows = vendorShowsOf(adds, {
+    vehicles: vehicles.length,
+    drivers: drivers.length,
+    guides: guides.length,
+  });
   // What suspending takes it off, read for SUPER while it can be suspended.
   const held =
     reviews && status === "active"
@@ -163,55 +168,59 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
               scope={scope.slug ?? ALL}
               cancelHref={vendorsHref(scope.slug)}
             />
-            <Card flush>
-              <CardTitle
-                inset
-                meta={vehicles.length > 0 ? vehicles.length : undefined}
-                action={
-                  takesFleet && adds.vehicles ? (
-                    <Button asChild variant="secondary" size="sm">
-                      <Link href={newVendorVehicleHref(scope.slug, id)}>
-                        <PlusIcon />
-                        Add vehicle
-                      </Link>
-                    </Button>
-                  ) : null
-                }
-              >
-                Vehicles
-              </CardTitle>
-              <VehiclesTable
-                vehicles={vehicles}
-                scope={scope.slug}
-                bare
-                emptyMessage="No vehicle yet."
-              />
-            </Card>
-            <Card flush>
-              <CardTitle
-                inset
-                meta={drivers.length > 0 ? drivers.length : undefined}
-                action={
-                  takesFleet && adds.drivers ? (
-                    <Button asChild variant="secondary" size="sm">
-                      <Link href={newVendorDriverHref(scope.slug, id)}>
-                        <PlusIcon />
-                        Add driver
-                      </Link>
-                    </Button>
-                  ) : null
-                }
-              >
-                Drivers
-              </CardTitle>
-              <DriversTable
-                drivers={drivers}
-                scope={scope.slug}
-                bare
-                emptyMessage="No driver yet."
-              />
-            </Card>
-            {showsGuides ? (
+            {shows.vehicles ? (
+              <Card flush>
+                <CardTitle
+                  inset
+                  meta={vehicles.length > 0 ? vehicles.length : undefined}
+                  action={
+                    takesFleet && adds.vehicles ? (
+                      <Button asChild variant="secondary" size="sm">
+                        <Link href={newVendorVehicleHref(scope.slug, id)}>
+                          <PlusIcon />
+                          Add vehicle
+                        </Link>
+                      </Button>
+                    ) : null
+                  }
+                >
+                  Vehicles
+                </CardTitle>
+                <VehiclesTable
+                  vehicles={vehicles}
+                  scope={scope.slug}
+                  bare
+                  emptyMessage="No vehicle yet."
+                />
+              </Card>
+            ) : null}
+            {shows.drivers ? (
+              <Card flush>
+                <CardTitle
+                  inset
+                  meta={drivers.length > 0 ? drivers.length : undefined}
+                  action={
+                    takesFleet && adds.drivers ? (
+                      <Button asChild variant="secondary" size="sm">
+                        <Link href={newVendorDriverHref(scope.slug, id)}>
+                          <PlusIcon />
+                          Add driver
+                        </Link>
+                      </Button>
+                    ) : null
+                  }
+                >
+                  Drivers
+                </CardTitle>
+                <DriversTable
+                  drivers={drivers}
+                  scope={scope.slug}
+                  bare
+                  emptyMessage="No driver yet."
+                />
+              </Card>
+            ) : null}
+            {shows.guides ? (
               <Card flush>
                 <CardTitle
                   inset

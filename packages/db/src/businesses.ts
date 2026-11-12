@@ -70,12 +70,14 @@ export function listBusinesses(
   });
 }
 
-/** The agents a new booking may come through, by name: the active ones. */
-export function listAgents(): Promise<{ id: string; name: string }[]> {
+/** The agents a new booking may come through, by name, with their payment terms: the active ones. */
+export function listAgents(): Promise<
+  { id: string; name: string; paymentTerms: string }[]
+> {
   return db.business.findMany({
     where: { kind: "agent", status: "active" },
     orderBy: { name: "asc" },
-    select: { id: true, name: true },
+    select: { id: true, name: true, paymentTerms: true },
   });
 }
 

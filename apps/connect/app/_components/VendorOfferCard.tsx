@@ -9,7 +9,6 @@ import {
 import type { OfferRole, VendorOfferView } from "@repo/db/server";
 import { cx } from "@repo/ui/cx";
 import { FormError } from "@repo/ui/form-error";
-import { ClassReasonField } from "@repo/console/ClassReasonField";
 import { useActionForm } from "@repo/console/use-action-form";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
@@ -166,9 +165,6 @@ function RoleRow({ offerId, role }: { offerId: string; role: OfferRole }) {
 /** Picks the vendor's own vehicle, driver or tour guide for a role it was left to choose, by tapping one. */
 function NameRecord({ offerId, role }: { offerId: string; role: OfferRole }) {
   const [chosen, setChosen] = useState("");
-  // A vehicle of another class than booked asks why.
-  const classChange =
-    role.choices.find((c) => c.id === chosen)?.classChange ?? null;
   const { pending, error, formProps } = useActionForm(nameRecordAction, {
     done: `${PART_ROLE_LABELS[role.role]} chosen.`,
   });
@@ -211,11 +207,7 @@ function NameRecord({ offerId, role }: { offerId: string; role: OfferRole }) {
                   <span className="truncate text-xs text-muted">
                     {blocked
                       ? choice.reasons.join(", ")
-                      : [
-                          choice.locationName,
-                          choice.classChange,
-                          ...choice.warnings,
-                        ]
+                      : [choice.locationName, ...choice.warnings]
                           .filter(Boolean)
                           .join(" · ")}
                   </span>
@@ -229,7 +221,6 @@ function NameRecord({ offerId, role }: { offerId: string; role: OfferRole }) {
           );
         })}
       </fieldset>
-      {classChange ? <ClassReasonField change={classChange} /> : null}
       <Button type="submit" variant="secondary" pending={pending}>
         {pending ? "Saving…" : `Choose this ${roleWord(role.role)}`}
       </Button>

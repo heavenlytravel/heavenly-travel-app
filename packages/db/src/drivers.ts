@@ -24,6 +24,8 @@ import type { FleetFilter } from "./vehicles";
 import { isUniqueViolation } from "./prisma-errors";
 import { phoneDigitsOf } from "./search";
 import { checkVendorServes } from "./vendors";
+import { suppliesIt } from "./vendor-input";
+import { NO_BANK } from "./bank-input";
 import { releaseHeldWork } from "./fulfilment";
 
 /**
@@ -191,6 +193,60 @@ async function withDriverAccount<R extends Change | Created>(
     },
     change,
   );
+}
+
+/**
+ * An individual's own driver record, made when the team approves them:
+ * an individual who supplies driving is their own driver, so they are not
+ * asked to enter themself again. Made from the vendor's details (their
+ * name, phone and email, which links the account they registered with),
+ * based at the first location they serve, paid through the vendor, with
+ * no classes yet. Nothing when the vendor is a company, supplies no
+ * driving, serves no location, or has a driver already. See
+ * docs/261111-catalogue-booking-flow-and-ops.md, part E.
+ */
+export async function createOwnDriver(
+  actor: Actor,
+  vendorId: string,
+): Promise<Change> {
+  const vendor = await db.vendor.findUnique({
+    where: { id: vendorId },
+    select: {
+      id: true,
+      kind: true,
+      isOurs: true,
+      services: true,
+      name: true,
+      contactPhone: true,
+      contactEmail: true,
+      locations: { select: { id: true }, orderBy: { name: "asc" }, take: 1 },
+      _count: { select: { drivers: true } },
+    },
+  });
+  if (
+    !vendor ||
+    vendor.kind !== "individual" ||
+    !suppliesIt(vendor, "driver") ||
+    vendor._count.drivers > 0 ||
+    vendor.locations.length === 0
+  ) {
+    return { ok: true };
+  }
+  const made = await createDriver(actor, {
+    vendorId: vendor.id,
+    name: vendor.name,
+    phone: vendor.contactPhone,
+    email: vendor.contactEmail || null,
+    locationId: vendor.locations[0]!.id,
+    vehicleClassIds: [],
+    isActive: true,
+    notes: "",
+    licenceExpiresOn: null,
+    psvExpiresOn: null,
+    paidToVendor: true,
+    ...NO_BANK,
+  });
+  return made.ok ? { ok: true } : made;
 }
 
 /**

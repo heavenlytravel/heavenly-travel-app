@@ -1,7 +1,7 @@
 import { TRIP_CATEGORY_LABELS, type TripCategory } from "./booking-status";
 import { refuse, type Change } from "./change";
 import { guardFor } from "./const-enum";
-import type { PageKind } from "./page-content";
+import { PAGE_LIMITS, type PageKind } from "./page-content";
 import { plural } from "./names";
 import { SITE_NAME } from "./site-page-input";
 import { slugify } from "./slug";
@@ -10,8 +10,9 @@ import { slugify } from "./slug";
  * A location's pages, pure and browser-safe: its main page, then its
  * sections, each with a page of its own and, for most, pages under it.
  * Car with driver and coach charter have one page per vehicle class the
- * location offers; popular places, attractions, hotels and the blog have
- * pages Marketing adds on demand. What a page holds is its kind's
+ * location offers; popular places, attractions and hotels have pages
+ * Marketing adds on demand. The blog has its own page alone: its posts are
+ * the site's (./blog-input), tagged with the locations they are about. What a page holds is its kind's
  * (./page-content). See docs/261025-marketing-pages.md, "A location's site
  * is sections".
  */
@@ -45,16 +46,14 @@ export const isLocationPageKey = guardFor(LOCATION_PAGES);
 export type SectionChildren =
   /** One per vehicle class the location offers in the product, keyed by the class's slug. */
   | { type: "classes"; category: TripCategory }
-  /** Added by Marketing, each with a slug of its own. */
+  /** Added by Marketing, each with a slug of its own, shown in Marketing's order. */
   | {
       type: "entries";
-      kind: Extract<PageKind, "place" | "article">;
+      kind: Extract<PageKind, "place">;
       /** What one is called: "popular place". */
       one: string;
       /** And several: "popular places". */
       many: string;
-      /** Shown in Marketing's order; else newest first, by their first publish. */
-      ordered: boolean;
     };
 
 export type SectionDef = {
@@ -104,7 +103,6 @@ export const SECTIONS: Record<LocationSection, SectionDef> = {
       kind: "place",
       one: "attraction",
       many: "attractions",
-      ordered: true,
     },
     comingSoon: true,
     note: "Tickets and tours, skip the queue",
@@ -117,7 +115,6 @@ export const SECTIONS: Record<LocationSection, SectionDef> = {
       kind: "place",
       one: "hotel",
       many: "hotels",
-      ordered: true,
     },
     comingSoon: true,
     note: "Stays picked by people who live here",
@@ -130,7 +127,6 @@ export const SECTIONS: Record<LocationSection, SectionDef> = {
       kind: "place",
       one: "popular place",
       many: "popular places",
-      ordered: true,
     },
     comingSoon: false,
     note: "Where most visitors go",
@@ -138,13 +134,8 @@ export const SECTIONS: Record<LocationSection, SectionDef> = {
   blog: {
     label: "Blog",
     kind: "listing",
-    children: {
-      type: "entries",
-      kind: "article",
-      one: "post",
-      many: "posts",
-      ordered: false,
-    },
+    // Its posts are the site's blog's, tagged with the location.
+    children: null,
     comingSoon: false,
     note: "Guides and stories",
   },
@@ -182,7 +173,7 @@ export function childrenOf(page: LocationPageKey): SectionChildren | null {
   return page === LANDING_PAGE ? null : SECTIONS[page].children;
 }
 
-/** How many pages a section has under it, as a list says it: "3 classes", "4 popular places", "1 post". */
+/** How many pages a section has under it, as a list says it: "3 classes", "4 popular places". */
 export function childrenCount(children: SectionChildren, n: number) {
   return children.type === "classes"
     ? plural(n, "class", "classes")
@@ -338,6 +329,30 @@ export const ENTRY_LIMITS = {
   /** Characters of a slug. */
   slug: 80,
 } as const;
+
+/**
+ * A title as a page added on demand, or a blog post, starts with it, its
+ * spaces tidied.
+ */
+export function entryTitleOf(title: string) {
+  return title.replace(/\s+/g, " ").trim();
+}
+
+/**
+ * A tidied title (`entryTitleOf`) is filled and within the headline's
+ * limit; `label` is what its editor calls it: "Name", "Title".
+ */
+export function checkEntryTitle(title: string, label: string): Change {
+  const what = label.toLowerCase();
+  if (title === "") return refuse(`Enter the ${what}.`, "title");
+  if (title.length > PAGE_LIMITS.heroHeadline) {
+    return refuse(
+      `The ${what} is at most ${PAGE_LIMITS.heroHeadline} characters.`,
+      "title",
+    );
+  }
+  return { ok: true };
+}
 
 /** A page added on demand is titled and given a slug: the slug is what `slugify` makes, within the limit. */
 export function checkEntrySlug(slug: string): Change {

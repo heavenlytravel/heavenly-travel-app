@@ -190,6 +190,38 @@ export function parseDriverFields(
   return check.ok ? { ok: true, value: fields } : check;
 }
 
+/** What a driver changes of their own record in Connect: the rest is their vendor's. */
+export type DriverSelfFields = Pick<
+  DriverFields,
+  "name" | "phone" | DriverDocument | keyof PayeeFields
+>;
+
+/**
+ * A driver's own form, read and checked: their name, phone, the expiry of
+ * their licences and where they are paid. Where they are based, the
+ * classes they drive, their email and whether they are in service stay
+ * with their vendor. See docs/261111-catalogue-booking-flow-and-ops.md,
+ * part E.
+ */
+export function parseDriverSelfFields(
+  values: Record<string, unknown>,
+): Parsed<DriverSelfFields> {
+  const documents = {} as Record<DriverDocument, string | null>;
+  for (const key of DRIVER_DOCUMENTS) {
+    const day = parseDay(values[key], DRIVER_DOCUMENT_LABELS[key], key);
+    if (!day.ok) return day;
+    documents[key] = day.value;
+  }
+  const fields: DriverSelfFields = {
+    name: textOf(values.name),
+    phone: normalizePhone(textOf(values.phone)),
+    ...documents,
+    ...readPayeeFields(values),
+  };
+  const check = checkDriverFields(fields);
+  return check.ok ? { ok: true, value: fields } : check;
+}
+
 /**
  * What deleting a driver takes (./delete-impact): them, and their
  * account when no one has used it, since one who has been on a job

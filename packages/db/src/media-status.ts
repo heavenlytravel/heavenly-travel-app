@@ -18,24 +18,42 @@ import type { Permission } from "./permissions";
 type LocationRef = { id: string; name: string; slug: string };
 
 /**
- * A page a file is on: a location's, by its section and slug, or one of the
- * site's own, or the footer; with the title the screens give it, "Eagle
- * Square", "Coach charter page", "About us", "Footer".
+ * A page a file is on: a location's, by its section and slug, one of the
+ * site's own, the footer, or a blog post, by its id; with the title the
+ * screens give it, "Eagle Square", "Coach charter page", "About us",
+ * "Footer", "A day in Langkawi".
  */
 export type MediaPage =
-  | { site: false; location: LocationRef; ref: LocationPageRef; title: string }
-  | { site: true; page: SitePageKey | FooterKey; title: string };
+  | {
+      scope: "location";
+      location: LocationRef;
+      ref: LocationPageRef;
+      title: string;
+    }
+  | { scope: "site"; page: SitePageKey | FooterKey; title: string }
+  | { scope: "blog"; postId: string; title: string };
 
 /** One key per page, to see a page once. */
 export function mediaPageKey(on: MediaPage) {
-  return on.site
-    ? `site|${on.page}`
-    : `${on.location.id}|${on.ref.page}|${on.ref.slug}`;
+  switch (on.scope) {
+    case "site":
+      return `site|${on.page}`;
+    case "blog":
+      return `blog|${on.postId}`;
+    case "location":
+      return `${on.location.id}|${on.ref.page}|${on.ref.slug}`;
+  }
 }
 
-/** Where a page is, as the Media screen names it: "Langkawi · Eagle Square", "Site · About us". */
+/** Where a page is, as the Media screen names it: "Langkawi · Eagle Square", "Site · About us", "Blog · A day in Langkawi". */
 export function mediaPageName(on: MediaPage) {
-  return `${on.site ? "Site" : on.location.name} · ${on.title}`;
+  const where =
+    on.scope === "location"
+      ? on.location.name
+      : on.scope === "site"
+        ? "Site"
+        : "Blog";
+  return `${where} · ${on.title}`;
 }
 
 /** One place a file is used, by its UploadThing key. */

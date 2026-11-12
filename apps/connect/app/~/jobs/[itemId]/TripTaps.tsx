@@ -61,8 +61,8 @@ const STEP_PROMPTS: Partial<
  * The driver's trip on the day, two reports: Arrived, then Dropped off,
  * each one slider, so a pocket or a brushing thumb sends nothing. A note
  * goes with the next report. No-show stands apart below, once the driver
- * has arrived and the pickup time has passed (`noShowRefusal`), and asks
- * why before it is sent; for `NO_SHOW_UNDO_MINUTES` after, the driver can
+ * has arrived and the pickup time has passed (`noShowRefusal`), in red. It
+ * asks why, then asks once more before it is sent; for `NO_SHOW_UNDO_MINUTES` after, the driver can
  * take it back when the passenger turns up. A tap is kept on the phone first, with an id made
  * here, then sent; without signal it waits and is sent again on the next
  * load or when the phone is back online. The server keeps a tap once,
@@ -89,6 +89,8 @@ export function TripTaps({
   const [noting, setNoting] = useState(false);
   // The no-show's reason while it is written; null while it is not.
   const [noShow, setNoShow] = useState<string | null>(null);
+  // The reason is written: asked once more before it is sent.
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [undoing, startUndo] = useTransition();
   // The time a no-show waits for, read again each half minute.
@@ -142,6 +144,7 @@ export function TripTaps({
     setNote("");
     setNoting(false);
     setNoShow(null);
+    setConfirming(false);
     toast.success(
       `${TRIP_EVENT_LABELS[kind]}, ${formatLocalTime(new Date(payload.at))}.`,
     );
@@ -164,12 +167,14 @@ export function TripTaps({
     });
   }
 
-  function sendNoShow() {
+  /** The reason checked, then asked once more. */
+  function askNoShow() {
     if (!noShow?.trim()) {
       setError("Say why: how long you waited and how you tried to reach them.");
       return;
     }
-    tap("no-show", noShow);
+    setError(null);
+    setConfirming(true);
   }
 
   const shown: TimelineEvent[] = [
@@ -247,7 +252,7 @@ export function TripTaps({
       {canNoShow ? (
         noShow === null ? (
           <Button
-            variant="secondary"
+            variant="destructive"
             size="lg"
             onClick={() => {
               setError(null);
@@ -270,25 +275,39 @@ export function TripTaps({
               <Textarea
                 value={noShow}
                 onChange={(event) => setNoShow(event.target.value)}
+                readOnly={confirming}
                 maxLength={TRIP_EVENT_NOTE_MAX_LENGTH}
                 rows={3}
                 autoFocus
                 placeholder="Waited 45 minutes at arrivals, called twice, no answer"
               />
             </label>
+            {confirming ? (
+              <p className="text-sm font-semibold text-danger-strong">
+                Report a no-show now? The trip ends. You can take it back within{" "}
+                {NO_SHOW_UNDO_MINUTES} minutes if the passenger comes.
+              </p>
+            ) : null}
             <div className="grid grid-cols-[1fr_1.4fr] gap-2">
               <Button
                 variant="secondary"
                 size="lg"
                 onClick={() => {
                   setError(null);
-                  setNoShow(null);
+                  if (confirming) setConfirming(false);
+                  else setNoShow(null);
                 }}
               >
                 Back
               </Button>
-              <Button variant="destructive" size="lg" onClick={sendNoShow}>
-                Report no-show
+              <Button
+                variant="destructive"
+                size="lg"
+                onClick={() =>
+                  confirming ? tap("no-show", noShow) : askNoShow()
+                }
+              >
+                {confirming ? "Yes, report no-show" : "Report no-show"}
               </Button>
             </div>
           </div>

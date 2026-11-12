@@ -223,6 +223,17 @@ describe("tripAssigned and assignStateOf", () => {
       }),
       "done",
     );
+    // A no-show its driver may still take back: they are still at the pickup.
+    assert.equal(
+      assignStateOf({
+        status: "completed",
+        reported: true,
+        parts: [],
+        withGuide: false,
+        noShowOpen: true,
+      }),
+      "on-the-road",
+    );
   });
 });
 

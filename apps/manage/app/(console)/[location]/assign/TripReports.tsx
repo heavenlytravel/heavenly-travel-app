@@ -255,7 +255,7 @@ function Extras({ events }: { events: readonly Event[] }) {
 
 /**
  * "Report for the driver", sent now: the next step with an optional note,
- * or a no-show with why, as in Connect: it ends the trip, and is taken
+ * or a no-show, in red, with why and asked once more, as in Connect: it ends the trip, and is taken
  * once the driver has arrived and the pickup time has passed.
  */
 function ReportFor({
@@ -271,13 +271,19 @@ function ReportFor({
   noShowWait: string | null;
 }) {
   const [noShowOpen, setNoShowOpen] = useState(false);
+  // The reason is written: asked once more before it is sent.
+  const [confirming, setConfirming] = useState(false);
+  const close = () => {
+    setNoShowOpen(false);
+    setConfirming(false);
+  };
   const step = useActionForm(reportForDriverAction, {
     done: `${TRIP_EVENT_LABELS[next]}: reported.`,
     reset: true,
   });
   const noShow = useActionForm(reportForDriverAction, {
     done: "No-show reported.",
-    onDone: () => setNoShowOpen(false),
+    onDone: close,
   });
 
   const ids = (
@@ -320,27 +326,50 @@ function ReportFor({
             <Textarea
               name="note"
               required
+              readOnly={confirming}
               rows={2}
               maxLength={TRIP_EVENT_NOTE_MAX_LENGTH}
               placeholder="Waited 45 minutes at arrivals, called twice, no answer"
             />
           </Field>
+          {confirming ? (
+            <p className="text-caption font-semibold text-danger-strong">
+              Report a no-show now? The trip ends, and the driver has an hour to
+              take it back.
+            </p>
+          ) : null}
           <div className="flex items-center gap-2">
-            <Button
-              type="submit"
-              size="sm"
-              variant="danger"
-              pending={noShow.pending}
-            >
-              Report no-show
-            </Button>
+            {confirming ? (
+              <Button
+                type="submit"
+                size="sm"
+                variant="danger"
+                pending={noShow.pending}
+              >
+                Yes, report no-show
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                variant="danger"
+                onClick={(event) => {
+                  // The reason is checked by the browser before the second ask.
+                  if (event.currentTarget.form?.reportValidity()) {
+                    setConfirming(true);
+                  }
+                }}
+              >
+                Report no-show
+              </Button>
+            )}
             <Button
               type="button"
               size="sm"
               variant="ghost"
-              onClick={() => setNoShowOpen(false)}
+              onClick={() => (confirming ? setConfirming(false) : close())}
             >
-              Cancel
+              {confirming ? "Back" : "Cancel"}
             </Button>
           </div>
           <FormError error={noShow.error} size="xs" />
@@ -352,7 +381,7 @@ function ReportFor({
           <Button
             type="button"
             size="sm"
-            variant="secondary"
+            variant="danger"
             onClick={() => setNoShowOpen(true)}
           >
             No-show

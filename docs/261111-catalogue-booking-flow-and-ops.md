@@ -286,9 +286,8 @@ counter on 2026-11-11, so its first is HTQ-0001; development's continues from 20
 - **Assign's past.** The When filter is gone. The page reads the trips from today on, or one day
   picked, past or not: one query on `(status, startsAt)` either way, never a page of past
   trips. The pick-up date takes any day; a past one shows a "Past day" line with Back to
-  upcoming. Above the tiles, a card lists the past days with trips left open (confirmed and
-  never assigned, or assigned and never reported done), newest first, each day a link with
-  its count (`listOpenPastDays`: pickup times alone, at most 500 trips). No card when none.
+  upcoming. The Done tile reads "Done today" unless a day is picked. History beyond that is
+  the Bookings list's. (A card of past days left open was built and taken out on review.)
 - **Undo no-show.** `noShowUndoRefusal` and `undoNoShow` (driver-jobs). The driver, in
   Connect, within `NO_SHOW_UNDO_MINUTES` (60) of the no-show; Operation, on the booking and
   the trip page, at any time. Not after a Dropped off, never on a cancelled trip. The no-show's
@@ -302,6 +301,20 @@ counter on 2026-11-11, so its first is HTQ-0001; development's continues from 20
   credit" or "Name · No credit" (`agentTermsLabel`). A credit agent ticks Pay later and
   locks it, with no date: its booking is Pay later on its period invoice already
   (`paysLater`). The writer still refuses a date sent for one.
+
+### Third round (2026-11-12)
+
+- **No-show** buttons are red, in Connect and Manage. After the reason, it asks once more
+  ("Yes, report no-show") before it is sent.
+- **On the road while it can be taken back.** A no-show completes the trip at once, but for
+  the driver's `NO_SHOW_UNDO_MINUTES` after it Assign shows the trip On the road, as the driver
+  is still at the pickup (`assignStateOf`'s `noShowOpen`), never overdue; then Done.
+- **When it bills.** The no-show completes the trip when it is tapped, not after the hour: with
+  no scheduler, a completion that waits would only happen when someone opened a page, and
+  billing must not hang on that. When it is the booking's last trip, the booking completes and
+  its invoice is issued at the tap; an undo leaves the invoice, as the price is the same. Kept
+  option: complete after the hour through a Vercel cron (needs `CRON_SECRET` and a route),
+  so the invoice waits for the hour.
 
 ### Production order for this branch
 

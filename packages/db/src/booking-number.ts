@@ -1,11 +1,13 @@
 /**
  * The numbers a booking and its bills are known by, one letter per
  * document type, four digits that grow to five, no year: HTB-1042 a
- * booking, HTI-0001 an invoice, HTC-0001 a credit note, HTQ for the
- * quotations to come. Each is one running count that never starts again
- * (`BookingNumberCounter`, ./booking-counter gives them). The booking
- * number is the booking's id everywhere, staff's and the customer's; an
- * invoice number never is. The formats live here alone, so the team may
+ * booking, HTQ-0012 a booking received and not yet confirmed (a
+ * quotation), HTI-0001 an invoice, HTC-0001 a credit note. Each is one
+ * running count that never starts again (`BookingNumberCounter`,
+ * ./booking-counter gives them). A booking's number, its HTQ until it is
+ * confirmed and its HTB from then, is its id everywhere, staff's and the
+ * customer's; an invoice number never is. See also
+ * docs/261111-catalogue-booking-flow-and-ops.md, part F. The formats live here alone, so the team may
  * change them in one place. Pure and browser-safe. See
  * docs/261108-billing-and-revisions.md, "Decisions".
  */
@@ -42,18 +44,45 @@ export function documentLabelOf(doc: { type: string; number: number | null }) {
 }
 
 /** What a query selects to name a booking (`bookingLabelOf`). */
-export const BOOKING_NUMBER_SELECT = { id: true, number: true } as const;
+export const BOOKING_NUMBER_SELECT = {
+  id: true,
+  number: true,
+  quoteNumber: true,
+} as const;
+
+/**
+ * The numbers that name a booking: its HTB once confirmed, its HTQ while
+ * received. Left out only where every booking read is confirmed already
+ * (its bills, its trips' work), so it has its HTB.
+ */
+export type BookingNumbers = {
+  id: string;
+  number: number | null;
+  quoteNumber?: number | null;
+};
 
 /**
  * What a booking is called on every screen and in every email: its
- * number, HTB-1042. A row from before booking numbers, not yet numbered by
- * db:set-billing, is called by the end of its id, so it can still be told
- * apart.
+ * number, HTB-1042 once confirmed, HTQ-0012 while it is received. A row
+ * from before booking numbers is called by the end of its id, so it can
+ * still be told apart.
  */
-export function bookingLabelOf(booking: { id: string; number: number | null }) {
+export function bookingLabelOf(booking: BookingNumbers) {
   return booking.number !== null
     ? formatDocumentNumber("booking", booking.number)
-    : `Booking ${booking.id.slice(-6).toUpperCase()}`;
+    : booking.quoteNumber != null
+      ? formatDocumentNumber("quote", booking.quoteNumber)
+      : `Booking ${booking.id.slice(-6).toUpperCase()}`;
+}
+
+/** Where a booking's number is in a query: its HTB, or its HTQ. */
+export type BookingRef = { kind: "booking" | "quote"; number: number };
+
+/** The query that finds a booking by its HTB or its HTQ. */
+export function bookingWhereOf(ref: BookingRef) {
+  return ref.kind === "booking"
+    ? { number: ref.number }
+    : { quoteNumber: ref.number };
 }
 
 const TYPED_RE = /^(HT([BICQ]))?[-\s]?(\d{1,7})$/i;
@@ -79,19 +108,23 @@ export function parseDocumentNumber(
 }
 
 /**
- * The booking a website address names, "HTB-1042", exactly as the site
- * writes it; null for anything else, an old reference (HT-7K3QZM)
- * included, which no longer opens a booking.
+ * The booking a website address names, "HTB-1042" or "HTQ-0012", exactly
+ * as the site writes it; null for anything else, an old reference
+ * (HT-7K3QZM) included, which no longer opens a booking.
  */
-export function bookingNumberOfPath(segment: string): number | null {
+export function bookingRefOfPath(segment: string): BookingRef | null {
   let decoded: string;
   try {
     decoded = decodeURIComponent(segment);
   } catch {
     return null; // "%E0": not an address of ours.
   }
-  const match = /^HTB-(\d{4,7})$/.exec(decoded);
-  return match ? Number(match[1]) : null;
+  const match = /^HT([BQ])-(\d{4,7})$/.exec(decoded);
+  if (!match) return null;
+  return {
+    kind: match[1] === "B" ? "booking" : "quote",
+    number: Number(match[2]),
+  };
 }
 
 /** The longest legacy invoice number staff may type. */

@@ -1,5 +1,6 @@
 "use client";
 
+import { isCredit, isPaymentTerms, PAYMENT_TERMS_LABELS } from "@repo/db";
 import { answerOf, UNANSWERED_MESSAGE } from "@repo/ui/action-answer";
 import { Button } from "@repo/ui/button";
 import { Dialog, DialogActions } from "@repo/ui/dialog";
@@ -19,12 +20,20 @@ import {
   PaymentTermsFields,
 } from "../../agents/_components/AgentFields";
 
-/** An agent a booking may come through. */
-export type Agent = { id: string; name: string };
+/** An agent a booking may come through, and its `PaymentTerms`. */
+export type Agent = { id: string; name: string; paymentTerms: string };
+
+/** "Monthly credit", "Twice a month credit" or "No credit": how an agent pays, beside its name. */
+export function agentTermsLabel(agent: Agent): string {
+  if (!isPaymentTerms(agent.paymentTerms)) return "";
+  return isCredit(agent.paymentTerms)
+    ? `${PAYMENT_TERMS_LABELS[agent.paymentTerms]} credit`
+    : PAYMENT_TERMS_LABELS.none;
+}
 
 /**
- * The agent the booking came through, if any: it is billed to the agent,
- * by its payment terms. One not yet entered is added here, beside the
+ * The agent the booking came through, if any, each with its terms, credit
+ * (monthly or twice a month) or none: it is billed to the agent by them. One not yet entered is added here, beside the
  * list, through the dialog Add agent's page asks the same in, and is
  * chosen at once.
  */
@@ -55,7 +64,10 @@ export function AgentPicker({
           onValueChange={onChange}
           options={[
             { value: "", label: "None: our own customer" },
-            ...agents.map((a) => ({ value: a.id, label: a.name })),
+            ...agents.map((a) => ({
+              value: a.id,
+              label: [a.name, agentTermsLabel(a)].filter(Boolean).join(" · "),
+            })),
           ]}
         />
         <Tooltip content="Add an agent">

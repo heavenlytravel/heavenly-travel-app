@@ -1,6 +1,6 @@
 "use server";
 
-import { parseContact, parseLegacyInvoiceNumber } from "@repo/db";
+import { isIsoDate, parseContact, parseLegacyInvoiceNumber } from "@repo/db";
 import {
   BookingRefusal,
   createBooking,
@@ -19,13 +19,15 @@ import {
   AGENT_FIELD,
   CONTACT_FIELDS,
   LEGACY_INVOICE_FIELD,
+  PAY_LATER_FIELD,
 } from "../_lib/trip-form";
 import { prepareFormItems, savedBookingHref } from "../_lib/trip-server";
 
 /**
- * Creates the booking from the posted form, numbered HTB: confirmed at
- * once with every trip when "Create and confirm" sent it, else received,
- * for confirming later. Every trip is resolved and priced again on the
+ * Creates the booking from the posted form: confirmed at once with every
+ * trip, numbered HTB, when "Create and confirm" sent it, else received,
+ * numbered HTQ, for confirming later. Pay later, ticked, is kept with
+ * the day it is to be paid by. Every trip is resolved and priced again on the
  * server, the customer is linked to an account when the email belongs to
  * one, and an agreed price is stored per trip with its reason. Confirmed,
  * its invoice opens, unless its agent is on credit (the month-end run);
@@ -54,6 +56,13 @@ export async function createManualBookingAction(
   );
   if (!legacy.ok) return { error: legacy.error, field: LEGACY_INVOICE_FIELD };
   const businessId = String(formData.get(AGENT_FIELD) ?? "") || null;
+  const payLater = formData.get(PAY_LATER_FIELD);
+  if (payLater !== null && !isIsoDate(String(payLater))) {
+    return {
+      error: "Choose the day it is to be paid by.",
+      field: PAY_LATER_FIELD,
+    };
+  }
 
   const prepared = await prepareFormItems(formData);
   if (!prepared.ok) return { error: prepared.error };
@@ -68,12 +77,17 @@ export async function createManualBookingAction(
       items: prepared.items,
       businessId,
       legacyInvoiceNumber: legacy.value,
+      payLaterDueOn: payLater === null ? null : String(payLater),
       confirm: formData.get("confirm") === "1",
     });
   } catch (error) {
-    // The agent was made inactive or removed meanwhile.
+    // The agent was made inactive or removed meanwhile, or is on credit
+    // terms with Pay later ticked.
     if (error instanceof BookingRefusal) {
-      return { error: error.message, field: AGENT_FIELD };
+      return {
+        error: error.message,
+        field: error.field === "payLater" ? PAY_LATER_FIELD : AGENT_FIELD,
+      };
     }
     throw error;
   }

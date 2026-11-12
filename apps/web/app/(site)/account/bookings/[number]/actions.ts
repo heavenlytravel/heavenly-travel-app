@@ -1,6 +1,6 @@
 "use server";
 
-import { bookingNumberOfPath, textOf } from "@repo/db";
+import { bookingRefOfPath, textOf, type BookingRef } from "@repo/db";
 import {
   cancelBookingAsCustomer,
   cancelTripAsCustomer,
@@ -29,7 +29,7 @@ const ITEM_ID_MAX_LENGTH = 64;
  */
 async function cancelAs(
   formData: FormData,
-  cancel: (userId: string, number: number) => Promise<BookingChange>,
+  cancel: (userId: string, ref: BookingRef) => Promise<BookingChange>,
 ): Promise<CancelState> {
   const access = await getAccess("user");
   if (access.status !== "ok") {
@@ -37,12 +37,12 @@ async function cancelAs(
   }
 
   const label = String(formData.get("booking") ?? "");
-  const number = bookingNumberOfPath(label);
-  if (number === null) {
+  const ref = bookingRefOfPath(label);
+  if (ref === null) {
     return { error: "This booking link is broken. Open it from My bookings." };
   }
 
-  const result = await cancel(access.user.id, number);
+  const result = await cancel(access.user.id, ref);
   if (!result.ok) return { error: result.error };
   after(() => sendBookingChangeEmail(result));
 
@@ -57,8 +57,8 @@ export async function cancelBookingAction(
   _previous: CancelState,
   formData: FormData,
 ): Promise<CancelState> {
-  return cancelAs(formData, (userId, number) =>
-    cancelBookingAsCustomer({ kind: "customer", userId }, number),
+  return cancelAs(formData, (userId, ref) =>
+    cancelBookingAsCustomer({ kind: "customer", userId }, ref),
   );
 }
 

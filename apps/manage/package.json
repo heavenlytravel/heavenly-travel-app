@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@clerk/nextjs": "7.9.4",
+    "@react-pdf/renderer": "4.9.0",
     "@repo/auth": "workspace:*",
     "@repo/console": "workspace:*",
     "@repo/db": "workspace:*",

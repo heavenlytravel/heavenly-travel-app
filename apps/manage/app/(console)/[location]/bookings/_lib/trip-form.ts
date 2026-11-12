@@ -69,6 +69,8 @@ export const SAME_VEHICLE_FIELD = "sameVehicle";
 
 /** A booking's old invoice number, the old system's (HT1223), a note; empty for none. */
 export const LEGACY_INVOICE_FIELD = "legacyInvoiceNumber";
+/** The day a booking agreed to be paid later is to be paid by ("2026-11-30"); empty for none. */
+export const PAY_LATER_FIELD = "payLaterDueOn";
 /** The agent the booking came through; empty for a customer of ours. */
 export const AGENT_FIELD = "agentId";
 

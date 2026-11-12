@@ -4,7 +4,9 @@ import {
   andList,
   BOOKING_RULES,
   CONTACT_NAME_MAX_LENGTH,
+  isCredit,
   LEGACY_INVOICE_MAX,
+  localDayOf,
   parseContact,
   parseLegacyInvoiceNumber,
   TRIP_CATEGORY_LABELS,
@@ -14,14 +16,18 @@ import {
 import { answerOf } from "@repo/ui/action-answer";
 import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
-import { Field, Input } from "@repo/ui/field";
+import { Checkbox, Field, Input } from "@repo/ui/field";
 import { PlusIcon } from "@repo/ui/icons";
 import { Switch } from "@repo/ui/switch";
 import { useState } from "react";
 import { SCOPE_FIELD } from "@repo/console/fleet-form";
 import { ALL, bookingsHref, type ScopeSlug } from "../../../../_lib/routes";
 import { useActionForm } from "@repo/console/use-action-form";
-import { AgentPicker, type Agent } from "../_components/AgentPicker";
+import {
+  AgentPicker,
+  agentTermsLabel,
+  type Agent,
+} from "../_components/AgentPicker";
 import { BookingSummary } from "../_components/BookingSummary";
 import { BookingTripStep, itemIssue } from "../_components/BookingTripStep";
 import { HiddenFields } from "../_components/HiddenFields";
@@ -38,6 +44,7 @@ import {
   itemsByStart,
   itemVehicle,
   LEGACY_INVOICE_FIELD,
+  PAY_LATER_FIELD,
   newItemDraft,
   placesLine,
   SAME_VEHICLE_FIELD,
@@ -101,6 +108,8 @@ export function NewBookingForm({
   const [contact, setContact] = useState<Contact>(EMPTY_CONTACT);
   const [agentId, setAgentId] = useState("");
   const [legacy, setLegacy] = useState("");
+  // Pay later, agreed when the booking is made: the day it is due; null for none.
+  const [payLaterOn, setPayLaterOn] = useState<string | null>(null);
   const [confirmNow, setConfirmNow] = useState(true);
   // Added from the form and not yet in `agents`, until the refresh brings them.
   const [added, setAdded] = useState<Agent[]>([]);
@@ -109,6 +118,8 @@ export function NewBookingForm({
     ...added.filter((one) => !agents.some((listed) => listed.id === one.id)),
   ].sort((a, b) => a.name.localeCompare(b.name));
   const agent = allAgents.find((a) => a.id === agentId) ?? null;
+  // A credit agent's booking pays later on its terms: ticked, and no date of ours.
+  const onCredit = agent !== null && isCredit(agent.paymentTerms);
   const [confirmDialog, confirm] = useConfirm();
   const [items, setItems] = useState<ItemDraft[]>(() => [newItemDraft()]);
   const [sameVehicle, setSameVehicle] = useState(true);
@@ -290,6 +301,9 @@ export function NewBookingForm({
       <input type="hidden" name={CONTACT_FIELDS.email} value={contact.email} />
       <input type="hidden" name={AGENT_FIELD} value={agentId} />
       <input type="hidden" name={LEGACY_INVOICE_FIELD} value={legacy} />
+      {payLaterOn !== null && !onCredit ? (
+        <input type="hidden" name={PAY_LATER_FIELD} value={payLaterOn} />
+      ) : null}
       {shared ? (
         <input type="hidden" name={SAME_VEHICLE_FIELD} value="on" />
       ) : null}
@@ -314,6 +328,11 @@ export function NewBookingForm({
                     contact.phone,
                     contact.email,
                     legacy.trim() ? `Old invoice ${legacy.trim()}` : null,
+                    onCredit
+                      ? "Pay later, on credit"
+                      : payLaterOn
+                        ? `Pay later, by ${payLaterOn}`
+                        : null,
                   ]
                     .filter(Boolean)
                     .join(" · ")
@@ -347,6 +366,40 @@ export function NewBookingForm({
                 onChange={(e) => setLegacy(e.target.value)}
               />
             </Field>
+            <div className="mt-4 grid gap-3 sm:grid-cols-[auto_minmax(0,14rem)] sm:items-end">
+              <label className="flex items-start gap-2 text-sm text-body sm:pb-2.5">
+                <Checkbox
+                  className="mt-0.5"
+                  checked={onCredit || payLaterOn !== null}
+                  disabled={onCredit}
+                  onChange={(event) =>
+                    setPayLaterOn(
+                      event.currentTarget.checked
+                        ? localDayOf(new Date())
+                        : null,
+                    )
+                  }
+                />
+                <span className="grid gap-0.5">
+                  <span className="font-medium text-ink">Pay later</span>
+                  <span className="text-caption text-muted">
+                    {onCredit
+                      ? `${agent.name} is on ${agentTermsLabel(agent).toLowerCase()}: the booking goes on its invoice for the period, so it is always Pay later.`
+                      : "Agreed that it is paid later, so it reads Pay later, not Pending. The first payment ends it."}
+                  </span>
+                </span>
+              </label>
+              {payLaterOn !== null && !onCredit ? (
+                <Field label="To be paid by">
+                  <Input
+                    type="date"
+                    required
+                    value={payLaterOn}
+                    onChange={(e) => setPayLaterOn(e.target.value)}
+                  />
+                </Field>
+              ) : null}
+            </div>
             <StepFoot
               disabled={customerIssue !== null}
               missing={

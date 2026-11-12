@@ -49,6 +49,8 @@ import {
   type FilterGroup,
 } from "../../../../_components/ListFilters";
 import { HistoryCard } from "../../../../_components/RecordHistory";
+import { PdfLink } from "../../../../_components/PdfLink";
+import { INVOICE_PDF_STATUSES } from "../../../../_pdf/statuses";
 import { getPermissions, requireAdmin } from "../../../../_lib/access";
 import {
   agentHref,
@@ -58,6 +60,7 @@ import {
   revisionHref,
   SORT_PARAM,
   withParams,
+  invoicePdfHref,
 } from "../../../../_lib/routes";
 import { scopeOf } from "../../../../_lib/scope";
 import { RevisionDetails } from "../../bookings/_components/RevisionDetails";
@@ -230,6 +233,9 @@ async function invoiceScreen(id: string, view: PaymentsView) {
         action={
           payable ? (
             <>
+              {INVOICE_PDF_STATUSES.includes(doc.status) ? (
+                <PdfLink href={invoicePdfHref(doc.id)} />
+              ) : null}
               {!credit ? (
                 <>
                   <RecordPaymentControl
@@ -282,6 +288,8 @@ async function invoiceScreen(id: string, view: PaymentsView) {
                 />
               )}
             </>
+          ) : INVOICE_PDF_STATUSES.includes(doc.status) ? (
+            <PdfLink href={invoicePdfHref(doc.id)} />
           ) : null
         }
       />

@@ -46,7 +46,8 @@ export async function addAgentAction(
 
 /** What adding an agent from the booking form answers: the agent, to choose at once, or why not. */
 export type AddAgentAnswer =
-  { id: string; name: string } | { error: string; field?: string };
+  | { id: string; name: string; paymentTerms: string }
+  | { error: string; field?: string };
 
 /** Adds an agent from New booking's Add an agent, to choose at once. */
 export async function addAgentForBookingAction(
@@ -63,7 +64,11 @@ async function addAgentOf(formData: FormData): Promise<AddAgentAnswer> {
   const created = await createBusiness(actorOf(admin), fields.value);
   if (!created.ok) return refusalOf(created);
   revalidateLocation();
-  return { id: created.id, name: fields.value.name };
+  return {
+    id: created.id,
+    name: fields.value.name,
+    paymentTerms: fields.value.paymentTerms,
+  };
 }
 
 /** Saves an agent's profile; its terms are `changeTermsAction`'s. */

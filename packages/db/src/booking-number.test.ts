@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   bookingLabelOf,
-  bookingNumberOfPath,
+  bookingRefOfPath,
   documentLabelOf,
   formatDocumentNumber,
   parseDocumentNumber,
@@ -19,6 +19,14 @@ describe("document numbers", () => {
 
   it("names a booking by its number, and one not numbered yet by its id", () => {
     assert.equal(bookingLabelOf({ id: "ck1", number: 1042 }), "HTB-1042");
+    assert.equal(
+      bookingLabelOf({ id: "ck1", number: 1042, quoteNumber: 12 }),
+      "HTB-1042",
+    );
+    assert.equal(
+      bookingLabelOf({ id: "ck1", number: null, quoteNumber: 12 }),
+      "HTQ-0012",
+    );
     assert.equal(
       bookingLabelOf({ id: "cmabcdef123456", number: null }),
       "Booking 123456",
@@ -54,12 +62,23 @@ describe("document numbers", () => {
   });
 
   it("opens a website booking only by its number as the site writes it", () => {
-    assert.equal(bookingNumberOfPath("HTB-1042"), 1042);
-    assert.equal(bookingNumberOfPath("HTB-10001"), 10001);
-    assert.equal(bookingNumberOfPath("htb-1042"), null);
-    assert.equal(bookingNumberOfPath("HT-7K3QZM"), null);
-    assert.equal(bookingNumberOfPath("1042"), null);
-    assert.equal(bookingNumberOfPath("%E0"), null);
+    assert.deepEqual(bookingRefOfPath("HTB-1042"), {
+      kind: "booking",
+      number: 1042,
+    });
+    assert.deepEqual(bookingRefOfPath("HTB-10001"), {
+      kind: "booking",
+      number: 10001,
+    });
+    assert.deepEqual(bookingRefOfPath("HTQ-0012"), {
+      kind: "quote",
+      number: 12,
+    });
+    assert.equal(bookingRefOfPath("htb-1042"), null);
+    assert.equal(bookingRefOfPath("HTI-0001"), null);
+    assert.equal(bookingRefOfPath("HT-7K3QZM"), null);
+    assert.equal(bookingRefOfPath("1042"), null);
+    assert.equal(bookingRefOfPath("%E0"), null);
   });
 
   it("keeps a legacy invoice number as free text, upper case", () => {

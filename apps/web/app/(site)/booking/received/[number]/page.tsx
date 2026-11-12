@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
-  bookingNumberOfPath,
+  bookingRefOfPath,
   EMAILS_ON,
   formatDocumentNumber,
   isMaskedEmail,
@@ -31,10 +31,10 @@ export default async function ReceivedPage({
   params,
   searchParams,
 }: PageProps<"/booking/received/[number]">) {
-  const number = bookingNumberOfPath((await params).number);
-  if (number === null) notFound();
+  const ref = bookingRefOfPath((await params).number);
+  if (ref === null) notFound();
   // Decoded once: the path parsed already.
-  const reference = formatDocumentNumber("booking", number);
+  const reference = formatDocumentNumber(ref.kind, ref.number);
   const { to } = await searchParams;
   const sentTo = isMaskedEmail(to) ? to : null;
 

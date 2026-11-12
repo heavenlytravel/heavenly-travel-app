@@ -7,7 +7,8 @@ import { useConfirm } from "@repo/ui/alert-dialog";
 import { toast } from "@repo/ui/toast";
 import { Switch } from "@repo/ui/switch";
 import { useState, useTransition } from "react";
-import { setVehicleClassActiveAction } from "./actions";
+import { moveVehicleClassAction, setVehicleClassActiveAction } from "./actions";
+import { MoveButtons } from "../../../../../_components/MoveButtons";
 import { FormError } from "@repo/ui/form-error";
 import { errorOf } from "@repo/console/action-state";
 
@@ -67,5 +68,25 @@ export function VehicleClassActiveSwitch({
       <FormError error={error} size="xs" />
       {dialog}
     </div>
+  );
+}
+
+/** The arrows on a catalogue card that move the class earlier or later among its category's. */
+export function VehicleClassMoveButtons({
+  vehicleClass,
+  first,
+  last,
+}: {
+  vehicleClass: VehicleClass;
+  first: boolean;
+  last: boolean;
+}) {
+  return (
+    <MoveButtons
+      name={vehicleClass.name}
+      first={first}
+      last={last}
+      move={(by) => moveVehicleClassAction(vehicleClass.id, by)}
+    />
   );
 }

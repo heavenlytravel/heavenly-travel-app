@@ -31,6 +31,7 @@ export {
   listPagePublishes,
   listSitePagePublishes,
   listFooterPublishes,
+  listBlogPostPublishes,
   listActivity,
 } from "./activity";
 export type { ActivityEntry, ActivityPage } from "./activity";
@@ -61,9 +62,12 @@ export {
   getVehicleClass,
   createVehicleClass,
   updateVehicleClass,
+  moveVehicleClass,
+  listClassKinds,
 } from "./vehicle-classes";
 export type {
   VehicleClass,
+  ClassWithKinds,
   CatalogueClass,
   ClassOption,
 } from "./vehicle-classes";
@@ -83,6 +87,7 @@ export {
   listDrivers,
   getDriver,
   createDriver,
+  createOwnDriver,
   updateDriver,
   deleteDriver,
 } from "./drivers";
@@ -120,13 +125,14 @@ export type {
   PartAnswer,
   HeldBooking,
 } from "./fulfilment";
-export { getAssignPage } from "./assign-list";
-export type { AssignPart, AssignRow } from "./assign-list";
+export { getAssignPage, listOpenPastDays } from "./assign-list";
+export type { AssignPart, AssignRow, OpenPastDay } from "./assign-list";
 export {
   listDriverJobs,
   getDriverJob,
   answerAsDriver,
   reportTripEvent,
+  undoNoShow,
   listTripEvents,
 } from "./driver-jobs";
 export type {
@@ -263,7 +269,6 @@ export {
   getPagePublish,
   getPublicLocation,
   getLocationPreview,
-  getLocationPageBody,
   listTopChoiceCards,
   listPublicLocationSlugs,
   listServiceLocationCards,
@@ -301,6 +306,30 @@ export type {
   PublishedSitePage,
 } from "./site-pages";
 export {
+  changeBlogHighlight,
+  createBlogPost,
+  deleteBlogPost,
+  getBlogPost,
+  getBlogPostPublish,
+  getBlogPostView,
+  listBlogPostSummaries,
+  listPublishedBlogPosts,
+  publishBlogPost,
+  renameBlogPost,
+  saveBlogPostDraft,
+  setBlogPostLocations,
+  unpublishBlogPost,
+} from "./blog-posts";
+export type {
+  BlogPostDetails,
+  BlogPostFields,
+  BlogPostLocation,
+  BlogPostPublish,
+  BlogPostSummary,
+  BlogPostView,
+} from "./blog-posts";
+export {
+  getCompanyDetails,
   getConnectFooter,
   getDefaultFooter,
   getFooter,
@@ -311,6 +340,7 @@ export {
   publishFooter,
 } from "./site-footer";
 export type {
+  CompanyDetails,
   FooterDetails,
   FooterPublish,
   FooterSummary,
@@ -481,6 +511,7 @@ export * from "./zone-routes";
 export * from "./location-page-input";
 export * from "./page-content";
 export * from "./site-page-input";
+export * from "./blog-input";
 export * from "./connect-page";
 export * from "./footer-content";
 export * from "./location-view";

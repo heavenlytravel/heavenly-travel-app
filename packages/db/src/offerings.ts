@@ -14,13 +14,14 @@ import {
   checkOfferingFields,
   type OfferingFields,
 } from "./offering-input";
-import { slugify } from "./slug";
+import { movedRow } from "./list-move";
 import {
   checkVehicleClassFields,
   type VehicleClassFields,
 } from "./vehicle-class-input";
 import { shownModel, type ShownModel } from "./models-shown";
 import { modelsShownAt } from "./vehicle-models";
+import { createClassIn } from "./vehicle-classes";
 
 export type { LocationVehicleClass };
 
@@ -43,10 +44,17 @@ const withClass = {
 /** An offering with its catalogue class. */
 export type Offering = Prisma.LocationVehicleClassGetPayload<typeof withClass>;
 
-/** The offering's class with the models of the location's vehicles in service. */
+/** The offering's class with its type and the models of the location's vehicles in service. */
 const withModelsAt = (location: Prisma.LocationWhereInput) =>
   ({
-    include: { vehicleClass: { include: { models: modelsShownAt(location) } } },
+    include: {
+      vehicleClass: {
+        include: {
+          models: modelsShownAt(location),
+          type: { select: { name: true } },
+        },
+      },
+    },
   }) satisfies Prisma.LocationVehicleClassDefaultArgs;
 
 type OfferingWithModelRows = Prisma.LocationVehicleClassGetPayload<
@@ -55,7 +63,11 @@ type OfferingWithModelRows = Prisma.LocationVehicleClassGetPayload<
 
 /** An offering on sale, its class with the models of the location's vehicles in service. */
 export type OfferingOnSale = Omit<OfferingWithModelRows, "vehicleClass"> & {
-  vehicleClass: VehicleClass & { models: ShownModel[] };
+  vehicleClass: VehicleClass & {
+    models: ShownModel[];
+    /** Its type, Sedan or MPV, which the website filters by; null on a class from before types. */
+    type: { name: string } | null;
+  };
 };
 
 /** Offerings as they are read, their models named, in the location's order. */
@@ -236,25 +248,9 @@ export async function createOffering(
       }
       vehicleClass = found;
     } else {
-      const slug = slugify(choice.newClass.name);
-      if (!slug) {
-        return refuse("Enter a name with a letter or digit.", "name");
-      }
-      const taken = await tx.vehicleClass.findUnique({ where: { slug } });
-      if (taken) {
-        return refuse(
-          `${taken.name} is in the catalogue already. Choose it from the catalogue instead.`,
-          "name",
-        );
-      }
-      vehicleClass = await tx.vehicleClass.create({
-        data: { slug, ...choice.newClass },
-      });
-      await logActivity(tx, actor, {
-        action: "vehicle-class.created",
-        entityId: vehicleClass.id,
-        after: { slug, ...choice.newClass },
-      });
+      const made = await createClassIn(tx, actor, choice.newClass);
+      if (!made.ok) return made;
+      vehicleClass = made.vehicleClass;
     }
 
     const already = await tx.locationVehicleClass.findUnique({
@@ -376,12 +372,12 @@ export async function moveOffering(
       })
     ).sort(byClassOrder);
     const before = rows.map((row) => row.vehicleClass.name);
-    const index = rows.findIndex((row) => row.id === id);
-    const other = index + by;
-    if (other < 0 || other >= rows.length) return { ok: true };
-    const after = [...rows];
-    after.splice(index, 1);
-    after.splice(other, 0, offering);
+    const after = movedRow(
+      rows,
+      rows.findIndex((row) => row.id === id),
+      by,
+    );
+    if (!after) return { ok: true };
     for (const [place, row] of after.entries()) {
       if (row.sortOrder === place + 1) continue;
       await tx.locationVehicleClass.update({

@@ -1,15 +1,19 @@
 "use client";
 
 import {
+  CLASS_KIND_LIMIT,
   TRIP_CATEGORIES,
   TRIP_CATEGORY_LABELS,
   VEHICLE_CLASS_FIELD_LABELS,
+  classNameOf,
+  classSlugOf,
   isTripCategory,
   type Photo,
   type TripCategory,
   type VehicleClassField,
 } from "@repo/db";
-import type { VehicleClass } from "@repo/db/server";
+import type { ClassWithKinds } from "@repo/db/server";
+import { Combobox } from "@repo/ui/combobox";
 import { Checkbox, Field, Input } from "@repo/ui/field";
 import { NumberField } from "@repo/ui/number-field";
 import { Select } from "@repo/ui/select";
@@ -24,9 +28,9 @@ import { VEHICLE_CLASS_IMAGE_UPLOAD_PATH } from "../../../../../_lib/routes";
 export const DEFAULT_CATEGORY: TripCategory = "car-with-driver";
 
 const TIPS: Partial<Record<VehicleClassField, string>> = {
-  name: "Renaming is safe: bookings keep the name they were made with.",
+  type: "What the vehicle is: Sedan, MPV, Van. The website filters by it.",
+  tier: "Its level: Standard, Deluxe, VIP. Leave it empty for a class that is its type alone.",
   description: "One line, as the options page shows it.",
-  sortOrder: "The position within the category, lowest first.",
   minPassengers: 'Information only, shown as "from".',
   maxPassengers: "A larger group is refused this class.",
   imageUrls:
@@ -69,11 +73,14 @@ function WholeNumberInput({
  */
 export function VehicleClassFieldset({
   vehicleClass,
+  kinds,
   showActive = true,
   onCategoryChange,
 }: {
   /** Absent for a class that does not exist yet. */
-  vehicleClass?: VehicleClass;
+  vehicleClass?: ClassWithKinds;
+  /** The types and tiers there are, suggested as they are typed. */
+  kinds: { types: string[]; tiers: string[] };
   /** The catalogue's switch; a location's form has its own "On sale" instead. */
   showActive?: boolean;
   /** Told when the category changes: a location's form starts the rules from it. */
@@ -84,6 +91,11 @@ export function VehicleClassFieldset({
       ? vehicleClass.category
       : DEFAULT_CATEGORY,
   );
+  const [type, setType] = useState(vehicleClass?.type?.name ?? "");
+  const [tier, setTier] = useState(vehicleClass?.tier?.name ?? "");
+  // A class from before types keeps its typed name until it is given one.
+  const name = type ? classNameOf({ type, tier }) : (vehicleClass?.name ?? "");
+  const slug = type ? classSlugOf({ type, tier }) : (vehicleClass?.slug ?? "");
   // Kept as the list edits them; a class's pictures have no caption.
   const [pictures, setPictures] = useState<Photo[]>(
     vehicleClass?.imageUrls.map((url) => ({ url, caption: "" })) ?? [],
@@ -101,26 +113,49 @@ export function VehicleClassFieldset({
         <CardTitle>Details</CardTitle>
         <div className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field {...classField("name")}>
-              <Input
-                name="name"
+            <Field {...classField("type")}>
+              <Combobox
+                name="type"
                 required
-                autoComplete="off"
-                defaultValue={vehicleClass?.name}
+                maxLength={CLASS_KIND_LIMIT}
+                placeholder="Choose or add the type"
+                searchPlaceholder="Find a type, or type a new one"
+                options={kinds.types}
+                value={type}
+                onValueChange={setType}
               />
             </Field>
-            {vehicleClass ? (
-              <Field label="Slug" hint="Set when the class was created.">
-                <Input value={vehicleClass.slug} readOnly disabled />
-              </Field>
-            ) : (
-              <Field
-                label="Slug"
-                hint="Derived from the name, never changed after."
-              >
-                <Input value="" placeholder="from the name" readOnly disabled />
-              </Field>
-            )}
+            <Field {...classField("tier")}>
+              <Combobox
+                name="tier"
+                maxLength={CLASS_KIND_LIMIT}
+                none="No tier"
+                placeholder="Choose or add the tier"
+                searchPlaceholder="Find a tier, or type a new one"
+                options={kinds.tiers}
+                value={tier}
+                onValueChange={setTier}
+              />
+            </Field>
+            <Field label="Name" hint="Made from the tier and the type.">
+              <Input
+                value={name}
+                placeholder="from the tier and the type"
+                readOnly
+                disabled
+              />
+            </Field>
+            <Field
+              label="Slug"
+              hint="Made from the name: one class per tier and type."
+            >
+              <Input
+                value={slug}
+                placeholder="from the name"
+                readOnly
+                disabled
+              />
+            </Field>
           </div>
           <Field {...classField("description")}>
             <Input
@@ -140,12 +175,6 @@ export function VehicleClassFieldset({
                   value: option,
                   label: TRIP_CATEGORY_LABELS[option],
                 }))}
-              />
-            </Field>
-            <Field {...classField("sortOrder")}>
-              <WholeNumberInput
-                field="sortOrder"
-                defaultValue={vehicleClass?.sortOrder ?? 0}
               />
             </Field>
           </div>
@@ -179,7 +208,7 @@ export function VehicleClassFieldset({
         />
         <PhotoList
           of="class"
-          name={vehicleClass?.name ?? ""}
+          name={name}
           photos={pictures}
           setPhotos={setPictures}
           uploadPath={VEHICLE_CLASS_IMAGE_UPLOAD_PATH}

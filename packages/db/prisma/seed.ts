@@ -4,7 +4,7 @@
 // each with its models, and keeps the State and District rows in step with
 // data/malaysia-districts.json. A vehicle class that already exists (by
 // slug) is left alone, models and all: once seeded, ops owns it and edits it
-// in the console; db:set-class-list brings an older database to the list. A
+// in the console. A
 // district that already exists has only its name and state refreshed from
 // the data file. Districts place an address; coverage is a location's
 // zones, drawn in the console, as
@@ -14,11 +14,16 @@
 // and docs/261019-vehicles-and-drivers.md.
 import { db } from "../src/client";
 import { DISTRICT_DATA } from "../src/district-index";
+import { classNameOf, classSlugOf } from "../src/vehicle-class-input";
 import { CLASS_LIST } from "./class-list";
 
 let classesCreated = 0;
 let classesKept = 0;
-for (const { slug, models, ...fields } of CLASS_LIST) {
+const places = new Map<string, number>();
+for (const { type, tier, models, ...fields } of CLASS_LIST) {
+  const sortOrder = (places.get(fields.category) ?? 0) + 1;
+  places.set(fields.category, sortOrder);
+  const slug = classSlugOf({ type, tier });
   const existing = await db.vehicleClass.findUnique({ where: { slug } });
   if (existing) {
     classesKept += 1;
@@ -27,7 +32,22 @@ for (const { slug, models, ...fields } of CLASS_LIST) {
   await db.vehicleClass.create({
     data: {
       slug,
+      name: classNameOf({ type, tier }),
+      sortOrder,
       ...fields,
+      type: {
+        connectOrCreate: { where: { name: type }, create: { name: type } },
+      },
+      ...(tier
+        ? {
+            tier: {
+              connectOrCreate: {
+                where: { name: tier },
+                create: { name: tier },
+              },
+            },
+          }
+        : {}),
       models: {
         create: models,
       },

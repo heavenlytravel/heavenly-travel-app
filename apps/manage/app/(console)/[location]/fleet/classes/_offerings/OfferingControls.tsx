@@ -6,13 +6,11 @@ import { answerOf } from "@repo/ui/action-answer";
 import { useConfirm } from "@repo/ui/alert-dialog";
 import { toast } from "@repo/ui/toast";
 import { Switch } from "@repo/ui/switch";
-import { Button } from "@repo/ui/button";
-import { ArrowLeftIcon, ArrowRightIcon } from "@repo/ui/icons";
-import { Tooltip } from "@repo/ui/tooltip";
 import { useState, useTransition } from "react";
 import { moveOfferingAction, setOfferingActiveAction } from "./actions";
 import { FormError } from "@repo/ui/form-error";
 import { errorOf } from "@repo/console/action-state";
+import { MoveButtons } from "../../../../../_components/MoveButtons";
 
 /**
  * An offering's switch. Taking the last class of a category off sale asks
@@ -77,8 +75,7 @@ export function OfferingActiveSwitch({
 
 /**
  * The arrows on an offering's card that move it earlier or later among
- * its category's here, the order the customer meets the classes in, as
- * Top choices are moved. The first has no way earlier, the last none later.
+ * its category's here, the order the customer meets the classes in.
  */
 export function OfferingMoveButtons({
   offering,
@@ -89,51 +86,12 @@ export function OfferingMoveButtons({
   first: boolean;
   last: boolean;
 }) {
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const { name } = offering.vehicleClass;
-
-  function move(by: -1 | 1) {
-    startTransition(async () => {
-      const refused = errorOf(
-        await answerOf(
-          moveOfferingAction(offering.locationId, offering.id, by),
-        ),
-      );
-      setError(refused);
-      if (!refused) {
-        toast.success(`Moved ${name} ${by < 0 ? "earlier" : "later"}.`);
-      }
-    });
-  }
-
   return (
-    <div className="flex items-center gap-1">
-      <Tooltip content="Move earlier">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          disabled={first}
-          pending={pending}
-          aria-label={`Move ${name} earlier`}
-          onClick={() => move(-1)}
-        >
-          <ArrowLeftIcon />
-        </Button>
-      </Tooltip>
-      <Tooltip content="Move later">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          disabled={last}
-          pending={pending}
-          aria-label={`Move ${name} later`}
-          onClick={() => move(1)}
-        >
-          <ArrowRightIcon />
-        </Button>
-      </Tooltip>
-      <FormError error={error} size="xs" />
-    </div>
+    <MoveButtons
+      name={offering.vehicleClass.name}
+      first={first}
+      last={last}
+      move={(by) => moveOfferingAction(offering.locationId, offering.id, by)}
+    />
   );
 }

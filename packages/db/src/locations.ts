@@ -21,7 +21,6 @@ import {
   type LocationFields,
   type LocationState,
   type OperationStanding,
-  type TopChoiceChange,
 } from "./location-input";
 import {
   LANDING_PAGE,
@@ -50,6 +49,7 @@ import {
   type PageImage,
 } from "./page-content";
 import { isPlace, type Place } from "./place";
+import { pickedAfter, type PickChange } from "./list-move";
 import { routesIntoLocation } from "./zones";
 import { checkSafetyBuffer } from "./fulfilment-rules";
 
@@ -837,7 +837,7 @@ export async function moveLocationState(
 export async function changeTopChoice(
   actor: Actor,
   id: string,
-  change: TopChoiceChange,
+  change: PickChange,
 ): Promise<Change> {
   return db.$transaction((tx) => changeTopChoiceIn(tx, actor, id, change));
 }
@@ -847,44 +847,33 @@ async function changeTopChoiceIn(
   tx: Prisma.TransactionClient,
   actor: Actor,
   id: string,
-  change: TopChoiceChange,
+  change: PickChange,
 ): Promise<Change> {
   const location = await tx.location.findUnique({ where: { id } });
   if (!location) return NOT_FOUND;
   const current = await tx.location.findMany(topChoices);
-  const ids = current.map((choice) => choice.id);
-  const index = ids.indexOf(id);
-
-  if (change === "add") {
-    if (index >= 0) return { ok: true };
-    if (locationStateOf(location.state) !== "live") {
-      return {
-        ok: false,
-        error: "Only a live location can be made a top choice.",
-      };
-    }
-    if (ids.length >= TOP_CHOICE_CAP) {
-      return {
-        ok: false,
-        error: `The home page shows at most ${TOP_CHOICE_CAP} top choices. Remove one first.`,
-      };
-    }
-    ids.push(id);
-  } else if (index < 0) {
-    // Removing what is not there is done; moving it is a stale screen.
-    return change === "remove"
-      ? { ok: true }
-      : refuse("This location is no longer a top choice. Reload to see them.");
-  } else if (change === "remove") {
-    ids.splice(index, 1);
-  } else {
-    const other = index + (change === "up" ? -1 : 1);
-    if (other < 0 || other >= ids.length) return { ok: true };
-    ids.splice(index, 1);
-    ids.splice(other, 0, id);
+  const picked = current.map((choice) => choice.id);
+  const isChoice = picked.includes(id);
+  if (
+    change === "add" &&
+    !isChoice &&
+    locationStateOf(location.state) !== "live"
+  ) {
+    return refuse("Only a live location can be made a top choice.");
+  }
+  const ids = pickedAfter(picked, id, change, TOP_CHOICE_CAP);
+  if (ids === "full") {
+    return refuse(
+      `The home page shows at most ${TOP_CHOICE_CAP} top choices. Remove one first.`,
+    );
+  }
+  if (ids === "gone") {
+    return refuse(
+      "This location is no longer a top choice. Reload to see them.",
+    );
   }
 
-  for (const row of index < 0 ? [...current, location] : current) {
+  for (const row of isChoice ? current : [...current, location]) {
     const place = ids.indexOf(row.id);
     const changed = changedFields(row, {
       topChoiceOrder: place < 0 ? null : place + 1,

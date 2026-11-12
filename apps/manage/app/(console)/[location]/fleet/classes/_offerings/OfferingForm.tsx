@@ -43,7 +43,7 @@ import { FORM_WIDTH } from "@repo/console/PageColumn";
 
 const TIPS: Partial<Record<OfferingField, string>> = {
   perKmSen:
-    "A one-way trip costs its cell on the rate grid. An address outside every zone adds its road to the nearest zone's edge at this rate, when the trip runs past the edge.",
+    "A transfer costs its cell on the rate grid. An address outside every zone adds its road to the nearest zone's edge at this rate, when the trip runs past the edge.",
   minLeadHours: "Hours before pickup a booking must be made.",
   cancellationCutoffHours:
     "Hours before pickup a customer may still cancel. A booking keeps the cutoff it was made with.",
@@ -147,6 +147,7 @@ export function OfferingForm({
   locationSlug,
   offering,
   candidates = [],
+  kinds = { types: [], tiers: [] },
   from = "classes",
 }: {
   locationId: string;
@@ -158,6 +159,8 @@ export function OfferingForm({
   offering?: Offering;
   /** The catalogue classes the location does not offer yet, for a new offering. */
   candidates?: VehicleClass[];
+  /** The types and tiers there are, for a new class. */
+  kinds?: { types: string[]; tiers: string[] };
 }) {
   const isNew = !offering;
   const { pending, error, formProps, leaveDialog } = useActionForm(
@@ -262,6 +265,7 @@ export function OfferingForm({
             </Card>
             {source === SOURCES.new ? (
               <VehicleClassFieldset
+                kinds={kinds}
                 showActive={false}
                 onCategoryChange={(next) => {
                   follow(next);

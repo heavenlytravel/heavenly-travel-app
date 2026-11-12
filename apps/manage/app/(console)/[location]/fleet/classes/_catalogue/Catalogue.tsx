@@ -19,7 +19,10 @@ import { CardImage } from "../../../../../_components/CardImage";
 import { classesHref, classHref, ratesHref } from "../../../../../_lib/routes";
 import { ClassCategoriesSkeleton, ClassCategory } from "./ClassCategory";
 import { seatsText } from "./class-text";
-import { VehicleClassActiveSwitch } from "./VehicleClassControls";
+import {
+  VehicleClassActiveSwitch,
+  VehicleClassMoveButtons,
+} from "./VehicleClassControls";
 
 /**
  * The class catalogue, the classes under `~`: what each class is, a card
@@ -91,13 +94,22 @@ function CatalogueClasses({
                       : null
                   }
                 >
-                  {ofCategory.map((vehicleClass) => (
+                  {ofCategory.map((vehicleClass, index) => (
                     <ClassCard
                       key={vehicleClass.id}
                       vehicleClass={vehicleClass}
                       manages={manages}
                       showsAdded={order !== undefined}
                       lastActive={vehicleClass.isActive && active === 1}
+                      // The arrows move the catalogue's order, not shown while sorted by when added.
+                      place={
+                        order
+                          ? null
+                          : {
+                              first: index === 0,
+                              last: index === ofCategory.length - 1,
+                            }
+                      }
                     />
                   ))}
                 </ClassCategory>
@@ -122,8 +134,11 @@ function ClassCard({
   manages,
   showsAdded,
   lastActive,
+  place,
 }: {
   vehicleClass: CatalogueClass;
+  /** Where it stands in its category, for the arrows; null while the list is sorted otherwise. */
+  place: { first: boolean; last: boolean } | null;
   manages: boolean;
   /** While the catalogue is by when each was added. */
   showsAdded: boolean;
@@ -219,6 +234,13 @@ function ClassCard({
             <Button asChild variant="secondary" size="sm" className="ml-auto">
               <Link href={href}>Edit</Link>
             </Button>
+            {place ? (
+              <VehicleClassMoveButtons
+                vehicleClass={vehicleClass}
+                first={place.first}
+                last={place.last}
+              />
+            ) : null}
           </>
         ) : (
           <ServiceBadge active={vehicleClass.isActive} on="Active" off="Off" />

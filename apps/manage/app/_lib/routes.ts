@@ -1,5 +1,6 @@
 import {
   ALL_LOCATIONS_SEGMENT,
+  BLOG_EDITOR_PATH,
   CONNECT_PAGE,
   CONNECT_PAGE_EDITOR_PATH,
   SITE_PAGES_PATH,
@@ -176,6 +177,11 @@ export function bookingsHref(
 /** One booking, by id: the customer site uses its number; ops uses the id. */
 export function bookingHref(scope: ScopeSlug, id: string) {
   return consolePath(scope, "bookings", id);
+}
+
+/** A booking's PDF, once it is confirmed (app/_pdf). */
+export function bookingPdfHref(scope: ScopeSlug, id: string) {
+  return consolePath(scope, "bookings", id, "pdf");
 }
 
 /** Where staff enter a booking that arrived by phone, WhatsApp or email; under a slug, that location already chosen. */
@@ -416,6 +422,11 @@ export function invoiceHref(id: string) {
   return consolePath(null, "invoices", id);
 }
 
+/** An invoice's or a credit note's PDF, once it is issued (app/_pdf). */
+export function invoicePdfHref(id: string) {
+  return consolePath(null, "invoices", id, "pdf");
+}
+
 /** The parameter of a vehicle's, a driver's or a guide's add page naming the vendor it starts with. */
 export const VENDOR_PARAM = "vendor";
 
@@ -614,6 +625,20 @@ export function sitePageHref(page: string) {
     ? CONNECT_PAGE_EDITOR_PATH
     : `${SITE_PAGES_PATH}/${page}`;
 }
+
+/** The blog's posts, with the highlighted ones, narrowed by status and a search. Console-wide. */
+export function blogHref(filter: Omit<PagesFilter, "section"> = {}) {
+  return listHref(BLOG_EDITOR_PATH, {
+    status: filter.status,
+    [SEARCH_PARAM]: filter.q,
+  });
+}
+
+/** A blog post in its editor, by its id. */
+export { blogPostEditorPath as blogPostHref } from "@repo/db";
+
+/** What one publish of a blog post put on it, by the log entry's id. */
+export { blogPostPublishPath as blogPostPublishHref } from "@repo/db";
 
 /** What one publish of a site page put on it, by the log entry's id. */
 export function sitePagePublishHref(entryId: string) {

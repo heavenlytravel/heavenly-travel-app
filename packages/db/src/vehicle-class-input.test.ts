@@ -2,15 +2,17 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   checkVehicleClassFields,
+  classNameOf,
+  classSlugOf,
   parseVehicleClassFields,
   seatsLabel,
 } from "./vehicle-class-input";
 
 const FORM: Record<string, string> = {
-  name: "Executive sedan",
+  type: "Sedan",
+  tier: " Executive ",
   description: "Up to 3 passengers and 2 large bags.",
   category: "car-with-driver",
-  sortOrder: "1",
   minPassengers: "1",
   maxPassengers: "3",
   luggage: "2 large bags",
@@ -24,16 +26,30 @@ function errorOf(values: Record<string, string>) {
   return result.ok ? null : result.error;
 }
 
+describe("classNameOf and classSlugOf", () => {
+  it("puts the tier first, and the type alone without one", () => {
+    assert.equal(
+      classNameOf({ type: "Sedan", tier: "Deluxe" }),
+      "Deluxe - Sedan",
+    );
+    assert.equal(classNameOf({ type: " Truck ", tier: "" }), "Truck");
+    assert.equal(
+      classSlugOf({ type: "Coach", tier: "44 Seater  Standard" }),
+      "44-seater-standard-coach",
+    );
+  });
+});
+
 describe("parseVehicleClassFields", () => {
   it("reads the form", () => {
     const result = parseVehicleClassFields(FORM);
     assert.equal(result.ok, true);
     if (!result.ok) return;
     assert.deepEqual(result.value, {
-      name: "Executive sedan",
+      type: "Sedan",
+      tier: "Executive",
       description: "Up to 3 passengers and 2 large bags.",
       category: "car-with-driver",
-      sortOrder: 1,
       minPassengers: 1,
       maxPassengers: 3,
       luggage: "2 large bags",
@@ -50,7 +66,10 @@ describe("parseVehicleClassFields", () => {
   });
 
   it("needs the text fields and a category", () => {
-    assert.match(errorOf({ name: " " }) ?? "", /name/);
+    assert.match(errorOf({ type: " " }) ?? "", /type/);
+    assert.equal(errorOf({ tier: "" }), null);
+    assert.match(errorOf({ type: "--" }) ?? "", /letter or digit/);
+    assert.match(errorOf({ tier: "x".repeat(41) }) ?? "", /at most 40/);
     assert.match(errorOf({ description: "" }) ?? "", /description/);
     assert.match(errorOf({ luggage: "" }) ?? "", /luggage/);
     assert.match(errorOf({ category: "boat" }) ?? "", /category/);

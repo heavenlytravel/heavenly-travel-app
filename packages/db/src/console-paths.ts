@@ -6,6 +6,8 @@
  * docs/261029-manage-signature-overhaul.md. Browser-safe.
  */
 
+import { VIEW_AS_PATH } from "./view-as";
+
 /** The first segment of a console address that means every location. */
 export const ALL_LOCATIONS_SEGMENT = "~";
 
@@ -17,4 +19,9 @@ export function consoleBookingPath(bookingId: string) {
 /** One vendor in the console, under every location. */
 export function consoleVendorPath(vendorId: string) {
   return `/${ALL_LOCATIONS_SEGMENT}/fleet/vendors/${vendorId}`;
+}
+
+/** Where the console opens a view of Connect as an account, on Connect's host. */
+export function connectViewAsPath(userId: string) {
+  return `${VIEW_AS_PATH}/${encodeURIComponent(userId)}`;
 }

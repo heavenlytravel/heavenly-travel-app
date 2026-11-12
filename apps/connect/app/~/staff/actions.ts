@@ -16,7 +16,7 @@ import { revalidatePath } from "next/cache";
 import {
   actorOf,
   getMemberAccess,
-  NOT_A_MEMBER,
+  notAMember,
   type MemberAccess,
 } from "../../_lib/access";
 
@@ -35,7 +35,7 @@ async function ownerOf(): Promise<
   { refused: ActionState } | { member: MemberAccess }
 > {
   const member = await getMemberAccess();
-  if (!member) return { refused: NOT_A_MEMBER };
+  if (!member) return { refused: await notAMember() };
   if (member.role !== "owner") return { refused: NOT_THE_OWNER };
   return { member };
 }

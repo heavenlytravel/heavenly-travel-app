@@ -1,4 +1,4 @@
-import { CONTACT } from "@repo/db";
+import { CONTACT, mayViewAs, VIEW_AS_PATH } from "@repo/db";
 import {
   Ban,
   Mail,
@@ -26,6 +26,14 @@ type Shut = Exclude<SignedIn, { status: "ok" }>;
  */
 export function AccessScreen({ access }: { access: Shut }) {
   if (access.status === "pending") redirect(STATUS_PATH);
+  // A SUPER with no Connect account of their own views as others instead.
+  if (
+    access.status === "register" &&
+    !access.viewAs &&
+    mayViewAs(access.user)
+  ) {
+    redirect(VIEW_AS_PATH);
+  }
   const screen = screenOf(
     access.status,
     access.status === "register" ? null : access.vendor.name,

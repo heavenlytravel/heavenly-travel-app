@@ -246,6 +246,10 @@ const ACTIONS = {
    * made for (a typo): its email in `before`, which names it once gone.
    */
   "user.deleted": { entityType: "user", customerVisible: false },
+  /** SUPER started viewing Connect as this account, read only. See docs/261112-connect-view-as.md. */
+  "connect.view-as.started": { entityType: "user", customerVisible: false },
+  /** SUPER stopped viewing Connect as this account. */
+  "connect.view-as.ended": { entityType: "user", customerVisible: false },
   "admin.promoted": { entityType: "admin", customerVisible: false },
   "admin.updated": { entityType: "admin", customerVisible: false },
   "admin.revoked": { entityType: "admin", customerVisible: false },
@@ -1102,6 +1106,10 @@ export function describeActivity(entry: DescribableActivity): string {
     case "booking.contact.viewed": {
       const driver = field(entry.after, "driverName");
       const vendor = field(entry.after, "vendorName");
+      const viewAs = field(entry.after, "viewAs");
+      if (typeof viewAs === "string") {
+        return `Saw the customer's details of ${itemName(entry.after)} while viewing Connect as ${viewAs}`;
+      }
       const who =
         typeof driver === "string"
           ? driver
@@ -1159,6 +1167,10 @@ export function describeActivity(entry: DescribableActivity): string {
       return "Set a new password and signed them out everywhere";
     case "user.deleted":
       return "Deleted the account, never used";
+    case "connect.view-as.started":
+      return "Started viewing Connect as them, read only";
+    case "connect.view-as.ended":
+      return "Stopped viewing Connect as them";
     case "admin.promoted":
       return `Promoted to ${adminState(entry.after)}`;
     case "admin.updated":

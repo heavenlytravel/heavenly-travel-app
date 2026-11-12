@@ -31,7 +31,7 @@ import {
   stateOf,
 } from "@repo/console/action-state";
 import { revalidatePath } from "next/cache";
-import { actorOf, getMemberAccess, NOT_A_MEMBER } from "./_lib/access";
+import { actorOf, getMemberAccess, notAMember } from "./_lib/access";
 
 /**
  * A vendor's own vehicles, drivers and tour guides, saved from Connect on the forms the
@@ -54,7 +54,7 @@ export async function saveVehicleAction(
   formData: FormData,
 ): Promise<ActionState> {
   const member = await getMemberAccess();
-  if (!member) return NOT_A_MEMBER;
+  if (!member) return notAMember();
   formData.set("vendorId", member.vendor.id);
   const parsed = parseVehicleFields(Object.fromEntries(formData));
   if (!parsed.ok) return refusalOf(parsed);
@@ -86,7 +86,7 @@ export async function saveDriverAction(
   formData: FormData,
 ): Promise<ActionState> {
   const member = await getMemberAccess();
-  if (!member) return NOT_A_MEMBER;
+  if (!member) return notAMember();
   formData.set("vendorId", member.vendor.id);
   const parsed = parseDriverFields(
     Object.fromEntries(formData),
@@ -157,7 +157,7 @@ export async function deleteDriverAction(
   typed: string | null,
 ): Promise<ActionState> {
   const member = await getMemberAccess();
-  if (!member) return NOT_A_MEMBER;
+  if (!member) return notAMember();
   const confirmation = deleteConfirmationOf(seen, typed);
   if (typeof id !== "string" || !id || !confirmation) return STALE;
   const driver = await getDriver(id);
@@ -179,7 +179,7 @@ export async function saveGuideAction(
   formData: FormData,
 ): Promise<ActionState> {
   const member = await getMemberAccess();
-  if (!member) return NOT_A_MEMBER;
+  if (!member) return notAMember();
   formData.set("vendorId", member.vendor.id);
   const id = textOf(formData.get("id"));
   const existing = id ? await getGuide(id) : null;
@@ -209,7 +209,7 @@ export async function deleteGuideAction(
   typed: string | null,
 ): Promise<ActionState> {
   const member = await getMemberAccess();
-  if (!member) return NOT_A_MEMBER;
+  if (!member) return notAMember();
   const confirmation = deleteConfirmationOf(seen, typed);
   if (typeof id !== "string" || !id || !confirmation) return STALE;
   const guide = await getGuide(id);

@@ -3,7 +3,9 @@ import {
   getConnectAccess,
   type ConnectAccess,
   type ConnectActor,
+  type JobViewer,
 } from "@repo/db/server";
+import type { ActionState } from "@repo/console/action-state";
 import { redirect } from "next/navigation";
 
 /** Connect's access, let in or not, for a signed-in visitor. */
@@ -15,7 +17,8 @@ export type LetIn = Extract<ConnectAccess, { status: "ok" }>;
  * First line of every Connect page: the visitor's access, signed-out ones
  * sent to /sign-in. The page renders each other case itself: the screen
  * saying why, or Connect. See docs/261028-fulfilment-vendors-and-connect.md,
- * "Signing up".
+ * "Signing up". While a SUPER views as someone, it is that account's, with
+ * `viewAs` set: see docs/261112-connect-view-as.md.
  */
 export async function requireSignedIn(): Promise<SignedIn> {
   const access = await getConnectAccess();
@@ -23,17 +26,43 @@ export async function requireSignedIn(): Promise<SignedIn> {
   return access;
 }
 
+/*
+ * The writers' gates. Every action and route that writes asks one of
+ * `getDriverAccess`, `getMemberAccess` or `getRegistrantAccess`, and each
+ * answers null while a SUPER views as someone, so nothing is written for
+ * them. view-as-gate.test.ts checks every action file asks one.
+ */
+
 /** The driver let in, or null: for server actions, which must not redirect. */
 export async function getDriverAccess() {
   const access = await getConnectAccess();
-  return access.status === "ok" && access.driver
+  return access.status === "ok" && access.driver && !access.viewAs
     ? { user: access.user, driver: access.driver }
     : null;
+}
+
+/** The signed-in visitor registering a vendor, or null: signed out, or viewing as someone. */
+export async function getRegistrantAccess() {
+  const access = await getConnectAccess();
+  return access.status === "signed-out" || access.viewAs ? null : access;
 }
 
 /** The member or driver as the activity log records them. */
 export function actorOf(user: { id: string }): ConnectActor {
   return { kind: "connect", userId: user.id };
+}
+
+/**
+ * Who opens a job, for the log of a look at the customer's details: the
+ * member or driver, or the SUPER viewing as them.
+ */
+export function viewerOf(access: LetIn): JobViewer {
+  return access.viewAs
+    ? {
+        actor: { kind: "admin", userId: access.viewAs.adminId },
+        viewAs: access.viewAs.label,
+      }
+    : { actor: actorOf(access.user), viewAs: null };
 }
 
 /** An active vendor's member, as Connect's vendor screens and actions read them. */
@@ -61,13 +90,42 @@ export function memberOf(access: LetIn): MemberAccess | null {
 /** The member let in, or null: for server actions, which must not redirect. */
 export async function getMemberAccess(): Promise<MemberAccess | null> {
   const access = await getConnectAccess();
-  return access.status === "ok" ? memberOf(access) : null;
+  return access.status === "ok" && !access.viewAs ? memberOf(access) : null;
 }
 
-/** What an action answers a visitor who is not an active vendor's member. */
-export const NOT_A_MEMBER = {
-  error: "You are not signed in for an active vendor. Reload the page.",
+/** What an action answers while a SUPER views as someone. */
+const READ_ONLY = {
+  error: "Viewing as someone is read only. Exit the view to make changes.",
 };
+
+/** Why a gate answered null: viewing as someone, or `otherwise`. */
+export async function whyRefused(otherwise: { error: string }) {
+  const access = await getConnectAccess();
+  return access.status !== "signed-out" && access.viewAs
+    ? READ_ONLY
+    : otherwise;
+}
+
+/** What an action answers a visitor who is not an active vendor's member, or one viewing as someone. */
+export function notAMember(): Promise<{ error: string }> {
+  return whyRefused({
+    error: "You are not signed in for an active vendor. Reload the page.",
+  });
+}
+
+/** What an action answers a visitor who is not a driver let in, or one viewing as someone. */
+export function notADriver(): Promise<{ error: string }> {
+  return whyRefused({
+    error: "You are not signed in as a driver. Reload the page.",
+  });
+}
+
+/** What the registration answers a visitor signed out, or one viewing as someone. */
+export function notARegistrant(): Promise<ActionState> {
+  return whyRefused({
+    error: "Your sign-in ended. Sign in again, then send it.",
+  });
+}
 
 /** What the screen shows a member: their vendor's tabs, Team for its owner. */
 export function shellMember(member: MemberAccess | null) {

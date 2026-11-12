@@ -99,19 +99,30 @@ export default async function AccountPage({
           </ul>
         </Panel>
       ) : null}
-      <AccountSettings
-        offerPassword={
-          query[ADD_PASSWORD_PARAM] === "password"
-            ? {
-                next: safeRedirect(
-                  typeof next === "string" ? next : null,
-                  "/",
-                  "",
-                ),
-              }
-            : undefined
-        }
-      />
+      {/* The sign-in settings are always the signed-in person's own, the
+          admin's while viewing as someone: not shown then. */}
+      {access.viewAs ? (
+        <Panel className="p-5">
+          <p className="text-sm text-muted">
+            Their name, email, password and devices are theirs to change, and
+            are not shown while viewing.
+          </p>
+        </Panel>
+      ) : (
+        <AccountSettings
+          offerPassword={
+            query[ADD_PASSWORD_PARAM] === "password"
+              ? {
+                  next: safeRedirect(
+                    typeof next === "string" ? next : null,
+                    "/",
+                    "",
+                  ),
+                }
+              : undefined
+          }
+        />
+      )}
     </Screen>
   );
 }

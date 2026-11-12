@@ -1,12 +1,20 @@
 import "server-only";
 import { cache } from "react";
 import { auth, currentUser } from "@clerk/nextjs/server";
+import { cookies } from "next/headers";
 import { db } from "./client";
 import type { Prisma } from "./generated/prisma/client";
+import { fullName } from "./names";
 import { may, type Permission } from "./permissions";
 import type { Area } from "./roles";
 import { getAccessPolicy } from "./settings";
 import { snapshotFromBackendUser, upsertUserFromClerk } from "./sync";
+import {
+  mayViewAs,
+  parseViewAs,
+  viewableAccount,
+  VIEW_AS_COOKIE,
+} from "./view-as";
 
 const withProfiles = {
   include: {
@@ -44,6 +52,10 @@ export type SessionUser = Prisma.UserGetPayload<typeof withProfiles>;
 
 function findUser(clerkId: string) {
   return db.user.findUnique({ where: { clerkId }, ...withProfiles });
+}
+
+function findUserById(id: string) {
+  return db.user.findUnique({ where: { id }, ...withProfiles });
 }
 
 /**
@@ -137,15 +149,30 @@ export type ConnectVendor = {
   services: string[];
 };
 
+/** A SUPER viewing Connect as someone else, read only: who, and as whom. */
+export type ViewAs = {
+  /** The admin viewing, as the log records them. */
+  adminId: string;
+  adminName: string;
+  /** The account viewed: its name, or its email without one. */
+  label: string;
+};
+
+/**
+ * Connect's access. `user` is whose screens show: the visitor, or the
+ * account a SUPER views while `viewAs` is set. Nothing may be written
+ * while it is set; Connect's action helpers refuse.
+ */
 export type ConnectAccess =
   | { status: "signed-out" }
   /** Neither a vendor's member nor a linked driver: the registration form. */
-  | { status: "register"; user: SessionUser }
+  | { status: "register"; user: SessionUser; viewAs: ViewAs | null }
   /** Their vendor waits for approval, was refused, or is suspended. */
   | {
       status: "pending" | "refused" | "suspended";
       user: SessionUser;
       vendor: ConnectVendor;
+      viewAs: ViewAs | null;
     }
   | {
       status: "ok";
@@ -155,7 +182,47 @@ export type ConnectAccess =
       /** Their driver row, when its vendor is active. */
       driver:
         (NonNullable<SessionUser["driver"]> & { vendor: ConnectVendor }) | null;
+      viewAs: ViewAs | null;
     };
+
+/**
+ * The account a SUPER views, from Connect's cookie, or null: no cookie,
+ * one started in another sign-in, the visitor no longer SUPER, or the
+ * account gone or not viewable. The cookie names a target and grants
+ * nothing; the real session is checked here on every request.
+ */
+async function viewedAccount(
+  me: SessionUser,
+  sessionId: string | null,
+): Promise<{ user: SessionUser; viewAs: ViewAs } | null> {
+  if (!mayViewAs(me)) return null;
+  const target = parseViewAs(
+    (await cookies()).get(VIEW_AS_COOKIE)?.value,
+    sessionId,
+  );
+  if (!target) return null;
+  const user = await findUserById(target.userId);
+  if (!user || !viewableAccount(me, user)) return null;
+  return {
+    user,
+    viewAs: {
+      adminId: me.id,
+      adminName: fullName(me) || me.email,
+      label: fullName(user) || user.email,
+    },
+  };
+}
+
+/**
+ * The account a SUPER may view in Connect, by id, as /view-as names it
+ * before the view starts, or null: the viewer is not SUPER, or the account
+ * is gone or not viewable.
+ */
+export async function getViewAsCandidate(viewer: SessionUser, userId: string) {
+  if (!mayViewAs(viewer)) return null;
+  const user = await findUserById(userId);
+  return user && viewableAccount(viewer, user) ? user : null;
+}
 
 /**
  * Who may use Connect, from rows, never a role column: a member (owner or
@@ -164,10 +231,15 @@ export type ConnectAccess =
  * for approval, not approved, or suspended. Ours has no members; our
  * drivers come in as drivers. Each page asks here and renders each case
  * itself. See docs/261028-fulfilment-vendors-and-connect.md, "Signing up".
+ * A SUPER viewing as someone gets that account's access with `viewAs`; see
+ * docs/261112-connect-view-as.md. Deduped per request.
  */
-export async function getConnectAccess(): Promise<ConnectAccess> {
-  const { user } = await getSession();
-  if (!user) return { status: "signed-out" };
+export const getConnectAccess = cache(async (): Promise<ConnectAccess> => {
+  const { session, user: me } = await getSession();
+  if (!me) return { status: "signed-out" };
+  const viewed = await viewedAccount(me, session.sessionId);
+  const user = viewed?.user ?? me;
+  const viewAs = viewed?.viewAs ?? null;
   const memberships = user.vendorMembers.filter(
     (m) => m.vendor.status === "active",
   );
@@ -182,6 +254,7 @@ export async function getConnectAccess(): Promise<ConnectAccess> {
       user,
       memberships: memberships.map((m) => ({ vendor: m.vendor, role: m.role })),
       driver,
+      viewAs,
     };
   }
   // Not let in: the reason is the vendor they belong to, a suspension
@@ -192,7 +265,7 @@ export async function getConnectAccess(): Promise<ConnectAccess> {
   ];
   for (const status of ["suspended", "refused", "pending"] as const) {
     const vendor = vendors.find((v) => v.status === status);
-    if (vendor) return { status, user, vendor };
+    if (vendor) return { status, user, vendor, viewAs };
   }
-  return { status: "register", user };
-}
+  return { status: "register", user, viewAs };
+});

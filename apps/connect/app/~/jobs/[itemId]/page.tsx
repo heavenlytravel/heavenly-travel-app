@@ -17,7 +17,7 @@ import {
 import { NotebookText, Plane } from "lucide-react";
 import { AccessScreen } from "../../../_components/AccessScreen";
 import {
-  actorOf,
+  viewerOf,
   memberOf,
   requireSignedIn,
   shellMember,
@@ -63,11 +63,11 @@ export default async function JobPage({
   const member = memberOf(access);
   // Their own driving first; else their vendor's job, without the reports.
   const driverJob = access.driver
-    ? await getDriverJob(actorOf(access.user), access.driver, itemId)
+    ? await getDriverJob(viewerOf(access), access.driver, itemId)
     : null;
   const vendorJob =
     !driverJob && member
-      ? await getVendorJob(actorOf(access.user), member.vendor, itemId)
+      ? await getVendorJob(viewerOf(access), member.vendor, itemId)
       : null;
   const job = driverJob ?? vendorJob;
   if (!job) notFound();

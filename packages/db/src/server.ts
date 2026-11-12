@@ -4,6 +4,7 @@ export {
   getAccess,
   getAdminAccess,
   getConnectAccess,
+  getViewAsCandidate,
 } from "./session";
 export type {
   SessionUser,
@@ -12,8 +13,11 @@ export type {
   AdminAccess,
   ConnectAccess,
   ConnectVendor,
+  ViewAs,
 } from "./session";
 export { SITE_URL, ADMIN_URL, CONNECT_URL } from "./origins";
+export { listViewAsAccounts, logViewAs } from "./view-as-server";
+export type { ViewAsGroup, ViewAsPerson } from "./view-as-server";
 export {
   snapshotFromWebhook,
   snapshotFromBackendUser,
@@ -143,6 +147,7 @@ export type {
   JobStop,
   TripEventView,
   Reporter,
+  JobViewer,
 } from "./driver-jobs";
 export {
   listVendors,

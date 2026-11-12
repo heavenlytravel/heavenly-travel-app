@@ -15,7 +15,14 @@ import { Logo } from "@repo/ui/logo";
  * and Team) in its menu's rows, the way to WhatsApp Operation and the
  * account. A phone has the tab bar instead.
  */
-export function Sidebar({ member }: { member?: { owner: boolean } }) {
+export function Sidebar({
+  member,
+  admin,
+}: {
+  member?: { owner: boolean };
+  /** A SUPER: View as in the places. */
+  admin: boolean;
+}) {
   const pathname = usePathname();
   return (
     <aside className="sticky top-0 hidden h-dvh flex-col bg-linear-to-b from-navy to-ink px-4 py-6 text-white/80 lg:flex">
@@ -28,7 +35,7 @@ export function Sidebar({ member }: { member?: { owner: boolean } }) {
       </Link>
       <nav aria-label="Connect" className="mt-10">
         <ul className="grid gap-0.5">
-          {navItems(member).map((item) => {
+          {navItems(member, admin).map((item) => {
             const active = isActive(item, pathname);
             const Icon = item.icon;
             return (

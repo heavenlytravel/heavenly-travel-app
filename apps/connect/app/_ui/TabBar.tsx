@@ -11,7 +11,14 @@ import { isActive, navItems } from "./nav";
  * shows its name, in navy. `ui-dock` lifts the toasts above it. A large
  * screen has the sidebar instead.
  */
-export function TabBar({ owner }: { owner: boolean }) {
+export function TabBar({
+  owner,
+  admin,
+}: {
+  owner: boolean;
+  /** A SUPER: View as among the tabs. */
+  admin: boolean;
+}) {
   const pathname = usePathname();
   return (
     <nav
@@ -19,7 +26,7 @@ export function TabBar({ owner }: { owner: boolean }) {
       className="ui-dock pointer-events-none fixed inset-x-0 bottom-0 z-(--layer-chrome) flex justify-center px-4 pb-[max(env(safe-area-inset-bottom),0.9rem)] lg:hidden"
     >
       <ul className="pointer-events-auto flex items-center gap-1 rounded-full border border-edge bg-white/95 p-1 shadow-overlay backdrop-blur">
-        {navItems({ owner }).map((item) => {
+        {navItems({ owner }, admin).map((item) => {
           const active = isActive(item, pathname);
           const Icon = item.icon;
           return (

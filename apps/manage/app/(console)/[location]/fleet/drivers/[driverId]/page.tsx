@@ -1,4 +1,4 @@
-import { DRIVER_DELETE_IMPACT, driverDocumentsDue } from "@repo/db";
+import { DRIVER_DELETE_IMPACT, driverDocumentsDue, mayViewAs } from "@repo/db";
 import {
   getDriver,
   heldBookingsOf,
@@ -18,7 +18,8 @@ import { ServiceBadge } from "@repo/console/StatusBadges";
 import { DeleteButton } from "@repo/console/DeleteButton";
 import { DocumentBanner } from "../../../../../_components/DocumentBanner";
 import { HistoryLink } from "../../../../../_components/RecordHistory";
-import { requireAdmin } from "../../../../../_lib/access";
+import { ViewInConnect } from "../../../../../_components/ViewInConnect";
+import { requireAdmin, type AdminUser } from "../../../../../_lib/access";
 import { DATES_CARDS } from "@repo/console/fleet-form";
 import {
   ALL,
@@ -46,7 +47,7 @@ import { DriverForm } from "@repo/console/DriverForm";
 export default async function DriverPage({
   params,
 }: PageProps<"/[location]/fleet/drivers/[driverId]">) {
-  await requireAdmin("fleet.manage");
+  const admin = await requireAdmin("fleet.manage");
   const scope = await scopeOf(params);
   const { driverId } = await params;
 
@@ -63,13 +64,17 @@ export default async function DriverPage({
           </>
         }
       >
-        {() => driverScreen(scope, driverId)}
+        {() => driverScreen(scope, driverId, admin)}
       </Streamed>
     </>
   );
 }
 
-async function driverScreen(scope: ConsoleScope, driverId: string) {
+async function driverScreen(
+  scope: ConsoleScope,
+  driverId: string,
+  admin: AdminUser,
+) {
   const [driver, held, classes, locations, vendors] = await Promise.all([
     getDriver(driverId),
     heldBookingsOf({ driverId }),
@@ -97,6 +102,9 @@ async function driverScreen(scope: ConsoleScope, driverId: string) {
           .join(" · ")}
         action={
           <>
+            {driver.userId && mayViewAs(admin) ? (
+              <ViewInConnect userId={driver.userId} />
+            ) : null}
             <HistoryLink href={recordHistoryHref(href)} />
             <DeleteButton
               look="header"

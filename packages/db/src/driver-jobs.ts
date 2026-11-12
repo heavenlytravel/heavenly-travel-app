@@ -273,14 +273,22 @@ export function otherGuide(
 }
 
 /**
+ * Who opens a job, as its look at the customer's details is logged: the
+ * driver or member themself, or a SUPER viewing Connect as them, logged as
+ * the admin with whom they viewed as (`viewAs`).
+ */
+export type JobViewer = { actor: Actor; viewAs: string | null };
+
+/**
  * One job of the driver's, or null when it is not theirs. Showing the
  * customer's details logs the view, as PDPA asks. The trip's tour guide,
  * once their vendor accepted, shows while the customer's details do,
  * unless the guide is the driver themself, entered in both lists: the
- * same phone.
+ * same phone. A SUPER viewing as the driver is logged as themself, with
+ * `viewAs`.
  */
 export async function getDriverJob(
-  actor: Actor,
+  { actor, viewAs }: JobViewer,
   driver: { id: string; name: string },
   itemId: string,
   now: Date = new Date(),
@@ -343,7 +351,11 @@ export async function getDriverJob(
     logActivity(tx, actor, {
       action: "booking.contact.viewed",
       entityId: part.item.booking.id,
-      after: { position: part.item.position, driverName: driver.name },
+      after: {
+        position: part.item.position,
+        driverName: driver.name,
+        ...(viewAs ? { viewAs } : {}),
+      },
     }),
   );
   return {

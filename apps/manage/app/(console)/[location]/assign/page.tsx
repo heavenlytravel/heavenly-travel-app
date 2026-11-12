@@ -21,10 +21,8 @@ import {
 } from "@repo/db";
 import {
   getAssignPage,
-  listOpenPastDays,
   type AssignPart,
   type AssignRow,
-  type OpenPastDay,
 } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
@@ -108,8 +106,8 @@ const hrefOf = (scope: ScopeSlug, state: Shown, filter: AssignFilter) =>
  * Each row says how soon it picks up, red within the day while not yet
  * assigned, and who does it or whose answer it waits for; its reference
  * opens a quick view of the booking, Assign or Open the trip's own page.
- * Above them, the past days with trips left open, a link to each; a past
- * day picked says it is past.
+ * A past day picked says it is past. Done counts today's done trips, or
+ * the day's picked.
  * See docs/261028-fulfilment-vendors-and-connect.md, "Assigning a booking".
  */
 export default async function AssignPage({
@@ -154,7 +152,11 @@ export default async function AssignPage({
   );
 }
 
-/** The tiles: each state, then All, with its count; the one on screen ringed. Without counts, bones. */
+/**
+ * The tiles: each state, then All, with its count; the one on screen
+ * ringed. Without counts, bones. Done is today's, the list starting today,
+ * unless a day is picked.
+ */
 function stateFigures(
   scope: ScopeSlug,
   shown: Shown,
@@ -166,7 +168,10 @@ function stateFigures(
   return [
     ...ASSIGN_STATES.map((state) => ({
       key: state,
-      label: ASSIGN_STATE_LABELS[state],
+      label:
+        state === "done" && !filter.date
+          ? "Done today"
+          : ASSIGN_STATE_LABELS[state],
       value: valueOf(state),
       tone: ASSIGN_TONES[state],
       href: hrefOf(scope, state, filter),
@@ -224,55 +229,6 @@ function groupsOf(rows: readonly AssignRow[], view: AssignView) {
 /** A day, "2026-11-05", as its start in Malaysia, to write it out. */
 const pickupDay = (day: string) => pickupInstant(day, "00:00") ?? new Date();
 
-/**
- * The past days with trips left open, newest first, a link to each: trips
- * confirmed and never assigned, or assigned and never reported done.
- * Hidden when there is none.
- */
-function PastDays({
-  days,
-  hrefOf,
-  current,
-}: {
-  days: readonly OpenPastDay[];
-  hrefOf: (day: string) => string;
-  current?: string;
-}) {
-  if (days.length === 0) return null;
-  const total = days.reduce((sum, d) => sum + d.count, 0);
-  return (
-    <Card className="grid gap-2.5">
-      <p className="text-sm text-body">
-        <span className="font-semibold text-ink">
-          {total === 1
-            ? "1 past trip left open."
-            : `${total} past trips left open.`}
-        </span>{" "}
-        Assign them, report them done or cancel them.
-      </p>
-      <ul className="flex flex-wrap gap-1.5">
-        {days.map(({ day, count }) => (
-          <li key={day}>
-            <Link
-              href={hrefOf(day)}
-              aria-current={day === current ? "page" : undefined}
-              className={cx(
-                "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-caption",
-                day === current
-                  ? "border-brand bg-brand-tint font-semibold text-brand"
-                  : "border-warning-edge bg-warning-tint text-warning-strong",
-              )}
-            >
-              {formatLocalDate(pickupDay(day))}
-              <span className="font-semibold tabular-nums">{count}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </Card>
-  );
-}
-
 /** "Today · Thu, 5 Nov", "Tomorrow · Fri, 6 Nov", or the day alone, for the heading over a day's trips. */
 function dayHeading(day: string, at: Date, today: string) {
   const date = formatLocalDate(at);
@@ -289,10 +245,7 @@ async function assignList(
 ) {
   // A day asked for is read on its own, so an old one is always found.
   const now = new Date();
-  const [rows, pastDays] = await Promise.all([
-    getAssignPage(locationId, asked.date, now),
-    listOpenPastDays(locationId, now),
-  ]);
+  const rows = await getAssignPage(locationId, asked.date, now);
   const { groups, live: view } = groupsOf(rows, asked);
   const inView = rowsInView(rows, view, now);
   const counts = Object.fromEntries([
@@ -312,11 +265,6 @@ async function assignList(
 
   return (
     <>
-      <PastDays
-        days={pastDays}
-        hrefOf={(day) => hrefOf(scope, state, { ...filter, date: day })}
-        current={view.date}
-      />
       <FigureTiles
         label="Trips by where they stand"
         figures={stateFigures(scope, state, filter, counts)}

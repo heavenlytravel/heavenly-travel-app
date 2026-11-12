@@ -125,8 +125,8 @@ export type {
   PartAnswer,
   HeldBooking,
 } from "./fulfilment";
-export { getAssignPage, listOpenPastDays } from "./assign-list";
-export type { AssignPart, AssignRow, OpenPastDay } from "./assign-list";
+export { getAssignPage } from "./assign-list";
+export type { AssignPart, AssignRow } from "./assign-list";
 export {
   listDriverJobs,
   getDriverJob,

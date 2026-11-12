@@ -15,7 +15,7 @@ import {
 } from "./fulfilment-rules";
 import { expireOffers, jobOf } from "./fulfilment";
 import type { Prisma } from "./generated/prisma/client";
-import { isOnTheRoad } from "./trip-events-input";
+import { isOnTheRoad, noShowUndoRefusal } from "./trip-events-input";
 import { modelName } from "./vehicle-model-input";
 
 /**
@@ -149,44 +149,6 @@ export async function getAssignPage(
   return listAssignTrips(locationId, day, now);
 }
 
-/** The trips Assign counts as live: confirmed, to assign or waiting, and assigned. */
-const OPEN_STATUSES = ["confirmed", "assigned"];
-
-/** A past day with trips left open, and how many. */
-export type OpenPastDay = { day: string; count: number };
-
-/** The most open past trips read for the days they fall on; more than this is a backlog to clear first. */
-const OPEN_PAST_LIMIT = 500;
-
-/**
- * The days before today with trips still open, newest first: confirmed and
- * never assigned, or assigned and never reported done. What the Assign
- * page's Past card links to, a day each. Reads their pickup times alone,
- * on the status and pickup index, at most `OPEN_PAST_LIMIT` trips.
- */
-export async function listOpenPastDays(
-  locationId?: string,
-  now: Date = new Date(),
-): Promise<OpenPastDay[]> {
-  const from = pickupInstant(todayInMalaysia(now), "00:00") ?? now;
-  const items = await db.bookingItem.findMany({
-    where: {
-      status: { in: OPEN_STATUSES },
-      startsAt: { lt: from },
-      ...(locationId ? { locationId } : {}),
-    },
-    orderBy: { startsAt: "desc" },
-    take: OPEN_PAST_LIMIT,
-    select: { startsAt: true },
-  });
-  const days = new Map<string, number>();
-  for (const item of items) {
-    const day = todayInMalaysia(item.startsAt);
-    days.set(day, (days.get(day) ?? 0) + 1);
-  }
-  return [...days].map(([day, count]) => ({ day, count }));
-}
-
 /**
  * The trips confirmed, to assign or waiting, the assigned ones and those
  * done: from the start of today in Malaysia on, by pickup; or one day
@@ -202,7 +164,7 @@ async function listAssignTrips(
   const start = pickupInstant(day ?? todayInMalaysia(now), "00:00") ?? now;
   const items = await db.bookingItem.findMany({
     where: {
-      status: { in: [...OPEN_STATUSES, "completed"] },
+      status: { in: ["confirmed", "assigned", "completed"] },
       ...(locationId ? { locationId } : {}),
       startsAt: day
         ? { gte: start, lt: localDayRange(start).end }
@@ -220,6 +182,7 @@ async function listAssignTrips(
       parts: item.parts,
       withGuide,
       reported: isOnTheRoad(item.events),
+      noShowOpen: noShowUndoRefusal(item.events, "driver", now) === null,
     });
     return {
       itemId: item.id,
@@ -259,7 +222,9 @@ async function listAssignTrips(
           respondBy: vendorWaits ? part.offer.respondBy : null,
         };
       }),
+      // A no-show still open ended the trip: never overdue.
       overdue:
+        item.status !== "completed" &&
         (state === "assigned" || state === "on-the-road") &&
         tripWindow(job).end.getTime() < now.getTime(),
       lastEvent,

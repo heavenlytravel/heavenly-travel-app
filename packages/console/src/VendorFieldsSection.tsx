@@ -22,6 +22,7 @@ import {
   Textarea,
 } from "@repo/ui/field";
 import { InfoTip } from "@repo/ui/info-tip";
+import { useState } from "react";
 import { BankCard } from "./BankCard";
 import { Card, CardTitle } from "./Card";
 
@@ -113,7 +114,9 @@ export function VendorFieldsSection({
 /**
  * Who the vendor is and who the team speaks to: company or individual, its
  * name and registration, the contact's name, phone and email, and its
- * address. Connect's registration (`applicant`) asks for the person apart.
+ * address. An individual is asked their own name and IC, if they wish,
+ * and no contact person: they are their own. Connect's registration
+ * (`applicant`) asks for the person apart.
  */
 export function VendorDetailsFields({
   fields,
@@ -122,6 +125,8 @@ export function VendorDetailsFields({
   fields: VendorFields | null;
   applicant?: boolean;
 }) {
+  const [kind, setKind] = useState(fields?.kind ?? "company");
+  const individual = kind === "individual";
   return (
     <div className="grid gap-4">
       <fieldset className="grid gap-2">
@@ -129,23 +134,24 @@ export function VendorDetailsFields({
           {VENDOR_FIELD_LABELS.kind}
         </legend>
         <div className="flex flex-wrap gap-4">
-          {VENDOR_KINDS.map((kind) => (
-            <label key={kind} className="flex items-center gap-2 text-sm">
+          {VENDOR_KINDS.map((option) => (
+            <label key={option} className="flex items-center gap-2 text-sm">
               <Radio
                 name="kind"
-                value={kind}
+                value={option}
                 required
-                defaultChecked={(fields?.kind ?? "company") === kind}
+                checked={kind === option}
+                onChange={() => setKind(option)}
               />
-              {VENDOR_KIND_LABELS[kind]}
+              {VENDOR_KIND_LABELS[option]}
             </label>
           ))}
         </div>
       </fieldset>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
-          label={VENDOR_FIELD_LABELS.name}
-          hint="The company's registered name, or the person's full name."
+          label={individual ? "Full name" : VENDOR_FIELD_LABELS.name}
+          hint={individual ? "As on the IC." : "The company's registered name."}
         >
           <Input
             name="name"
@@ -156,8 +162,12 @@ export function VendorDetailsFields({
           />
         </Field>
         <Field
-          label={VENDOR_FIELD_LABELS.registrationNo}
-          hint="The SSM number of a company, the IC of an individual."
+          label={individual ? "IC number (optional)" : "SSM number"}
+          hint={
+            individual
+              ? "Helps the team check who you are."
+              : "The company's registration number."
+          }
         >
           <Input
             name="registrationNo"
@@ -168,15 +178,17 @@ export function VendorDetailsFields({
         </Field>
         {applicant ? null : (
           <>
-            <Field label={VENDOR_FIELD_LABELS.contactName}>
-              <Input
-                name="contactName"
-                required
-                autoComplete="off"
-                maxLength={VENDOR_LIMITS.contactName}
-                defaultValue={fields?.contactName}
-              />
-            </Field>
+            {individual ? null : (
+              <Field label={VENDOR_FIELD_LABELS.contactName}>
+                <Input
+                  name="contactName"
+                  required
+                  autoComplete="off"
+                  maxLength={VENDOR_LIMITS.contactName}
+                  defaultValue={fields?.contactName}
+                />
+              </Field>
+            )}
             <Field
               label={VENDOR_FIELD_LABELS.contactPhone}
               hint="Their WhatsApp, with the country code."

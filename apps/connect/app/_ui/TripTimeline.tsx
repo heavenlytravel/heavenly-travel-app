@@ -17,7 +17,7 @@ export type TimelineEvent = {
 };
 
 /**
- * The trip's four steps top to bottom, each ticked with its time once
+ * The trip's steps top to bottom, each ticked with its time once
  * tapped, the next one lit; a no-show or a problem stands under them with
  * its note. The driver sees it over their buttons, the vendor alone.
  */

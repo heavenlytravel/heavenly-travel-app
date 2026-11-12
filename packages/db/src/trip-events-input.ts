@@ -4,13 +4,18 @@ import { tripWindow, type TripTimes } from "./fulfilment-rules";
 
 /**
  * The driver's reports on the day, pure and browser-safe: what a tap can
- * say, the checks a tap passes before it is kept, the waiting it measures
- * and how long a driver sees the customer's details. The writer is
- * ./driver-jobs. See docs/261028-fulfilment-vendors-and-connect.md, "On the
- * day: the driver's reports" and "What people see in Connect".
+ * say, the checks a tap passes before it is kept and how long a driver
+ * sees the customer's details. The writer is ./driver-jobs. See
+ * docs/261028-fulfilment-vendors-and-connect.md, "On the day: the driver's
+ * reports" and "What people see in Connect", and
+ * docs/261111-catalogue-booking-flow-and-ops.md, part E: two reports since.
  */
 
-/** In the order a trip goes; no-show and a problem may come at any point. */
+/**
+ * Every kind a tap has had, in the order a trip goes. On the way,
+ * Passenger on board and a problem are no longer tapped (`TAPPED_EVENTS`);
+ * the old taps still read.
+ */
 export const TRIP_EVENT_KINDS = [
   "on-the-way",
   "arrived",
@@ -40,13 +45,17 @@ export function isOnTheRoad(events: readonly { kind: string }[]) {
   return events.some((e) => e.kind !== "problem" && isTripEventKind(e.kind));
 }
 
-/** The steps of a trip, in order: suggested, never enforced. */
+/** The steps of a trip, in order: Arrived, then Dropped off. */
 export const TRIP_STEPS = [
-  "on-the-way",
   "arrived",
-  "on-board",
   "dropped-off",
 ] as const satisfies readonly TripEventKind[];
+
+/** What a driver, or Operation for them, taps now: the steps and a no-show. */
+export const TAPPED_EVENTS: readonly TripEventKind[] = [
+  ...TRIP_STEPS,
+  "no-show",
+];
 
 /**
  * The taps that end a trip: it is completed. A no-show ends it too, and
@@ -76,12 +85,14 @@ export type TripEventInput = {
   clientId: string;
 };
 
-/** The checks a tap passes before it is kept. A problem needs a few words. */
+/** The checks a tap passes before it is kept. A no-show says why. */
 export function checkTripEvent(
   input: TripEventInput,
   now: Date = new Date(),
 ): Change {
-  if (!isTripEventKind(input.kind)) return refuse("Choose what happened.");
+  if (!isTripEventKind(input.kind) || !TAPPED_EVENTS.includes(input.kind)) {
+    return refuse("Choose what happened.");
+  }
   if (!CLIENT_ID_RE.test(input.clientId)) {
     return refuse("This tap did not arrive whole. Tap again.");
   }
@@ -98,10 +109,61 @@ export function checkTripEvent(
       "note",
     );
   }
-  if (input.kind === "problem" && !input.note?.trim()) {
-    return refuse("Say what the problem is.", "note");
+  if (input.kind === "no-show" && !input.note?.trim()) {
+    return refuse(
+      "Say why: how long you waited and how you tried to reach them.",
+      "note",
+    );
   }
   return { ok: true };
+}
+
+/**
+ * Why a no-show cannot be reported yet, or null when it can: only once
+ * the driver has arrived and the pickup time has passed, so a late
+ * passenger is waited for. The phone shows the button by the same rule.
+ */
+export function noShowRefusal(
+  events: readonly { kind: string }[],
+  startsAt: Date,
+  now: Date = new Date(),
+): string | null {
+  if (!events.some((e) => e.kind === "arrived")) {
+    return "Tap Arrived first: a no-show is reported at the pickup.";
+  }
+  if (now.getTime() < startsAt.getTime()) {
+    return "Wait for the pickup time before reporting a no-show.";
+  }
+  return null;
+}
+
+/** How long a driver may take back their own no-show, from when it happened: the passenger turned up late. */
+export const NO_SHOW_UNDO_MINUTES = 60;
+
+/**
+ * Why a trip's no-show cannot be taken back, or null when it can: there is
+ * one, and the trip did not go on to be dropped off. Operation takes one
+ * back at any time; the driver within `NO_SHOW_UNDO_MINUTES` of it, so a
+ * passenger who turns up late still rides. Both sides show the button by
+ * this rule; the writer checks it again.
+ */
+export function noShowUndoRefusal(
+  events: readonly { kind: string; at: Date }[],
+  by: "driver" | "admin",
+  now: Date = new Date(),
+): string | null {
+  const noShow = events.find((e) => e.kind === "no-show");
+  if (!noShow) return "This trip has no no-show to take back.";
+  if (events.some((e) => e.kind === "dropped-off")) {
+    return "This trip was dropped off after the no-show.";
+  }
+  if (
+    by === "driver" &&
+    now.getTime() > noShow.at.getTime() + NO_SHOW_UNDO_MINUTES * 60 * 1000
+  ) {
+    return "It is too late to take this no-show back. Call Operation.";
+  }
+  return null;
 }
 
 /** The step a driver is likely to tap next, after the taps so far; null once the trip is ended. */
@@ -113,24 +175,6 @@ export function nextTripStep(
   }
   const done = new Set(events.map((e) => e.kind));
   return TRIP_STEPS.find((step) => !done.has(step)) ?? null;
-}
-
-/**
- * How long the driver waited: from the first "Arrived" to the first
- * "Passenger on board" after it, in whole minutes; null until both are
- * in. Not a tap of its own: for waiting charges and vendor questions.
- */
-export function waitingMinutes(
-  events: readonly { kind: string; at: Date }[],
-): number | null {
-  const sorted = [...events].sort((a, b) => a.at.getTime() - b.at.getTime());
-  const arrived = sorted.find((e) => e.kind === "arrived");
-  if (!arrived) return null;
-  const onBoard = sorted.find(
-    (e) => e.kind === "on-board" && e.at >= arrived.at,
-  );
-  if (!onBoard) return null;
-  return Math.round((onBoard.at.getTime() - arrived.at.getTime()) / 60_000);
 }
 
 /** How many days after a trip's end its driver still sees the customer's details. */

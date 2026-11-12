@@ -4,6 +4,7 @@ import {
   addVendorStaff,
   createVendor,
   createVendorWithOwner,
+  createOwnDriver,
   moveVendor,
   parseAccountFor,
   parseVendorFields,
@@ -126,11 +127,28 @@ export async function moveVendorAction(
     textOf(formData.get("reviewNote")),
   );
   if (!result.ok) return stateOf(result);
+  // An individual who drives is their own driver: added for them on
+  // approval (and on a reinstatement that finds none), before the pages
+  // read again. A refusal leaves the approval made, and says so.
+  const own =
+    move === "approve" || move === "reinstate"
+      ? await createOwnDriver(actorOf(admin), id).catch(
+          (error: unknown): { ok: false; error: string } => {
+            console.error("Adding the individual's own driver failed", error);
+            return { ok: false, error: "it could not be saved." };
+          },
+        )
+      : { ok: true as const };
   revalidateVendors();
   // Approved, the vendor hears that Connect is open; a refusal is staff only.
   const vendor = result.vendor;
   if (move === "approve" && vendor) {
     after(() => sendVendorEmail("approved", { ...vendor, at: new Date() }));
+  }
+  if (!own.ok) {
+    return {
+      error: `${move === "approve" ? "Approved" : "Reinstated"}. Their own driver was not added: ${own.error} Add them under Drivers.`,
+    };
   }
   return null;
 }

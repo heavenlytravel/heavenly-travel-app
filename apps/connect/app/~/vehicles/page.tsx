@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { modelName, VEHICLE_DOCUMENTS, vehicleDocumentsDue } from "@repo/db";
 import { CarFrontIcon, PlusIcon } from "@repo/ui/icons";
 import { FleetList } from "../../_components/FleetList";
 import { FleetTabs } from "../../_components/FleetTabs";
 import { requireMember, shellMember } from "../../_lib/access";
-import { fleetCounts, vendorFleet } from "../../_lib/fleet";
+import { fleetCounts, fleetHome, vendorFleet } from "../../_lib/fleet";
 import { Button } from "@repo/ui/button";
 import { Plate } from "../../_ui/parts";
 import { BandHeading, Screen } from "../../_ui/Screen";
@@ -20,6 +21,8 @@ export default async function VehiclesPage() {
   const member = await requireMember();
   const fleet = await vendorFleet(member.vendor.id);
   const { vehicles } = fleet;
+  // Not supplied and none from before: Fleet opens on what it has.
+  if (!vehicles) redirect(fleetHome(fleet));
   // Only what the vendor offers, by the one service it chose.
   const add = fleet.adds.vehicles ? (
     <Button asChild variant="secondary" size="sm">

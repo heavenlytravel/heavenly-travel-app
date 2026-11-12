@@ -4,14 +4,14 @@ import {
   formatLocalTime,
   isTripEventKind,
   nextTripStep,
+  noShowRefusal,
+  noShowUndoRefusal,
   TRIP_EVENT_LABELS,
   TRIP_EVENT_NOTE_MAX_LENGTH,
   TRIP_STEPS,
-  waitingMinutes,
   type TripEventKind,
 } from "@repo/db";
 import type { FulfilmentTrip } from "@repo/db/server";
-import { useConfirm } from "@repo/ui/alert-dialog";
 import { Button } from "@repo/ui/button";
 import { cx } from "@repo/ui/cx";
 import { Field, Input, Textarea } from "@repo/ui/field";
@@ -20,7 +20,7 @@ import { CheckIcon } from "@repo/ui/icons";
 import { useState } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
 import { useActionForm } from "@repo/console/use-action-form";
-import { reportForDriverAction } from "./actions";
+import { reportForDriverAction, undoNoShowAction } from "./actions";
 
 type Event = {
   id: string;
@@ -83,8 +83,10 @@ export function TripReports({
 }
 
 /**
- * One trip's day: its four steps, a no-show or a problem, the waiting,
- * and for Operation the way to report for the driver. Inside a card of
+ * One trip's day: its two steps, Arrived and Dropped off, a no-show and
+ * its reason (or a problem, from before), and for Operation the way to
+ * report for the driver, or to take a no-show back when the passenger
+ * came after all. Inside a card of
  * its own (`TripReports`) or the trip's card on the booking.
  */
 export function TripDay({
@@ -94,7 +96,7 @@ export function TripDay({
   canFulfil,
 }: {
   bookingId: string;
-  trip: Pick<FulfilmentTrip, "id" | "status">;
+  trip: Pick<FulfilmentTrip, "id" | "status" | "startsAt">;
   /** The trip's own events. */
   events: Event[];
   canFulfil: boolean;
@@ -102,25 +104,59 @@ export function TripDay({
   const next = nextTripStep(events);
   const open =
     next !== null && trip.status !== "cancelled" && trip.status !== "completed";
-  const waited = waitingMinutes(events);
+  const undoable =
+    canFulfil &&
+    trip.status !== "cancelled" &&
+    noShowUndoRefusal(events, "admin") === null;
   return (
     <div className="grid gap-4">
       <StepLine events={events} next={open ? next : null} />
       <Extras events={events} />
-      {waited !== null ? (
-        <p className="text-sm text-muted">
-          Waited {waited} min for the passenger.
-        </p>
-      ) : null}
       {canFulfil && open ? (
-        <ReportFor bookingId={bookingId} itemId={trip.id} next={next} />
+        <ReportFor
+          bookingId={bookingId}
+          itemId={trip.id}
+          next={next}
+          noShowWait={noShowRefusal(events, trip.startsAt)}
+        />
       ) : null}
+      {undoable ? <UndoNoShow itemId={trip.id} /> : null}
     </div>
   );
 }
 
+/** Takes the no-show back: the trip is open again, for the driver to report Dropped off. */
+function UndoNoShow({ itemId }: { itemId: string }) {
+  const undo = useActionForm(undoNoShowAction, {
+    done: "No-show taken back: the trip is open again.",
+  });
+  return (
+    <form
+      {...undo.formProps}
+      className="grid gap-2 rounded-control border border-card-edge bg-shade p-3"
+    >
+      <input type="hidden" name="itemId" value={itemId} />
+      <p className="text-caption text-muted">
+        The passenger came after all? Take the no-show back, and the driver
+        reports Dropped off at the end. An invoice it issued stays.
+      </p>
+      <div>
+        <Button
+          type="submit"
+          size="sm"
+          variant="secondary"
+          pending={undo.pending}
+        >
+          Undo no-show
+        </Button>
+      </div>
+      <FormError error={undo.error} size="xs" />
+    </form>
+  );
+}
+
 /**
- * The four steps in a line from `sm` up, two by two on a phone: ticked
+ * The steps in a line, ticked
  * with the time once reported, the next one ringed, the rest grey.
  */
 function StepLine({
@@ -133,7 +169,7 @@ function StepLine({
   return (
     <ol
       aria-label="Driver's steps"
-      className="grid grid-cols-2 gap-3 sm:grid-cols-[repeat(3,minmax(0,1fr))_auto] sm:gap-x-2"
+      className="grid grid-cols-2 gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-x-2"
     >
       {TRIP_STEPS.map((step, index) => {
         const event = events.find((e) => e.kind === step);
@@ -189,7 +225,7 @@ function StepLine({
   );
 }
 
-/** A no-show or a problem, with its time and note, under the steps. */
+/** A no-show and why, or a problem reported before, with its time, under the steps. */
 function Extras({ events }: { events: readonly Event[] }) {
   const extra = events.filter(
     (e) => !(TRIP_STEPS as readonly string[]).includes(e.kind),
@@ -219,38 +255,29 @@ function Extras({ events }: { events: readonly Event[] }) {
 
 /**
  * "Report for the driver", sent now: the next step with an optional note,
- * a no-show (asked first, as it ends the trip), or a problem in a few
- * words. Nothing else, as in Connect.
+ * or a no-show with why, as in Connect: it ends the trip, and is taken
+ * once the driver has arrived and the pickup time has passed.
  */
 function ReportFor({
   bookingId,
   itemId,
   next,
+  noShowWait,
 }: {
   bookingId: string;
   itemId: string;
   next: TripEventKind;
+  /** Why a no-show cannot be reported yet (`noShowRefusal`), as Connect waits; null once it can. */
+  noShowWait: string | null;
 }) {
-  const [problem, setProblem] = useState(false);
+  const [noShowOpen, setNoShowOpen] = useState(false);
   const step = useActionForm(reportForDriverAction, {
     done: `${TRIP_EVENT_LABELS[next]}: reported.`,
     reset: true,
   });
-  const [dialog, confirm] = useConfirm();
   const noShow = useActionForm(reportForDriverAction, {
-    ask: () =>
-      confirm({
-        title: "Report a no-show?",
-        description:
-          "The passenger did not come. This ends the trip, and its vendor is paid for it.",
-        action: "Report no-show",
-        danger: true,
-      }),
     done: "No-show reported.",
-  });
-  const report = useActionForm(reportForDriverAction, {
-    done: "Problem reported.",
-    onDone: () => setProblem(false),
+    onDone: () => setNoShowOpen(false),
   });
 
   const ids = (
@@ -282,17 +309,20 @@ function ReportFor({
         </Button>
         <FormError error={step.error} />
       </form>
-      {problem ? (
-        <form {...report.formProps} className="grid gap-2">
+      {noShowOpen ? (
+        <form {...noShow.formProps} className="grid gap-2">
           {ids}
-          <input type="hidden" name="kind" value="problem" />
-          <Field label="What is the problem?">
+          <input type="hidden" name="kind" value="no-show" />
+          <Field
+            label="Why is it a no-show?"
+            hint="It ends the trip, and its vendor is paid for it."
+          >
             <Textarea
               name="note"
               required
               rows={2}
               maxLength={TRIP_EVENT_NOTE_MAX_LENGTH}
-              placeholder="Flat tyre on the way, about 30 minutes late"
+              placeholder="Waited 45 minutes at arrivals, called twice, no answer"
             />
           </Field>
           <div className="flex items-center gap-2">
@@ -300,47 +330,35 @@ function ReportFor({
               type="submit"
               size="sm"
               variant="danger"
-              pending={report.pending}
+              pending={noShow.pending}
             >
-              Send problem
+              Report no-show
             </Button>
             <Button
               type="button"
               size="sm"
               variant="ghost"
-              onClick={() => setProblem(false)}
+              onClick={() => setNoShowOpen(false)}
             >
               Cancel
             </Button>
           </div>
-          <FormError error={report.error} size="xs" />
+          <FormError error={noShow.error} size="xs" />
         </form>
+      ) : noShowWait ? (
+        <p className="text-caption text-muted">No-show: {noShowWait}</p>
       ) : (
-        <div className="flex flex-wrap items-start gap-2">
-          <form {...noShow.formProps} className="grid gap-1">
-            {ids}
-            <input type="hidden" name="kind" value="no-show" />
-            <Button
-              type="submit"
-              size="sm"
-              variant="secondary"
-              pending={noShow.pending}
-            >
-              No-show
-            </Button>
-            <FormError error={noShow.error} size="xs" />
-          </form>
+        <div>
           <Button
             type="button"
             size="sm"
             variant="secondary"
-            onClick={() => setProblem(true)}
+            onClick={() => setNoShowOpen(true)}
           >
-            Problem
+            No-show
           </Button>
         </div>
       )}
-      {dialog}
     </div>
   );
 }

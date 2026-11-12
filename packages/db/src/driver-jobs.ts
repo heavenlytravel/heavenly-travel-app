@@ -8,7 +8,9 @@ import { db } from "./client";
 import { answerParts, heldJobs, jobOf, tripInclude } from "./fulfilment";
 import {
   DECLINE_REASONS,
+  hasGuide,
   timingWarnings,
+  tripAssigned,
   type DeclineReason,
   type Job,
 } from "./fulfilment-rules";
@@ -20,6 +22,8 @@ import {
   checkTripEvent,
   COMPLETING_EVENTS,
   contactVisible,
+  noShowRefusal,
+  noShowUndoRefusal,
   placeArea,
   type TripEventInput,
   type TripEventKind,
@@ -457,6 +461,15 @@ export async function reportTripEvent(
       if (item.status === "cancelled") {
         return refuse("This trip was cancelled. Call Operation.");
       }
+      if (input.kind === "no-show") {
+        const events = await tx.tripEvent.findMany({
+          where: { itemId: item.id },
+          select: { kind: true },
+        });
+        // By when it happened, so a tap queued without signal still counts.
+        const early = noShowRefusal(events, item.startsAt, input.at);
+        if (early) return refuse(early);
+      }
       await tx.tripEvent.create({
         data: {
           itemId: item.id,
@@ -511,6 +524,93 @@ export async function reportTripEvent(
     if (isUniqueViolation(error, "clientId")) return { ok: true };
     throw error;
   }
+}
+
+/**
+ * Takes a no-show back: the passenger turned up after all. By the trip's
+ * accepted driver within `NO_SHOW_UNDO_MINUTES`, or Operation at any time
+ * (`noShowUndoRefusal`). The no-show's tap is removed, so the driver can
+ * report Dropped off; the history keeps it, with its reason and who took
+ * it back. A trip the no-show completed is open again, assigned or
+ * confirmed by its parts, and its booking's status follows. An invoice
+ * the no-show issued stays issued: the price did not change, and a number
+ * is never taken back.
+ */
+export async function undoNoShow(
+  actor: Actor,
+  reporter: Reporter,
+  itemId: string,
+  now: Date = new Date(),
+): Promise<Change> {
+  return db.$transaction(async (tx) => {
+    const item = await tx.bookingItem.findUnique({
+      where: { id: itemId },
+      include: {
+        parts: true,
+        tripDetails: { select: { guideLanguage: true } },
+        events: { select: { id: true, kind: true, at: true, note: true } },
+      },
+    });
+    if (!item) return refuse("This trip is no longer on the booking.");
+    const driverPart = item.parts.find((p) => p.role === "driver");
+    if ("driver" in reporter) {
+      if (
+        driverPart?.driverId !== reporter.driver.id ||
+        !driverPart.driverAcceptedAt
+      ) {
+        return refuse("This trip is not yours. Call Operation.");
+      }
+    }
+    if (item.status === "cancelled") {
+      return refuse("This trip was cancelled. Call Operation.");
+    }
+    const refusal = noShowUndoRefusal(
+      item.events,
+      "driver" in reporter ? "driver" : "admin",
+      now,
+    );
+    if (refusal) return refuse(refusal);
+    const noShows = item.events.filter((e) => e.kind === "no-show");
+    await tx.tripEvent.deleteMany({
+      where: { id: { in: noShows.map((e) => e.id) } },
+    });
+    const reopened =
+      item.status === "completed"
+        ? tripAssigned(item.parts, hasGuide(item.tripDetails))
+          ? "assigned"
+          : "confirmed"
+        : null;
+    await logActivity(tx, actor, {
+      action: "booking.trip.no-show.undone",
+      entityId: item.bookingId,
+      before: {
+        position: item.position,
+        status: item.status,
+        at: noShows[0]!.at.toISOString(),
+        ...(noShows[0]!.note ? { note: noShows[0]!.note } : {}),
+      },
+      after: {
+        position: item.position,
+        status: reopened ?? item.status,
+        driverName: "driver" in reporter ? reporter.driver.name : null,
+      },
+    });
+    if (reopened) {
+      await tx.bookingItem.update({
+        where: { id: item.id },
+        data: { status: reopened },
+      });
+      const siblings = await tx.bookingItem.findMany({
+        where: { bookingId: item.bookingId },
+        select: { status: true },
+      });
+      await tx.booking.update({
+        where: { id: item.bookingId },
+        data: { status: bookingStatusOf(siblings) },
+      });
+    }
+    return { ok: true };
+  });
 }
 
 /** A trip's taps, in order, for the admin's booking page. */

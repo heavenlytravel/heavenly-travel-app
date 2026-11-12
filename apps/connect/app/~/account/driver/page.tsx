@@ -13,8 +13,9 @@ export const metadata: Metadata = { title: "Your driver profile | Connect" };
 
 /**
  * Route: /account/driver. The signed-in driver's own record, as their
- * vendor keeps it, every sensitive detail blurred until clicked. Their
- * vendor's people change it, in Fleet; the driver asks them.
+ * vendor keeps it, every sensitive detail blurred until clicked. The
+ * driver edits their name, phone, licences and bank
+ * (/account/driver/edit); the rest, their vendor's people in Fleet.
  */
 export default async function DriverProfilePage() {
   const access = await requireSignedIn();
@@ -22,7 +23,8 @@ export default async function DriverProfilePage() {
   const driver = await getDriver(access.driver.id);
   if (!driver) notFound();
   const member = memberOf(access);
-  const edits = member?.vendor.id === driver.vendorId;
+  // Their vendor's owner or staff may change the rest too, in Fleet.
+  const inFleet = member?.vendor.id === driver.vendorId;
   return (
     <Screen
       member={shellMember(member)}
@@ -36,15 +38,22 @@ export default async function DriverProfilePage() {
     >
       <Panel className="connect-rise grid gap-4 p-6">
         <DriverDetails driver={driver} />
-        {edits ? (
-          <Button asChild className="justify-self-start">
-            <Link href={`/~/drivers/${driver.id}`}>Edit in Fleet</Link>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild>
+            <Link href="/~/account/driver/edit">Edit your profile</Link>
           </Button>
-        ) : (
-          <p className="text-xs text-muted">
-            To change any of these, ask {driver.vendor.name}.
-          </p>
-        )}
+          {inFleet ? (
+            <Button asChild variant="secondary">
+              <Link href={`/~/drivers/${driver.id}`}>Edit in Fleet</Link>
+            </Button>
+          ) : null}
+        </div>
+        <p className="text-xs text-muted">
+          Where you are based and what you drive{" "}
+          {inFleet
+            ? "are changed in Fleet."
+            : `are changed by ${driver.vendor.name}.`}
+        </p>
       </Panel>
     </Screen>
   );

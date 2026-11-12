@@ -4,7 +4,6 @@ import {
   CONTACT_VISIBLE_DAYS,
   formatMyr,
   nextTripStep,
-  waitingMinutes,
   whatsappHref,
 } from "@repo/db";
 import { getDriverJob, getVendorJob, type JobStop } from "@repo/db/server";
@@ -15,7 +14,7 @@ import {
   PhoneIcon,
   UsersIcon,
 } from "@repo/ui/icons";
-import { Hourglass, NotebookText, Plane } from "lucide-react";
+import { NotebookText, Plane } from "lucide-react";
 import { AccessScreen } from "../../../_components/AccessScreen";
 import {
   actorOf,
@@ -74,7 +73,6 @@ export default async function JobPage({
   if (!job) notFound();
   const now = new Date();
   const state = tripStateOf(job);
-  const waited = waitingMinutes(job.events);
   const open =
     driverJob !== null &&
     job.accepted &&
@@ -83,19 +81,15 @@ export default async function JobPage({
 
   const onTheDay = job.accepted ? (
     <Panel className="grid gap-5 p-5">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-bold tracking-title text-ink">
-          On the day
-        </h2>
-        {waited !== null ? (
-          <span className="flex items-center gap-1.5 text-sm font-medium text-muted">
-            <Hourglass aria-hidden className="size-4" />
-            Waited {waited} min
-          </span>
-        ) : null}
-      </div>
+      <h2 className="text-lg font-bold tracking-title text-ink">On the day</h2>
       {driverJob ? (
-        <TripTaps itemId={job.itemId} events={job.events} open={open} />
+        <TripTaps
+          itemId={job.itemId}
+          startsAt={job.startsAt}
+          events={job.events}
+          open={open}
+          cancelled={job.status === "cancelled"}
+        />
       ) : (
         <TripTimeline
           events={job.events.map((e) => ({

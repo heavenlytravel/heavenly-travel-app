@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { PlusIcon } from "@repo/ui/icons";
 import { Languages } from "lucide-react";
 import { FleetList } from "../../_components/FleetList";
 import { FleetTabs } from "../../_components/FleetTabs";
 import { requireMember, shellMember } from "../../_lib/access";
-import { fleetCounts, vendorFleet } from "../../_lib/fleet";
+import { fleetCounts, fleetHome, vendorFleet } from "../../_lib/fleet";
 import { Button } from "@repo/ui/button";
 import { Avatar } from "../../_ui/parts";
 import { BandHeading, Screen } from "../../_ui/Screen";
@@ -20,7 +20,7 @@ export default async function GuidesPage() {
   const member = await requireMember();
   const fleet = await vendorFleet(member.vendor.id);
   const { guides } = fleet;
-  if (!guides) notFound();
+  if (!guides) redirect(fleetHome(fleet));
   // Only what the vendor offers, by the one service it chose.
   const add = fleet.adds.guides ? (
     <Button asChild variant="secondary" size="sm">

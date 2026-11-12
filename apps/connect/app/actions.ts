@@ -6,6 +6,7 @@ import {
   isTripEventKind,
   reportTripEvent,
   textOf,
+  undoNoShow,
 } from "@repo/db/server";
 import { sendDriverEmailFor } from "@repo/email";
 import { type ActionState, refusalOf, STALE } from "@repo/console/action-state";
@@ -14,7 +15,8 @@ import { after } from "next/server";
 import { actorOf, getDriverAccess } from "./_lib/access";
 
 /**
- * A driver's actions in Connect: answering an offer and reporting a trip.
+ * A driver's actions in Connect: answering an offer, reporting a trip and
+ * taking a no-show back.
  * Each asks who is signed in again, since actions are reachable by direct
  * POST, and lets the writer in @repo/db check that the job is theirs.
  */
@@ -94,5 +96,26 @@ export async function reportTapAction(
   if (!result.ok) return { ok: false, error: result.error };
   revalidatePath("/~");
   revalidatePath(`/~/jobs/${tap.itemId}`);
+  return { ok: true };
+}
+
+/** Takes the driver's own no-show back, within its time: the passenger came after all. */
+export async function undoNoShowAction(
+  itemId: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const access = await getDriverAccess();
+  if (!access)
+    return { ok: false, error: "You are not signed in as a driver." };
+  if (typeof itemId !== "string" || !itemId) {
+    return { ok: false, error: "Reload the page and try again." };
+  }
+  const result = await undoNoShow(
+    actorOf(access.user),
+    { driver: access.driver },
+    itemId,
+  );
+  if (!result.ok) return { ok: false, error: result.error };
+  revalidatePath("/~");
+  revalidatePath(`/~/jobs/${itemId}`);
   return { ok: true };
 }

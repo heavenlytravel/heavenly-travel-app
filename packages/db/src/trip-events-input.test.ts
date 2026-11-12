@@ -5,8 +5,9 @@ import {
   contactVisible,
   contactVisibleUntil,
   nextTripStep,
+  noShowRefusal,
+  noShowUndoRefusal,
   placeArea,
-  waitingMinutes,
   type TripEventInput,
   isOnTheRoad,
 } from "./trip-events-input";
@@ -44,44 +45,79 @@ describe("checkTripEvent", () => {
     assert.equal(checkTripEvent(tap({ clientId: "x" }), NOW).ok, false);
   });
 
-  it("needs a few words for a problem", () => {
-    assert.equal(checkTripEvent(tap({ kind: "problem" }), NOW).ok, false);
+  it("needs a reason for a no-show", () => {
+    assert.equal(checkTripEvent(tap({ kind: "no-show" }), NOW).ok, false);
     assert.equal(
-      checkTripEvent(tap({ kind: "problem", note: "Flat tyre" }), NOW).ok,
+      checkTripEvent(
+        tap({ kind: "no-show", note: "Waited 30 min, no answer" }),
+        NOW,
+      ).ok,
       true,
     );
+  });
+
+  it("refuses the reports no longer tapped", () => {
+    for (const kind of ["on-the-way", "on-board", "problem"] as const) {
+      assert.equal(
+        checkTripEvent(tap({ kind, note: "x" }), NOW).ok,
+        false,
+        kind,
+      );
+    }
+  });
+});
+
+describe("noShowRefusal", () => {
+  it("waits for Arrived and the pickup time", () => {
+    assert.match(noShowRefusal([], NOW, minutes(10)) ?? "", /Arrived/);
+    assert.match(
+      noShowRefusal([{ kind: "arrived" }], NOW, minutes(-5)) ?? "",
+      /pickup time/,
+    );
+    assert.equal(noShowRefusal([{ kind: "arrived" }], NOW, NOW), null);
+  });
+});
+
+describe("noShowUndoRefusal", () => {
+  const noShow = [
+    { kind: "arrived", at: NOW },
+    { kind: "no-show", at: NOW },
+  ];
+  it("needs a no-show, and none dropped off after it", () => {
+    assert.match(
+      noShowUndoRefusal([{ kind: "arrived", at: NOW }], "admin", NOW) ?? "",
+      /no no-show/,
+    );
+    assert.match(
+      noShowUndoRefusal(
+        [...noShow, { kind: "dropped-off", at: minutes(30) }],
+        "admin",
+        minutes(30),
+      ) ?? "",
+      /dropped off/,
+    );
+  });
+  it("gives the driver an hour, Operation any time", () => {
+    assert.equal(noShowUndoRefusal(noShow, "driver", minutes(60)), null);
+    assert.match(
+      noShowUndoRefusal(noShow, "driver", minutes(61)) ?? "",
+      /too late/,
+    );
+    assert.equal(noShowUndoRefusal(noShow, "admin", minutes(600)), null);
   });
 });
 
 describe("nextTripStep", () => {
   it("suggests the first step not tapped, in order", () => {
-    assert.equal(nextTripStep([]), "on-the-way");
-    assert.equal(
-      nextTripStep([{ kind: "on-the-way" }, { kind: "arrived" }]),
-      "on-board",
-    );
+    assert.equal(nextTripStep([]), "arrived");
+    assert.equal(nextTripStep([{ kind: "arrived" }]), "dropped-off");
+    // A trip begun with the old steps goes on to the next of the two.
+    assert.equal(nextTripStep([{ kind: "on-the-way" }]), "arrived");
   });
 
   it("suggests nothing once the trip ended, by drop-off or no-show", () => {
     assert.equal(nextTripStep([{ kind: "dropped-off" }]), null);
     assert.equal(nextTripStep([{ kind: "no-show" }]), null);
-  });
-});
-
-describe("waitingMinutes", () => {
-  it("measures from arrived to on board", () => {
-    assert.equal(
-      waitingMinutes([
-        { kind: "on-board", at: minutes(17) },
-        { kind: "arrived", at: NOW },
-      ]),
-      17,
-    );
-  });
-
-  it("is null until both are in", () => {
-    assert.equal(waitingMinutes([{ kind: "arrived", at: NOW }]), null);
-    assert.equal(waitingMinutes([{ kind: "on-board", at: NOW }]), null);
   });
 });
 

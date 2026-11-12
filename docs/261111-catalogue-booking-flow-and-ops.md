@@ -333,7 +333,8 @@ Before the merge, in this order. Both are `--protect`: rehearsed on a copy of pr
 confirmed by typing, then production is backed up to a Neon branch.
 
 1. `pnpm db:push:prod`. Additive only: `VehicleType`, `VehicleTier`, `VehicleClass.typeId` and
-   `tierId` (optional), `BlogPost` and its location join table.
+   `tierId` (optional), `BlogPost` and its location join table, and an index on
+   `TripEvent (kind, createdAt)` for `completeNoShows`.
 2. `pnpm --filter @repo/db db:set-class-types:prod -- --dry-run`: check each of the 11
    classes' type, tier and new name (Van: VIP Seating; Coach: 44 Seater Standard, VIP,
    Executive). Then the same without `--dry-run`.

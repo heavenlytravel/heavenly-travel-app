@@ -904,6 +904,8 @@ model TripEvent {
   createdAt DateTime    @default(now())
 
   @@index([itemId, at])
+  /// completeNoShows: the no-shows whose hour is over.
+  @@index([kind, createdAt])
 }
 
 /// A business we sell to on account. Only agents for now; corporates and

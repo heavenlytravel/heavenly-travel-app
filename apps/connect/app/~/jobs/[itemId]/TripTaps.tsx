@@ -63,9 +63,9 @@ const STEP_PROMPTS: Partial<
  * each one slider, so a pocket or a brushing thumb sends nothing. A note
  * goes with the next report. No-show stands apart below, once the driver
  * has arrived and the pickup time has passed (`noShowRefusal`), in red. It
- * asks why, then asks once more before it is sent; for `NO_SHOW_UNDO_MINUTES` after, the driver can
- * take it back when the passenger turns up. A tap is kept on the phone first, with an id made
- * here, then sent; without signal it waits and is sent again on the next
+ * asks why, then asks once more before it is sent; for its hour after
+ * (`noShowEndsAt`), the driver can take it back when the passenger turns
+ * up. A tap is kept on the phone first, with an id made here, then sent; without signal it waits and is sent again on the next
  * load or when the phone is back online. The server keeps a tap once,
  * however often it is sent.
  */
@@ -74,7 +74,6 @@ export function TripTaps({
   startsAt,
   events,
   open,
-  cancelled,
 }: {
   itemId: string;
   /** The pickup: a no-show is reported once it has passed. */
@@ -82,7 +81,6 @@ export function TripTaps({
   events: TripEventView[];
   /** The trip can still be reported: accepted, not done, not cancelled. */
   open: boolean;
-  cancelled: boolean;
 }) {
   const router = useRouter();
   const [waiting, setWaiting] = useState<TapPayload[]>([]);
@@ -200,7 +198,7 @@ export function TripTaps({
     open && next !== null && noShowRefusal(shown, startsAt, now) === null;
   // Only once the no-show is sent: one still waiting for signal is not kept yet.
   const canUndo =
-    !cancelled &&
+    open &&
     !waiting.some((t) => t.kind === "no-show") &&
     noShowUndoRefusal(events, now) === null;
 

@@ -88,7 +88,6 @@ export default async function JobPage({
           startsAt={job.startsAt}
           events={job.events}
           open={open}
-          cancelled={job.status === "cancelled"}
         />
       ) : (
         <TripTimeline

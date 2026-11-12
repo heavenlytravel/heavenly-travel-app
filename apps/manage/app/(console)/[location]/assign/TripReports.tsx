@@ -5,6 +5,7 @@ import {
   isTripEventKind,
   nextTripStep,
   noShowRefusal,
+  noShowEndsAt,
   noShowUndoRefusal,
   TRIP_EVENT_LABELS,
   TRIP_EVENT_NOTE_MAX_LENGTH,
@@ -17,7 +18,7 @@ import { cx } from "@repo/ui/cx";
 import { Field, Input, Textarea } from "@repo/ui/field";
 import { FormError } from "@repo/ui/form-error";
 import { CheckIcon } from "@repo/ui/icons";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardTitle } from "@repo/console/Card";
 import { useActionForm } from "@repo/console/use-action-form";
 import { reportForDriverAction, undoNoShowAction } from "./actions";
@@ -106,10 +107,13 @@ export function TripDay({
   const next = nextTripStep(events);
   const open =
     next !== null && trip.status !== "cancelled" && trip.status !== "completed";
+  const now = useNow();
   const undoable =
     canFulfil &&
     trip.status !== "cancelled" &&
-    noShowUndoRefusal(events, "admin") === null;
+    trip.status !== "completed" &&
+    noShowUndoRefusal(events, now) === null;
+  const undoUntil = noShowEndsAt(events);
   return (
     <div className="grid gap-4">
       <StepLine events={events} next={open ? next : null} />
@@ -122,13 +126,25 @@ export function TripDay({
           noShowWait={noShowRefusal(events, trip.startsAt)}
         />
       ) : null}
-      {undoable ? <UndoNoShow itemId={trip.id} /> : null}
+      {undoable && undoUntil ? (
+        <UndoNoShow itemId={trip.id} until={undoUntil} />
+      ) : null}
     </div>
   );
 }
 
-/** Takes the no-show back: the trip is open again, for the driver to report Dropped off. */
-function UndoNoShow({ itemId }: { itemId: string }) {
+/** The time, read again each half minute, so a button with an end hides itself once it is over. */
+function useNow() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
+  return now;
+}
+
+/** Takes the no-show back within its hour: the driver reports Dropped off at the end. */
+function UndoNoShow({ itemId, until }: { itemId: string; until: Date }) {
   const undo = useActionForm(undoNoShowAction, {
     done: "No-show taken back: the trip is open again.",
   });
@@ -139,9 +155,9 @@ function UndoNoShow({ itemId }: { itemId: string }) {
     >
       <input type="hidden" name="itemId" value={itemId} />
       <p className="text-caption text-muted">
-        The passenger came after all? Take the no-show back, and the driver
-        reports Dropped off at the end. After its hour the trip is completed and
-        billed; taking it back then reopens the trip, and the bill stays.
+        The passenger came after all? Take the no-show back until{" "}
+        {formatLocalTime(until)}, and the driver reports Dropped off at the end.
+        Then the trip is done.
       </p>
       <div>
         <Button

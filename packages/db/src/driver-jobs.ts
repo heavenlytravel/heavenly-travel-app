@@ -9,9 +9,7 @@ import { db } from "./client";
 import { answerParts, heldJobs, jobOf, tripInclude } from "./fulfilment";
 import {
   DECLINE_REASONS,
-  hasGuide,
   timingWarnings,
-  tripAssigned,
   type DeclineReason,
   type Job,
 } from "./fulfilment-rules";
@@ -531,14 +529,13 @@ export async function reportTripEvent(
 
 /**
  * Takes a no-show back: the passenger turned up after all. By the trip's
- * accepted driver within its hour, before it completes the trip, or
- * Operation at any time (`noShowUndoRefusal`). The no-show's tap is
- * removed, so the driver can report Dropped off; the history keeps it,
- * with its reason and who took it back. Within the hour nothing else
- * changes: the trip was not completed nor billed yet. After it, Operation's
- * undo is a correction: the trip is open again, assigned or confirmed by
- * its parts, its booking's status follows, and what was billed stays, as
- * for any trip reopened.
+ * accepted driver or Operation, within the no-show's hour only
+ * (`noShowUndoRefusal`), checked here by the server's clock however long
+ * a page was left open. The no-show's tap is removed, so the driver can
+ * report Dropped off; the history keeps it, with its reason and who took
+ * it back. Nothing else changes: within the hour the trip is not completed
+ * nor billed. A trip completed is refused, should its hour be counted
+ * differently by a page.
  */
 export async function undoNoShow(
   actor: Actor,
@@ -551,7 +548,6 @@ export async function undoNoShow(
       where: { id: itemId },
       include: {
         parts: true,
-        tripDetails: { select: { guideLanguage: true } },
         events: {
           select: {
             id: true,
@@ -576,51 +572,28 @@ export async function undoNoShow(
     if (item.status === "cancelled") {
       return refuse("This trip was cancelled. Call Operation.");
     }
-    const refusal = noShowUndoRefusal(
-      item.events,
-      "driver" in reporter ? "driver" : "admin",
-      now,
-    );
+    const refusal =
+      item.status === "completed"
+        ? "This trip is done: its no-show can no longer be taken back."
+        : noShowUndoRefusal(item.events, now);
     if (refusal) return refuse(refusal);
     const noShows = item.events.filter((e) => e.kind === "no-show");
     await tx.tripEvent.deleteMany({
       where: { id: { in: noShows.map((e) => e.id) } },
     });
-    const reopened =
-      item.status === "completed"
-        ? tripAssigned(item.parts, hasGuide(item.tripDetails))
-          ? "assigned"
-          : "confirmed"
-        : null;
     await logActivity(tx, actor, {
       action: "booking.trip.no-show.undone",
       entityId: item.bookingId,
       before: {
         position: item.position,
-        status: item.status,
         at: noShows[0]!.at.toISOString(),
         ...(noShows[0]!.note ? { note: noShows[0]!.note } : {}),
       },
       after: {
         position: item.position,
-        status: reopened ?? item.status,
         driverName: "driver" in reporter ? reporter.driver.name : null,
       },
     });
-    if (reopened) {
-      await tx.bookingItem.update({
-        where: { id: item.id },
-        data: { status: reopened },
-      });
-      const siblings = await tx.bookingItem.findMany({
-        where: { bookingId: item.bookingId },
-        select: { status: true },
-      });
-      await tx.booking.update({
-        where: { id: item.bookingId },
-        data: { status: bookingStatusOf(siblings) },
-      });
-    }
     return { ok: true };
   });
 }

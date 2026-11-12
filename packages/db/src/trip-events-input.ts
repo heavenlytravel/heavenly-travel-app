@@ -162,14 +162,14 @@ export function noShowEndsAt(
 
 /**
  * Why a trip's no-show cannot be taken back, or null when it can: there is
- * one, and the trip did not go on to be dropped off. Operation takes one
- * back at any time; the driver until it completes the trip
- * (`noShowEndsAt`), so a passenger who turns up late still rides. Both
- * sides show the button by this rule; the writer checks it again.
+ * one, the trip did not go on to be dropped off, and its hour is not over
+ * (`noShowEndsAt`), so a passenger who turns up late still rides. The same
+ * hour for the driver and Operation: after it the trip is completed and
+ * may be billed, and stays so. Both sides show the button by this rule,
+ * hiding it as the hour ends; the writer checks it again.
  */
 export function noShowUndoRefusal(
   events: readonly { kind: string; createdAt: Date }[],
-  by: "driver" | "admin",
   now: Date = new Date(),
 ): string | null {
   const endsAt = noShowEndsAt(events);
@@ -177,8 +177,8 @@ export function noShowUndoRefusal(
   if (events.some((e) => e.kind === "dropped-off")) {
     return "This trip was dropped off after the no-show.";
   }
-  if (by === "driver" && now.getTime() >= endsAt.getTime()) {
-    return "It is too late to take this no-show back. Call Operation.";
+  if (now.getTime() >= endsAt.getTime()) {
+    return "Its hour has passed: the no-show stands and the trip is done. Add a note on the booking if it was wrong.";
   }
   return null;
 }

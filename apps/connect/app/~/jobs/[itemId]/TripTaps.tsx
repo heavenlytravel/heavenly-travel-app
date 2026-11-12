@@ -202,7 +202,7 @@ export function TripTaps({
   const canUndo =
     !cancelled &&
     !waiting.some((t) => t.kind === "no-show") &&
-    noShowUndoRefusal(events, "driver", now) === null;
+    noShowUndoRefusal(events, now) === null;
 
   return (
     <div className="grid gap-6">

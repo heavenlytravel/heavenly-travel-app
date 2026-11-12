@@ -87,27 +87,24 @@ describe("noShowUndoRefusal", () => {
   ];
   it("needs a no-show, and none dropped off after it", () => {
     assert.match(
-      noShowUndoRefusal([{ kind: "arrived", createdAt: NOW }], "admin", NOW) ??
-        "",
+      noShowUndoRefusal([{ kind: "arrived", createdAt: NOW }], NOW) ?? "",
       /no no-show/,
     );
     assert.match(
       noShowUndoRefusal(
         [...noShow, { kind: "dropped-off", createdAt: minutes(30) }],
-        "admin",
         minutes(30),
       ) ?? "",
       /dropped off/,
     );
   });
-  it("gives the driver the hour from when it was received, Operation any time", () => {
+  it("gives everyone the hour from when it was received, no longer", () => {
     assert.equal(noShowEndsAt(noShow)?.getTime(), minutes(60).getTime());
-    assert.equal(noShowUndoRefusal(noShow, "driver", minutes(59)), null);
+    assert.equal(noShowUndoRefusal(noShow, minutes(59)), null);
     assert.match(
-      noShowUndoRefusal(noShow, "driver", minutes(60)) ?? "",
-      /too late/,
+      noShowUndoRefusal(noShow, minutes(60)) ?? "",
+      /hour has passed/,
     );
-    assert.equal(noShowUndoRefusal(noShow, "admin", minutes(600)), null);
   });
 });
 

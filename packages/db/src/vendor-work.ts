@@ -3,6 +3,7 @@ import { logActivity } from "./activity";
 import type { Actor } from "./activity-actions";
 import { refuse, type Change } from "./change";
 import { db } from "./client";
+import { completeNoShows } from "./no-shows";
 import {
   DONE_DAYS,
   jobInclude,
@@ -291,6 +292,7 @@ export async function listVendorJobs(
   vendorId: string,
   now: Date = new Date(),
 ): Promise<VendorJobs> {
+  await completeNoShows(now);
   const parts = await db.tripPart.findMany({
     where: {
       vendorAcceptedAt: { not: null },
@@ -351,6 +353,7 @@ export async function getVendorJob(
   itemId: string,
   now: Date = new Date(),
 ): Promise<VendorJob | null> {
+  await completeNoShows(now);
   const parts = await db.tripPart.findMany({
     where: {
       itemId,

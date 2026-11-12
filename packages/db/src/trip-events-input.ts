@@ -58,8 +58,10 @@ export const TAPPED_EVENTS: readonly TripEventKind[] = [
 ];
 
 /**
- * The taps that end a trip: it is completed. A no-show ends it too, and
- * the vendor is paid for it; what the customer pays is B-O4's.
+ * The taps that end a trip's steps. Dropped off completes the trip at
+ * once. A no-show completes it `NO_SHOW_UNDO_MINUTES` after it is received
+ * (`noShowEndsAt`), so the driver can take it back first; the vendor is
+ * paid for it, and what the customer pays is B-O4's.
  */
 export const COMPLETING_EVENTS: readonly TripEventKind[] = [
   "dropped-off",
@@ -137,30 +139,45 @@ export function noShowRefusal(
   return null;
 }
 
-/** How long a driver may take back their own no-show, from when it happened: the passenger turned up late. */
+/**
+ * How long a no-show waits before it completes the trip, and so how long
+ * its driver may take it back: the passenger turned up late.
+ */
 export const NO_SHOW_UNDO_MINUTES = 60;
+
+/**
+ * When a trip's no-show completes it: `NO_SHOW_UNDO_MINUTES` after the
+ * server received it (`createdAt`), not by the phone's clock, so a wrong
+ * clock or a tap queued without signal never shortens the wait. Null with
+ * no no-show.
+ */
+export function noShowEndsAt(
+  events: readonly { kind: string; createdAt: Date }[],
+): Date | null {
+  const noShow = events.find((e) => e.kind === "no-show");
+  return noShow
+    ? new Date(noShow.createdAt.getTime() + NO_SHOW_UNDO_MINUTES * 60 * 1000)
+    : null;
+}
 
 /**
  * Why a trip's no-show cannot be taken back, or null when it can: there is
  * one, and the trip did not go on to be dropped off. Operation takes one
- * back at any time; the driver within `NO_SHOW_UNDO_MINUTES` of it, so a
- * passenger who turns up late still rides. Both sides show the button by
- * this rule; the writer checks it again.
+ * back at any time; the driver until it completes the trip
+ * (`noShowEndsAt`), so a passenger who turns up late still rides. Both
+ * sides show the button by this rule; the writer checks it again.
  */
 export function noShowUndoRefusal(
-  events: readonly { kind: string; at: Date }[],
+  events: readonly { kind: string; createdAt: Date }[],
   by: "driver" | "admin",
   now: Date = new Date(),
 ): string | null {
-  const noShow = events.find((e) => e.kind === "no-show");
-  if (!noShow) return "This trip has no no-show to take back.";
+  const endsAt = noShowEndsAt(events);
+  if (!endsAt) return "This trip has no no-show to take back.";
   if (events.some((e) => e.kind === "dropped-off")) {
     return "This trip was dropped off after the no-show.";
   }
-  if (
-    by === "driver" &&
-    now.getTime() > noShow.at.getTime() + NO_SHOW_UNDO_MINUTES * 60 * 1000
-  ) {
+  if (by === "driver" && now.getTime() >= endsAt.getTime()) {
     return "It is too late to take this no-show back. Call Operation.";
   }
   return null;

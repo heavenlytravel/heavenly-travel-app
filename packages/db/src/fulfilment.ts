@@ -5,6 +5,7 @@ import { BOOKING_NUMBER_SELECT, bookingLabelOf } from "./booking-number";
 import { formatLocalTime } from "./booking-rules";
 import { refuse, type Change, type Refusal } from "./change";
 import { db } from "./client";
+import { completeNoShows } from "./no-shows";
 import { DRIVER_DOCUMENTS, DRIVER_DOCUMENT_LABELS } from "./driver-input";
 import { GUIDE_DOCUMENTS, GUIDE_DOCUMENT_LABELS } from "./guide-input";
 import { dayOf, todayInMalaysia } from "./expiry";
@@ -195,6 +196,7 @@ export async function getBookingFulfilment(
   bookingId: string,
 ): Promise<FulfilmentTrip[]> {
   await expireOffers();
+  await completeNoShows();
   const items = await db.bookingItem.findMany({
     where: { bookingId },
     orderBy: { position: "asc" },

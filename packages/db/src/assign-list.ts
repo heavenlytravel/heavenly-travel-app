@@ -14,8 +14,9 @@ import {
   type PartWaiting,
 } from "./fulfilment-rules";
 import { expireOffers, jobOf } from "./fulfilment";
+import { completeNoShows } from "./no-shows";
 import type { Prisma } from "./generated/prisma/client";
-import { isOnTheRoad, noShowUndoRefusal } from "./trip-events-input";
+import { isOnTheRoad } from "./trip-events-input";
 import { modelName } from "./vehicle-model-input";
 
 /**
@@ -146,6 +147,7 @@ export async function getAssignPage(
   now: Date = new Date(),
 ): Promise<AssignRow[]> {
   await expireOffers(now);
+  await completeNoShows(now);
   return listAssignTrips(locationId, day, now);
 }
 
@@ -182,7 +184,6 @@ async function listAssignTrips(
       parts: item.parts,
       withGuide,
       reported: isOnTheRoad(item.events),
-      noShowOpen: noShowUndoRefusal(item.events, "driver", now) === null,
     });
     return {
       itemId: item.id,
@@ -222,9 +223,9 @@ async function listAssignTrips(
           respondBy: vendorWaits ? part.offer.respondBy : null,
         };
       }),
-      // A no-show still open ended the trip: never overdue.
+      // A no-show waiting its hour ended the trip: never overdue.
       overdue:
-        item.status !== "completed" &&
+        !item.events.some((e) => e.kind === "no-show") &&
         (state === "assigned" || state === "on-the-road") &&
         tripWindow(job).end.getTime() < now.getTime(),
       lastEvent,

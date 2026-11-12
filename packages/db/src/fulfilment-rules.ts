@@ -376,8 +376,8 @@ export const ASSIGN_STATE_LABELS: Record<AssignState, string> = {
  * Where a trip stands: by its status, its parts and whether its driver
  * has reported. It is to assign while any role it needs has no one asked,
  * though others are, and waits to accept once every role is asked. A
- * no-show completes the trip, but while its driver may still take it back
- * they are at the pickup, so it stays on the road until then.
+ * no-show waiting its hour is on the road: the driver is still at the
+ * pickup, and the trip completes after it (./no-shows).
  */
 export function assignStateOf(trip: {
   status: string;
@@ -385,12 +385,8 @@ export function assignStateOf(trip: {
   withGuide: boolean;
   /** Its driver has tapped "On the way" or later: `isOnTheRoad`. */
   reported: boolean;
-  /** Ended by a no-show its driver may still take back: `noShowUndoRefusal` for the driver is null. */
-  noShowOpen?: boolean;
 }): AssignState {
-  if (trip.status === "completed") {
-    return trip.noShowOpen ? "on-the-road" : "done";
-  }
+  if (trip.status === "completed") return "done";
   if (trip.reported) return "on-the-road";
   if (tripAssigned(trip.parts, trip.withGuide)) return "assigned";
   const asked = rolesOf(trip.withGuide).every((role) =>

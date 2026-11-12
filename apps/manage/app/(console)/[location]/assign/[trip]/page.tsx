@@ -8,7 +8,6 @@ import {
   formatLocalDateTime,
   isLive,
   isOnTheRoad,
-  noShowUndoRefusal,
   namedIdOf,
   PART_ROLE_LABELS,
   PART_ROLES,
@@ -116,11 +115,7 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
   const thisOpen = open.find((t) => t.id === trip.id);
   const view = tripViewOfItem(item);
   const details = item.tripDetails;
-  const state = assignStateOf({
-    ...trip,
-    reported: isOnTheRoad(events),
-    noShowOpen: noShowUndoRefusal(events, "driver") === null,
-  });
+  const state = assignStateOf({ ...trip, reported: isOnTheRoad(events) });
   // On the road or done, what the driver reports comes first.
   const reporting = state === "on-the-road" || state === "done";
   const until = untilPickup(trip.startsAt);

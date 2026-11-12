@@ -6,6 +6,7 @@ import {
   contactVisibleUntil,
   nextTripStep,
   noShowRefusal,
+  noShowEndsAt,
   noShowUndoRefusal,
   placeArea,
   type TripEventInput,
@@ -79,28 +80,31 @@ describe("noShowRefusal", () => {
 });
 
 describe("noShowUndoRefusal", () => {
+  // Received at NOW, though the phone said earlier.
   const noShow = [
-    { kind: "arrived", at: NOW },
-    { kind: "no-show", at: NOW },
+    { kind: "arrived", createdAt: NOW },
+    { kind: "no-show", createdAt: NOW },
   ];
   it("needs a no-show, and none dropped off after it", () => {
     assert.match(
-      noShowUndoRefusal([{ kind: "arrived", at: NOW }], "admin", NOW) ?? "",
+      noShowUndoRefusal([{ kind: "arrived", createdAt: NOW }], "admin", NOW) ??
+        "",
       /no no-show/,
     );
     assert.match(
       noShowUndoRefusal(
-        [...noShow, { kind: "dropped-off", at: minutes(30) }],
+        [...noShow, { kind: "dropped-off", createdAt: minutes(30) }],
         "admin",
         minutes(30),
       ) ?? "",
       /dropped off/,
     );
   });
-  it("gives the driver an hour, Operation any time", () => {
-    assert.equal(noShowUndoRefusal(noShow, "driver", minutes(60)), null);
+  it("gives the driver the hour from when it was received, Operation any time", () => {
+    assert.equal(noShowEndsAt(noShow)?.getTime(), minutes(60).getTime());
+    assert.equal(noShowUndoRefusal(noShow, "driver", minutes(59)), null);
     assert.match(
-      noShowUndoRefusal(noShow, "driver", minutes(61)) ?? "",
+      noShowUndoRefusal(noShow, "driver", minutes(60)) ?? "",
       /too late/,
     );
     assert.equal(noShowUndoRefusal(noShow, "admin", minutes(600)), null);

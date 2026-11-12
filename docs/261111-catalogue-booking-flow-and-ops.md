@@ -306,15 +306,25 @@ counter on 2026-11-11, so its first is HTQ-0001; development's continues from 20
 
 - **No-show** buttons are red, in Connect and Manage. After the reason, it asks once more
   ("Yes, report no-show") before it is sent.
-- **On the road while it can be taken back.** A no-show completes the trip at once, but for
-  the driver's `NO_SHOW_UNDO_MINUTES` after it Assign shows the trip On the road, as the driver
-  is still at the pickup (`assignStateOf`'s `noShowOpen`), never overdue; then Done.
-- **When it bills.** The no-show completes the trip when it is tapped, not after the hour: with
-  no scheduler, a completion that waits would only happen when someone opened a page, and
-  billing must not hang on that. When it is the booking's last trip, the booking completes and
-  its invoice is issued at the tap; an undo leaves the invoice, as the price is the same. Kept
-  option: complete after the hour through a Vercel cron (needs `CRON_SECRET` and a route),
-  so the invoice waits for the hour.
+- **A no-show completes the trip an hour later, not at the tap.** Billing at the tap was wrong:
+  the driver can't know a trip is the booking's last, and after an undo any add-on would have
+  made a second invoice. Now:
+  - The tap records the no-show. The trip stays open (assigned), On the road on Assign, never
+    overdue.
+  - The hour runs from when the server received the tap (`TripEvent.createdAt`), not the
+    phone's clock, so a wrong clock or a tap queued without signal never shortens it
+    (`noShowEndsAt`). Connect shows "You can take it back until 10:42".
+  - Within the hour the driver or Operation takes it back: the tap is removed and nothing else
+    changes, as nothing was completed or billed.
+  - After the hour, `completeNoShows` (`packages/db/src/no-shows.ts`) completes the trip, then
+    the booking's status and billing, as Dropped off does. The invoice is dated when the hour
+    ended. It runs before Assign, a booking's page and Connect's jobs read trips, as
+    `expireOffers` does, so no scheduler is needed. A trip two runs reach at once is completed
+    once (`updateMany` on the open status).
+  - After the hour, Operation's undo is a correction: the trip reopens and what was billed
+    stays, as for any trip reopened.
+  - Kept option: a Vercel cron to run `completeNoShows` on time even when no one opens a
+    page.
 
 ### Production order for this branch
 

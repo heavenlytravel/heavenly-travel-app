@@ -28,6 +28,8 @@ type Event = {
   kind: string;
   at: Date;
   note: string | null;
+  /** When the server received it: a no-show's hour runs from here. */
+  createdAt: Date;
 };
 
 /**
@@ -138,7 +140,8 @@ function UndoNoShow({ itemId }: { itemId: string }) {
       <input type="hidden" name="itemId" value={itemId} />
       <p className="text-caption text-muted">
         The passenger came after all? Take the no-show back, and the driver
-        reports Dropped off at the end. An invoice it issued stays.
+        reports Dropped off at the end. After its hour the trip is completed and
+        billed; taking it back then reopens the trip, and the bill stays.
       </p>
       <div>
         <Button
@@ -334,8 +337,8 @@ function ReportFor({
           </Field>
           {confirming ? (
             <p className="text-caption font-semibold text-danger-strong">
-              Report a no-show now? The trip ends, and the driver has an hour to
-              take it back.
+              Report a no-show now? The trip completes an hour after, unless it
+              is taken back.
             </p>
           ) : null}
           <div className="flex items-center gap-2">

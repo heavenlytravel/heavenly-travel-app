@@ -6,6 +6,7 @@ import {
   noShowRefusal,
   noShowUndoRefusal,
   NO_SHOW_UNDO_MINUTES,
+  noShowEndsAt,
   TRIP_EVENT_LABELS,
   TRIP_EVENT_NOTE_MAX_LENGTH,
   type TripEventKind,
@@ -284,8 +285,9 @@ export function TripTaps({
             </label>
             {confirming ? (
               <p className="text-sm font-semibold text-danger-strong">
-                Report a no-show now? The trip ends. You can take it back within{" "}
-                {NO_SHOW_UNDO_MINUTES} minutes if the passenger comes.
+                Report a no-show now? The trip ends {NO_SHOW_UNDO_MINUTES}{" "}
+                minutes after. Until then you can take it back if the passenger
+                comes.
               </p>
             ) : null}
             <div className="grid grid-cols-[1fr_1.4fr] gap-2">
@@ -325,7 +327,8 @@ export function TripTaps({
             The passenger came: undo no-show
           </Button>
           <p className="text-center text-caption text-muted">
-            You can take it back within {NO_SHOW_UNDO_MINUTES} minutes.
+            You can take it back until{" "}
+            {formatLocalTime(noShowEndsAt(events) ?? now)}. Then the trip ends.
           </p>
         </div>
       ) : null}

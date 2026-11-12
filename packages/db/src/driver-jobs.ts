@@ -3,6 +3,7 @@ import { settleBilling } from "./billing";
 import { logActivity } from "./activity";
 import { ITEM_ACTIONS, type Actor } from "./activity-actions";
 import { bookingStatusOf } from "./booking-status";
+import { completeNoShows } from "./no-shows";
 import { refuse, type Change } from "./change";
 import { db } from "./client";
 import { answerParts, heldJobs, jobOf, tripInclude } from "./fulfilment";
@@ -20,13 +21,11 @@ import { stopsOf } from "./stops";
 import { isUniqueViolation } from "./prisma-errors";
 import {
   checkTripEvent,
-  COMPLETING_EVENTS,
   contactVisible,
   noShowRefusal,
   noShowUndoRefusal,
   placeArea,
   type TripEventInput,
-  type TripEventKind,
 } from "./trip-events-input";
 
 /**
@@ -75,6 +74,8 @@ export type TripEventView = {
   kind: string;
   at: Date;
   note: string | null;
+  /** When the server received it: a no-show's hour runs from here (`noShowEndsAt`). */
+  createdAt: Date;
 };
 
 /** A trip as a driver sees it before accepting, or on their list. */
@@ -139,11 +140,12 @@ export function tripOf(part: JobPart): DriverTrip {
     pickupArea: pickup ? placeArea(pickup) : "",
     dropoffArea: dropoff ? placeArea(dropoff) : null,
     accepted: part.driverAcceptedAt !== null,
-    events: part.item.events.map(({ id, kind, at, note }) => ({
+    events: part.item.events.map(({ id, kind, at, note, createdAt }) => ({
       id,
       kind,
       at,
       note,
+      createdAt,
     })),
   };
 }
@@ -166,6 +168,7 @@ export async function listDriverJobs(
   driver: { id: string; name: string },
   now: Date = new Date(),
 ): Promise<DriverJobs> {
+  await completeNoShows(now);
   const parts = await db.tripPart.findMany({
     where: {
       driverId: driver.id,
@@ -284,6 +287,7 @@ export async function getDriverJob(
   itemId: string,
   now: Date = new Date(),
 ): Promise<(DriverJob & { guide: JobGuide | null }) | null> {
+  await completeNoShows(now);
   const part = await db.tripPart.findFirst({
     where: { itemId, driverId: driver.id, vendorAcceptedAt: { not: null } },
     include: {
@@ -417,7 +421,8 @@ export type Reporter =
  * Keeps one tap. Only the trip's driver, once they accepted it, or
  * Operation on their behalf; never on a cancelled trip. A tap sent again
  * with the same id from the phone is kept once and answers ok. Dropped
- * off and no-show complete the trip. The order of the steps is suggested,
+ * off completes the trip; a no-show completes it after its hour
+ * (`completeNoShows`). The order of the steps is suggested,
  * not enforced.
  */
 export async function reportTripEvent(
@@ -492,10 +497,8 @@ export async function reportTripEvent(
           driverName: part?.driver?.name ?? null,
         },
       });
-      if (
-        COMPLETING_EVENTS.includes(input.kind as TripEventKind) &&
-        item.status !== "completed"
-      ) {
+      // Dropped off completes the trip; a no-show does an hour after (./no-shows).
+      if (input.kind === "dropped-off" && item.status !== "completed") {
         await tx.bookingItem.update({
           where: { id: item.id },
           data: { status: "completed" },
@@ -528,13 +531,14 @@ export async function reportTripEvent(
 
 /**
  * Takes a no-show back: the passenger turned up after all. By the trip's
- * accepted driver within `NO_SHOW_UNDO_MINUTES`, or Operation at any time
- * (`noShowUndoRefusal`). The no-show's tap is removed, so the driver can
- * report Dropped off; the history keeps it, with its reason and who took
- * it back. A trip the no-show completed is open again, assigned or
- * confirmed by its parts, and its booking's status follows. An invoice
- * the no-show issued stays issued: the price did not change, and a number
- * is never taken back.
+ * accepted driver within its hour, before it completes the trip, or
+ * Operation at any time (`noShowUndoRefusal`). The no-show's tap is
+ * removed, so the driver can report Dropped off; the history keeps it,
+ * with its reason and who took it back. Within the hour nothing else
+ * changes: the trip was not completed nor billed yet. After it, Operation's
+ * undo is a correction: the trip is open again, assigned or confirmed by
+ * its parts, its booking's status follows, and what was billed stays, as
+ * for any trip reopened.
  */
 export async function undoNoShow(
   actor: Actor,
@@ -548,7 +552,15 @@ export async function undoNoShow(
       include: {
         parts: true,
         tripDetails: { select: { guideLanguage: true } },
-        events: { select: { id: true, kind: true, at: true, note: true } },
+        events: {
+          select: {
+            id: true,
+            kind: true,
+            at: true,
+            note: true,
+            createdAt: true,
+          },
+        },
       },
     });
     if (!item) return refuse("This trip is no longer on the booking.");
@@ -618,6 +630,13 @@ export function listTripEvents(itemIds: readonly string[]) {
   return db.tripEvent.findMany({
     where: { itemId: { in: [...itemIds] } },
     orderBy: { at: "asc" },
-    select: { id: true, itemId: true, kind: true, at: true, note: true },
+    select: {
+      id: true,
+      itemId: true,
+      kind: true,
+      at: true,
+      note: true,
+      createdAt: true,
+    },
   });
 }

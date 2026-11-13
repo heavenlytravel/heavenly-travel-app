@@ -185,9 +185,9 @@ How it behaves:
   than the list; a page under a record (a trip's amend, a history) names its record as a
   link under the title. None on the dashboard. Groups ("Operations") are not in the trail.
 - **Titles are in Title Case:** a page's title, its row's name and what the search calls
-  it ("Add Zone", "Rate Grid", "Try a Trip"), with a, an, the, and, or, of, to, in, on and
-  for small inside a title. Buttons, card headings, dialogs, labels and sentences stay in
-  sentence case ("Add zone" on the button that opens Add Zone).
+  it ("Add Zone", "Rate Grid", "Try a Trip"). Since 2026-11-13 so is every label, in
+  every app: card headings, buttons, column headers, field labels and status words.
+  Sentences stay in sentence case. The rule is `docs/261113-text-case.md`.
 - **On a phone** the same menu fills the panel, sections opening in place, the picker
   on top.
 - **The search palette** keeps working as today, with its index moved to the new addresses.

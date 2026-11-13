@@ -3,6 +3,7 @@ import { refuse, type Change } from "./change";
 import { flagOf, numberOf, textOf, type Parsed } from "./fields";
 import type { Ring } from "./geo";
 import { formatMyr, parseRinggit } from "./money";
+import { sentenceCase } from "./names";
 import { isRing, isZoneShape, ringsOf, type ZoneShape } from "./zone-match";
 
 /**
@@ -343,9 +344,6 @@ export const CHARGE_LIMITS = {
   /** RM 1,000. */
   maxFlatSen: 100_000,
 } as const;
-
-const sentenceCase = (text: string) =>
-  text.charAt(0).toUpperCase() + text.slice(1);
 
 /**
  * The rules on a charge: a whole percentage from 1, or an amount from one

@@ -86,7 +86,7 @@ export function PostLocations({
             disabled={unchanged}
             pending={pending}
           >
-            {pending ? "Saving…" : "Save locations"}
+            {pending ? "Saving…" : "Save Locations"}
           </Button>
           <FormError error={error} />
         </div>

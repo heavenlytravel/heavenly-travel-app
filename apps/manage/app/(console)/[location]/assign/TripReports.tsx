@@ -40,7 +40,7 @@ type Event = {
  * its note; the waiting they measure. Operation can report for a driver
  * who cannot, in the same order as Connect: only the next step, or a
  * no-show, or a problem. See docs/261028-fulfilment-vendors-and-connect.md,
- * "On the day".
+ * "On the Day".
  */
 export function TripReports({
   bookingId,
@@ -62,7 +62,7 @@ export function TripReports({
   return (
     <Card>
       <CardTitle description="What the driver reported on the day.">
-        On the day
+        On the Day
       </CardTitle>
       <div className="grid gap-6">
         {shown.map((trip) => (
@@ -166,7 +166,7 @@ function UndoNoShow({ itemId, until }: { itemId: string; until: Date }) {
           variant="secondary"
           pending={undo.pending}
         >
-          Undo no-show
+          Undo No-show
         </Button>
       </div>
       <FormError error={undo.error} size="xs" />
@@ -365,7 +365,7 @@ function ReportFor({
                 variant="danger"
                 pending={noShow.pending}
               >
-                Yes, report no-show
+                Yes, Report No-show
               </Button>
             ) : (
               <Button
@@ -379,7 +379,7 @@ function ReportFor({
                   }
                 }}
               >
-                Report no-show
+                Report No-show
               </Button>
             )}
             <Button

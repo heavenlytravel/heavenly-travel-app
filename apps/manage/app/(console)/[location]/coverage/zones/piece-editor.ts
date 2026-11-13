@@ -638,7 +638,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
   }
 
   const deleteItem = (index: number): PieceMenuItem => ({
-    label: "Delete this piece",
+    label: "Delete This Piece",
     danger: true,
     run: () => deletePieces([index]),
   });
@@ -649,7 +649,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     ...(pieces.length > 1
       ? [
           {
-            label: "Delete the other pieces",
+            label: "Delete the Other Pieces",
             danger: true,
             run: () => {
               deletePieces(pieces.flatMap((_, i) => (i === index ? [] : [i])));
@@ -664,7 +664,7 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
     index: number,
     edge: { ring: number; after: number; corner: LngLat },
   ): PieceMenuItem => ({
-    label: "Add a corner here",
+    label: "Add a Corner Here",
     run: () => {
       addCorner(index, edge);
       changed(index);
@@ -932,8 +932,8 @@ export function createPieceEditor(options: PieceEditorOptions): PieceEditor {
       };
       selectCorner(at);
       openMenu(event, [
-        { label: "Remove this corner", run: () => removeCorner(index, at) },
-        { label: "Cut from this corner", run: startCut },
+        { label: "Remove This Corner", run: () => removeCorner(index, at) },
+        { label: "Cut from This Corner", run: startCut },
         deleteItem(index),
       ]);
       return;

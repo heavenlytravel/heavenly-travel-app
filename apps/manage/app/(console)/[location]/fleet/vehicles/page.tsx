@@ -36,7 +36,7 @@ export default async function VehiclesPage({
           <Button asChild>
             <Link href={newVehicleHref(scope.slug)}>
               <PlusIcon />
-              Add vehicle
+              Add Vehicle
             </Link>
           </Button>
         }

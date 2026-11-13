@@ -107,7 +107,7 @@ async function vehicleScreen(scope: ConsoleScope, vehicleId: string) {
             <HistoryLink href={recordHistoryHref(href)} />
             <DeleteButton
               look="header"
-              label="Delete vehicle"
+              label="Delete Vehicle"
               title={`Delete ${vehicle.plate}?`}
               impact={impact}
               note="For a vehicle entered by mistake: one that has served is taken out of service instead. Its history stays in the log. This cannot be undone."

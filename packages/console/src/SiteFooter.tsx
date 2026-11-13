@@ -28,8 +28,8 @@ import {
 
 /**
  * The foot of every page of the customer site, and of Connect's public
- * pages, as SUPER writes it in the console: the logo and the tagline; the link columns, "Follow us on" and
- * "Get in touch"; the ways to pay and the bodies the company is
+ * pages, as SUPER writes it in the console: the logo and the tagline; the link columns, "Follow Us On" and
+ * "Get in Touch"; the ways to pay and the bodies the company is
  * registered with; then the copyright line with its links. A part with nothing in
  * it is left out and the others close up. `content` is the footer as it is
  * shown, its links to pages the public cannot open already left out. It
@@ -126,7 +126,7 @@ export function SiteFooter({
                           rel="noopener noreferrer"
                           className={linkClass}
                         >
-                          WhatsApp us
+                          WhatsApp Us
                         </a>
                       ) : (
                         <span>WhatsApp {content.whatsapp}</span>
@@ -290,7 +290,7 @@ function BadgeTile({
         </strong>
         {href ? (
           <span className="underline underline-offset-4 group-hover:text-white">
-            {badge.detail || "View certificate"}
+            {badge.detail || "View Certificate"}
           </span>
         ) : (
           badge.detail

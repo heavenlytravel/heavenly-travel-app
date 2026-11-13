@@ -124,7 +124,7 @@ const LEAD_HEADING =
 
 /**
  * A location's hourly price list, in the rate grid's look: for each zone,
- * "Pickup from" it, a row for each of the 4, 8 and 12-hour packages, the
+ * "Pickup From" it, a row for each of the 4, 8 and 12-hour packages, the
  * hours the package covers from there, and its price per class; then the
  * rate per extra hour for each package size, the same from every zone. An
  * empty price is not sold. Saved whole. The Filters button, at the right
@@ -302,8 +302,8 @@ export function HourlyRates({
     },
     {
       param: "unsold",
-      label: "Sold hourly",
-      options: [{ value: "1", label: `Not sold, no price (${unsold})` }],
+      label: "Sold Hourly",
+      options: [{ value: "1", label: `Not Sold, No Price (${unsold})` }],
       value: unsoldOnly ? "1" : "",
     },
   ];
@@ -344,7 +344,7 @@ export function HourlyRates({
       rowSpan={span}
       className={cx(LEAD_HEADING, "pr-3 pl-5 text-left")}
     >
-      Pickup from
+      Pickup From
     </th>,
     <th
       key="duration"
@@ -424,7 +424,7 @@ export function HourlyRates({
                   }
                   className="text-link"
                 >
-                  Show every zone
+                  Show Every Zone
                 </button>
               </EmptyRow>
             ) : null}
@@ -514,7 +514,7 @@ export function HourlyRates({
                 colSpan={classes.length + 3}
                 className="border-b border-hairline bg-shade py-2.5 pr-3 pl-5 text-left text-2xs font-semibold tracking-caps text-body uppercase"
               >
-                Extra hour, from every zone
+                Extra Hour, from Every Zone
               </th>
             </tr>
             {HOURLY_PACKAGES.map((size, index) => {
@@ -581,7 +581,7 @@ export function HourlyRates({
               setError(null);
             }}
             onSave={save}
-            label="Save hourly rates"
+            label="Save Hourly Rates"
           />
           {leaveDialog}
         </>

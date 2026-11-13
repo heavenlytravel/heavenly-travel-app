@@ -75,7 +75,7 @@ function onlyOne(own: readonly Candidate[], tripId: string) {
  * both. An individual reads "Individual · name" and is their own driver,
  * named at once. What we pay
  * is per trip: the booking's other trips still needing the role can be
- * given the same, all at once with "All trips", each with its own amount.
+ * given the same, all at once with "All Trips", each with its own amount.
  * When the vendor answers by, before the pickup; for our vehicle or guide,
  * the acceptance now. Sent, the vendor accepts before the role is
  * settled. See docs/261028-fulfilment-vendors-and-connect.md, "Assigning
@@ -268,8 +268,8 @@ export function AssignForm({
                     {
                       value: ANY,
                       label: vendor?.isOurs
-                        ? "Any, we name it later"
-                        : "Any, the vendor assigns",
+                        ? "Any, We Name It Later"
+                        : "Any, the Vendor Assigns",
                     },
                   ]),
               ...own.map((c) => candidateOption(c, [trip.id])),
@@ -289,8 +289,8 @@ export function AssignForm({
                       {
                         value: ANY,
                         label: vendor?.isOurs
-                          ? "Any, we name it later"
-                          : "Any, the vendor assigns",
+                          ? "Any, We Name It Later"
+                          : "Any, the Vendor Assigns",
                       },
                     ]),
                 ...ownDrivers.map((c) => candidateOption(c, [trip.id])),
@@ -357,7 +357,7 @@ export function AssignForm({
           ) : null}
           {tipped && tipRole ? (
             <Field
-              label={`Driver tip ${posted.length > 1 ? "per trip " : ""}(RM)`}
+              label={`Driver Tip ${posted.length > 1 ? "per trip " : ""}(RM)`}
               hint="Out of what the customer paid, to the driver themselves."
             >
               <Input
@@ -370,11 +370,11 @@ export function AssignForm({
             </Field>
           ) : null}
           <Field
-            label="Answer by"
+            label="Answer By"
             hint="Before the pickup. Unanswered by then, it opens again."
           >
             <DateTimeField
-              title="Answer by"
+              title="Answer By"
               value={respondBy}
               onChange={setRespondByEdit}
               max={last.date}
@@ -393,10 +393,10 @@ export function AssignForm({
 
       {others.length > 0 && vendor ? (
         <fieldset className="grid gap-2 rounded-control bg-shade p-3">
-          <legend className="sr-only">Also give the same to</legend>
+          <legend className="sr-only">Also Give the Same To</legend>
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-medium text-ink">
-              Also give the same to
+              Also Give the Same To
             </p>
             <Button
               type="button"
@@ -411,7 +411,7 @@ export function AssignForm({
                 )
               }
             >
-              All trips
+              All Trips
             </Button>
           </div>
           {others.map((other) => {

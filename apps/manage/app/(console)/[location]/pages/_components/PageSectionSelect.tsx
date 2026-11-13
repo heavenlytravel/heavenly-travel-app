@@ -5,7 +5,7 @@ import { Select } from "@repo/ui/select";
 import { useRouter } from "next/navigation";
 import { showNavigation } from "@repo/ui/navigation-progress";
 
-/** One choice of the section, "All sections" worth "", with the list's address narrowed to it. */
+/** One choice of the section, "All Sections" worth "", with the list's address narrowed to it. */
 export type SectionOption = { value: string; label: string; href: string };
 
 /**

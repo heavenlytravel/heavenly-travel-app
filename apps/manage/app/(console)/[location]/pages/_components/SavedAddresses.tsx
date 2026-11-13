@@ -30,7 +30,7 @@ export type SavedAddress = {
   placeId: string;
   placeLabel: string;
   placeAddress: string;
-  /** The pages whose "Take me here" goes to it, by name: popular places, attractions, hotels. */
+  /** The pages whose "Take Me Here" goes to it, by name: popular places, attractions, hotels. */
   usedBy: string[];
   /** It lies outside the location's states, where no new address may. */
   isStray: boolean;

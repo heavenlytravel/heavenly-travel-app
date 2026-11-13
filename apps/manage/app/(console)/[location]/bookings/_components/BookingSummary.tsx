@@ -131,7 +131,7 @@ export function BookingSummary({
               {agreed !== null ? (
                 <div className="flex items-baseline justify-between gap-4">
                   <span className="min-w-0 text-body">
-                    Agreed price
+                    Agreed Price
                     {trip.priceReason ? (
                       <span className="block text-xs text-muted">
                         {trip.priceReason}
@@ -254,7 +254,7 @@ function AgreedPrice({
         >
           {name
             ? `Agree a different price for ${name.toLowerCase()}`
-            : "Agree a different price"}
+            : "Agree a Different Price"}
         </button>
         {note ? <p className="text-xs text-warning">{note}</p> : null}
       </div>
@@ -265,7 +265,7 @@ function AgreedPrice({
     <div className="mt-1 mb-1 grid gap-3 rounded-control border border-dashed border-slot p-3">
       <label htmlFor={`${ids}-amount`} className="grid gap-1.5">
         <span className="text-xs font-semibold text-body">
-          {name ? `${name}, agreed price (RM)` : "Agreed price (RM)"}
+          {name ? `${name}, Agreed Price (RM)` : "Agreed Price (RM)"}
         </span>
         <Input
           id={`${ids}-amount`}

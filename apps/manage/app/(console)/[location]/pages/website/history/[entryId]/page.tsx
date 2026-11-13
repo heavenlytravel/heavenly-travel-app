@@ -57,7 +57,7 @@ async function publishDetails({ entryId }: { entryId: string }) {
     return (
       <PublishHeader
         entry={footer.entry}
-        edit={{ href: footerEditorPath(footer.key), label: "Edit the footer" }}
+        edit={{ href: footerEditorPath(footer.key), label: "Edit the Footer" }}
       >
         <Card>
           <CardTitle>Before</CardTitle>
@@ -92,7 +92,7 @@ async function publishDetails({ entryId }: { entryId: string }) {
   return (
     <PublishHeader
       entry={entry}
-      edit={{ href: sitePageHref(page), label: "Edit this page" }}
+      edit={{ href: sitePageHref(page), label: "Edit This Page" }}
     >
       <PagePublishCards kind={kind} before={before} after={after} />
     </PublishHeader>

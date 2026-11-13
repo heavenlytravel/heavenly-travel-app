@@ -54,7 +54,7 @@ export function Catalogue({
             scroll={false}
             className="rounded-sm text-sm font-medium text-muted underline-offset-4 hover:text-ink hover:underline focus-ring"
           >
-            Catalogue order
+            Catalogue Order
           </Link>
         ) : null}
         <AddedSortLink
@@ -205,7 +205,7 @@ function ClassCard({
                     <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
                       <span className="truncate">{offering.location.name}</span>
                       {offering.isActive ? null : (
-                        <span className="text-xs font-normal">Off sale</span>
+                        <span className="text-xs font-normal">Off Sale</span>
                       )}
                       <span className="ml-auto text-xs font-normal text-muted tabular-nums">
                         {plural(

@@ -7,6 +7,7 @@ import {
   IMAGE_TYPES,
   PHOTO_LIMITS,
   photoAlt,
+  titleCase,
   type Photo,
   type UploadedImage,
 } from "@repo/db";
@@ -72,7 +73,7 @@ const LISTS = {
 /**
  * A vehicle's photos or a class's pictures (`of`), in order: each with
  * its caption (a vehicle's), viewed full screen, moved left or right, or
- * taken out. The first is the cover. "Add photos", the dashed slot after the last, stores each file
+ * taken out. The first is the cover. "Add Photos", the dashed slot after the last, stores each file
  * as soon as it is chosen, several at once, each shown in its place until
  * it lands; files past the limit are left out, and the list says so. In
  * the admin, "Choose from Media" adds files already stored. The form
@@ -244,7 +245,7 @@ export function PhotoList({
             >
               <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand">
                 {empty ? <ImageIcon /> : <PlusIcon />}
-                {uploading ? "Uploading…" : `Add ${list.many}`}
+                {uploading ? "Uploading…" : titleCase(`Add ${list.many}`)}
               </span>
               {empty ? (
                 <span className="text-xs text-muted">{list.first}</span>

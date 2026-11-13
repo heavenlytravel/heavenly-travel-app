@@ -25,7 +25,7 @@ export default async function EditBusinessPage() {
       width="narrow"
       back={{ href: "/~/account/business", label: "Business" }}
       band={
-        <BandHeading eyebrow={vendor.name} title="Edit details">
+        <BandHeading eyebrow={vendor.name} title="Edit Details">
           Who you are, where we reach you, where you work and where we pay you.
         </BandHeading>
       }

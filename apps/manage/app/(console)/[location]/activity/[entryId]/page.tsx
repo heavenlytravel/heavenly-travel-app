@@ -88,7 +88,7 @@ async function publishDetails({
         action={
           <Button asChild variant="secondary">
             <Link href={locationPageHref(location.slug, ref)}>
-              Edit this page
+              Edit This Page
             </Link>
           </Button>
         }

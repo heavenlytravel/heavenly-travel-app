@@ -35,7 +35,7 @@ export default async function AccountPage({
 
   return (
     <>
-      <PageTitle eyebrow="Account" title="Your account." />
+      <PageTitle eyebrow="Account" title="Your Account" />
       <div className="grid max-w-[640px] gap-5">
         <AccountSettings
           offerPassword={
@@ -57,7 +57,7 @@ export default async function AccountPage({
             ]}
           />
           <Button asChild size="lg" className="mt-6 w-full">
-            <Link href={ACCOUNT_BOOKINGS_PATH}>My bookings</Link>
+            <Link href={ACCOUNT_BOOKINGS_PATH}>My Bookings</Link>
           </Button>
         </Panel>
       </div>

@@ -29,11 +29,11 @@ export function BillNowControl({
     return (
       <ActionDialog
         action={billNowAction}
-        label="Issue credit note"
+        label="Issue Credit Note"
         title={`Credit ${label} now?`}
         description={`A credit note for ${formatMyr(-unbilledSen)} is issued now, against its invoices, newest first. Record the refund on it if the money goes back.`}
         done="Credit note issued."
-        submit="Issue credit note"
+        submit="Issue Credit Note"
         hidden={{ bookingId }}
         variant={variant}
       >
@@ -44,11 +44,11 @@ export function BillNowControl({
   return (
     <ActionDialog
       action={billNowAction}
-      label="Issue now"
+      label="Issue Now"
       title={`Issue ${label} now?`}
       description={`It is issued for ${formatMyr(unbilledSen)}, in full, and never changes after: a later change to the booking is billed on a new invoice or a credit note. Its payments stay on it.`}
       done="Invoice issued."
-      submit="Issue invoice"
+      submit="Issue Invoice"
       hidden={{ bookingId }}
       variant={variant}
     >

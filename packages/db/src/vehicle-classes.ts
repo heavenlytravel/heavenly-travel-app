@@ -218,7 +218,7 @@ function takenRefusal(name: string) {
 /**
  * Adds a class to the catalogue inside the caller's transaction: its type
  * and tier found or added, its name and slug made from them, last in its
- * category. The catalogue's "Add class" and a location's new class both
+ * category. The catalogue's "Add Class" and a location's new class both
  * add one here.
  */
 export async function createClassIn(

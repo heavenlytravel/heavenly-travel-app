@@ -54,7 +54,7 @@ export function DeleteLocation({
         <ImpactList impact={impact} />
       </div>
       <DeleteButton
-        label="Delete location"
+        label="Delete Location"
         title={`Delete ${name}?`}
         impact={impact}
         note="This cannot be undone."

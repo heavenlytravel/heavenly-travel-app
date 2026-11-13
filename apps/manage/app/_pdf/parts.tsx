@@ -143,7 +143,7 @@ export function PdfPage({
   children,
 }: {
   company: CompanyDetails;
-  /** "Booking confirmation", "Invoice". */
+  /** "Booking Confirmation", "Invoice". */
   title: string;
   /** "HTB-1042". */
   number: string;

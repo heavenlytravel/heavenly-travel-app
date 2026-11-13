@@ -9,7 +9,7 @@ import { ACCOUNT_PATH } from "../../../_ui/nav";
 import { Panel } from "../../../_ui/parts";
 import { BandHeading, Screen } from "../../../_ui/Screen";
 
-export const metadata: Metadata = { title: "Your driver profile | Connect" };
+export const metadata: Metadata = { title: "Your Driver Profile | Connect" };
 
 /**
  * Route: /account/driver. The signed-in driver's own record, as their
@@ -31,7 +31,7 @@ export default async function DriverProfilePage() {
       width="narrow"
       back={{ href: ACCOUNT_PATH, label: "Account" }}
       band={
-        <BandHeading eyebrow={driver.vendor.name} title="Your driver profile">
+        <BandHeading eyebrow={driver.vendor.name} title="Your Driver Profile">
           How {driver.vendor.name} has you as a driver, and where we pay you.
         </BandHeading>
       }
@@ -40,7 +40,7 @@ export default async function DriverProfilePage() {
         <DriverDetails driver={driver} />
         <div className="flex flex-wrap gap-2">
           <Button asChild>
-            <Link href="/~/account/driver/edit">Edit your profile</Link>
+            <Link href="/~/account/driver/edit">Edit Your Profile</Link>
           </Button>
           {inFleet ? (
             <Button asChild variant="secondary">

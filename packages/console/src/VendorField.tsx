@@ -17,7 +17,7 @@ const ADDS: Record<string, keyof VendorAdds> = {
  * then the other active vendors that offer it (`vendorAddsOf`), so an
  * agent-only vendor is never offered. The record's own vendor stays. A
  * vendor serves some locations only; the writer refuses a record based
- * where its vendor does not serve, under "Based at".
+ * where its vendor does not serve, under "Based At".
  */
 export function VendorField({
   vendors,
@@ -54,7 +54,7 @@ export function VendorField({
             ? [{ label: "Ours", options: ours.map(option) }]
             : []),
           ...(others.length > 0
-            ? [{ label: "Other vendors", options: others.map(option) }]
+            ? [{ label: "Other Vendors", options: others.map(option) }]
             : []),
         ]}
       />

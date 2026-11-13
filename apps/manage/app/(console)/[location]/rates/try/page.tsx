@@ -85,7 +85,7 @@ async function chooseLocation() {
   const locations = await locationsVisible();
   return (
     <Card flush>
-      <CardTitle inset>Pick a location</CardTitle>
+      <CardTitle inset>Pick a Location</CardTitle>
       {locations.length === 0 ? (
         <EmptyState>No location yet.</EmptyState>
       ) : (

@@ -15,7 +15,7 @@ import { SubmitButton } from "../../../_ui/SubmitButton";
 import { startViewAsAction } from "../actions";
 import { CannotView, NOT_SUPER, ViewAsRules } from "../parts";
 
-export const metadata: Metadata = { title: "View as | Connect" };
+export const metadata: Metadata = { title: "View As | Connect" };
 
 /**
  * Route: /~/view-as/[userId], opened from a driver's "View in Connect" in
@@ -50,7 +50,7 @@ export default async function ViewAsOnePage({
       width="narrow"
       back={{ href: VIEW_AS_PATH, label: "Everyone" }}
       band={
-        <BandHeading eyebrow="View as" title={fullName(target) || target.email}>
+        <BandHeading eyebrow="View As" title={fullName(target) || target.email}>
           {target.email}
         </BandHeading>
       }
@@ -67,7 +67,7 @@ export default async function ViewAsOnePage({
         <ViewAsRules />
         <form action={startViewAsAction.bind(null, target.id)}>
           <SubmitButton size="lg" className="w-full">
-            Start viewing
+            Start Viewing
           </SubmitButton>
         </form>
       </Panel>

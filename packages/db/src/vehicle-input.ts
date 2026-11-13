@@ -36,10 +36,10 @@ export const VEHICLE_DOCUMENTS = [
 export type VehicleDocument = (typeof VEHICLE_DOCUMENTS)[number];
 
 export const VEHICLE_DOCUMENT_LABELS: Record<VehicleDocument, string> = {
-  roadTaxExpiresOn: "Road tax",
+  roadTaxExpiresOn: "Road Tax",
   insuranceExpiresOn: "Insurance",
-  inspectionExpiresOn: "PUSPAKOM inspection",
-  permitExpiresOn: "Operating permit",
+  inspectionExpiresOn: "PUSPAKOM Inspection",
+  permitExpiresOn: "Operating Permit",
 };
 
 /** Every editable field of a vehicle but its photos: what a change is compared by. */
@@ -72,10 +72,10 @@ export const VEHICLE_FIELD_LABELS: Record<VehicleField | "photos", string> = {
   vehicleClassId: "Class",
   brand: "Brand",
   model: "Model",
-  locationId: "Based at",
+  locationId: "Based At",
   colour: "Colour",
-  year: "Year made",
-  isActive: "In service",
+  year: "Year Made",
+  isActive: "In Service",
   notes: "Notes",
   photos: "Photos",
   ...VEHICLE_DOCUMENT_LABELS,

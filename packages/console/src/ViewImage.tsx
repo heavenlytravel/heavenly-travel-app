@@ -30,7 +30,7 @@ export function ViewImage({
 }: {
   src: string;
   alt: string;
-  /** What the image is, as a screen reader hears the button and the view: "Hero image", "Photo 2". */
+  /** What the image is, as a screen reader hears the button and the view: "Hero Image", "Photo 2". */
   label: string;
   look?: "button" | "icon";
 }) {

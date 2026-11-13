@@ -109,7 +109,7 @@ export function HistoryTimeline({
  * One line: its time, a disc with who made it, what it says, and under
  * it the record it changed and who; a run of the same thing says how many
  * times and over what time, a save lists its other changes. The fields it
- * changed open under "What changed".
+ * changed open under "What Changed".
  */
 function HistoryLine({
   line,
@@ -197,7 +197,7 @@ function HistoryLine({
   );
 }
 
-/** "What changed" under a line, closed until clicked: each field, what it was and what it became. */
+/** "What Changed" under a line, closed until clicked: each field, what it was and what it became. */
 function Changes({
   changes,
 }: {
@@ -207,7 +207,7 @@ function Changes({
     <details className="group/changes">
       <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-sm text-caption font-medium text-link focus-ring [&::-webkit-details-marker]:hidden">
         <ChevronRightIcon className="size-3.5 transition-transform group-open/changes:rotate-90" />
-        What changed
+        What Changed
       </summary>
       <dl className="mt-2 grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)] gap-x-4 gap-y-1 rounded-md bg-shade px-3 py-2 text-caption">
         {changes.map((change, index) => (

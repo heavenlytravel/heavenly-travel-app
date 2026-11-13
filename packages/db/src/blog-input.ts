@@ -87,7 +87,7 @@ type Placed = { highlightOrder: number | null };
 /**
  * What the blog's home shows of the published posts, given newest first:
  * the highlighted ones in Marketing's order, then the newest of the rest.
- * "View all" follows them.
+ * "View All" follows them.
  */
 export function blogHomeOf<T extends Placed>(
   posts: readonly T[],

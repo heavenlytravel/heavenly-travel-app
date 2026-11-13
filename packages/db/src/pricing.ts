@@ -87,7 +87,7 @@ export type WeekendReason = (typeof WEEKEND_REASONS)[number];
 /** How a receipt names the surcharge, by why it applied. */
 export const WEEKEND_REASON_LABELS: Record<WeekendReason, string> = {
   weekend: "Weekend",
-  holiday: "Public holiday",
+  holiday: "Public Holiday",
 };
 
 /** The receipt stored on the booking item: every input and the result. */
@@ -309,10 +309,10 @@ export function fareSenOf(
 
 /** How a price breakdown names each charge besides the vehicle's fare. */
 export const CHARGE_LABELS = {
-  oddHours: "Odd-hours surcharge",
+  oddHours: "Odd-hours Surcharge",
   weekend: (reason: WeekendReason) =>
-    `${WEEKEND_REASON_LABELS[reason]} surcharge`,
-  guide: (language: string) => `Tour guide, ${language}`,
+    `${WEEKEND_REASON_LABELS[reason]} Surcharge`,
+  guide: (language: string) => `Tour Guide, ${language}`,
 };
 
 /**

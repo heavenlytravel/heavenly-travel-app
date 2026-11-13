@@ -32,7 +32,7 @@ export function BankCard({
   fields?: BankFields & { paidToVendor?: boolean };
   /** "the vendor", "the driver", "the guide": whom we pay. */
   whose: string;
-  /** Offer "Paid to": their own account or the vendor's. For a driver and a guide. */
+  /** Offer "Paid To": their own account or the vendor's. For a driver and a guide. */
   payee?: boolean;
 }) {
   const [toVendor, setToVendor] = useState(fields?.paidToVendor ?? false);
@@ -50,7 +50,7 @@ export function BankCard({
         {payee ? (
           <fieldset className="grid gap-2">
             <legend className="mb-2 text-sm font-medium text-ink">
-              Paid to
+              Paid To
             </legend>
             {([false, true] as const).map((vendor) => (
               <label

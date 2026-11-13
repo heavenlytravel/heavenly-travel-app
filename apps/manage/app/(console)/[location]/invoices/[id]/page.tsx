@@ -460,7 +460,7 @@ async function invoiceScreen(id: string, view: PaymentsView) {
 
             {!credit && doc.creditNotes.length > 0 ? (
               <Card flush>
-                <CardTitle inset>Credit notes</CardTitle>
+                <CardTitle inset>Credit Notes</CardTitle>
                 <Table bare>
                   <THead>
                     <Th>Number</Th>
@@ -503,7 +503,7 @@ async function invoiceScreen(id: string, view: PaymentsView) {
             <MoneyCard doc={doc} livePaid={livePaid} />
             <Card>
               <CardTitle meta={doc.billTo.businessId ? "Agent" : "Customer"}>
-                Billed to
+                Billed To
               </CardTitle>
               <Rows rows={billToRows(doc)} className="text-sm" />
               <p className="mt-3 text-caption text-muted">
@@ -689,7 +689,7 @@ function billToRows(doc: InvoicePage): [string, ReactNode][] {
     ]);
   if (doc.billTo.phone) rows.push(["Phone", doc.billTo.phone]);
   if (doc.billTo.registrationNo)
-    rows.push(["SSM number", doc.billTo.registrationNo]);
+    rows.push(["SSM Number", doc.billTo.registrationNo]);
   if (doc.billTo.address) rows.push(["Address", doc.billTo.address]);
   return rows;
 }
@@ -697,14 +697,14 @@ function billToRows(doc: InvoicePage): [string, ReactNode][] {
 /** What the document comes to: its total, its credit notes, what came in and what is left, and when it is due. */
 function MoneyCard({ doc, livePaid }: { doc: InvoicePage; livePaid: number }) {
   const rows: [string, ReactNode][] = [
-    [doc.open ? "Total so far" : "Total", formatMyr(doc.totalSen)],
+    [doc.open ? "Total So Far" : "Total", formatMyr(doc.totalSen)],
   ];
   if (doc.type === "invoice" && doc.money) {
     const credited = doc.money.netSen - doc.totalSen;
-    if (credited !== 0) rows.push(["Credit notes", formatMyr(credited)]);
+    if (credited !== 0) rows.push(["Credit Notes", formatMyr(credited)]);
     rows.push(["Paid", formatMyr(doc.money.paidSen)]);
     rows.push([
-      doc.money.balanceSen < 0 ? "To refund" : "Balance",
+      doc.money.balanceSen < 0 ? "To Refund" : "Balance",
       <strong key="b" className="font-bold text-ink">
         {formatMyr(Math.abs(doc.money.balanceSen))}
       </strong>,
@@ -751,7 +751,7 @@ function MoneyCard({ doc, livePaid }: { doc: InvoicePage; livePaid: number }) {
   }
   return (
     <Card>
-      <CardTitle>{doc.type === "credit" ? "Credit note" : "Money"}</CardTitle>
+      <CardTitle>{doc.type === "credit" ? "Credit Note" : "Money"}</CardTitle>
       <Rows rows={rows} className="text-sm" />
     </Card>
   );

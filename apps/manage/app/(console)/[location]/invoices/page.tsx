@@ -236,7 +236,7 @@ async function tiles(filter: InvoicesListFilter) {
         ...figures,
         {
           key: "ready",
-          label: "Month-end to issue",
+          label: "Month-end to Issue",
           value: String(ready),
           tone: "amber",
           href: invoicesHref(

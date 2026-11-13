@@ -3,7 +3,7 @@ import Link from "next/link";
 import { SignInFlow } from "@repo/auth/SignInFlow";
 import { ACCOUNT_PATH } from "../../_lib/routes";
 
-export const metadata: Metadata = { title: "Sign in | Heavenly Travel" };
+export const metadata: Metadata = { title: "Sign In | Heavenly Travel" };
 
 const LINK = "font-semibold text-brand underline-offset-4 hover:underline";
 
@@ -15,7 +15,10 @@ export default function SignInPage() {
       noAccount={
         <>
           Check the spelling, or{" "}
-          <Link href="/sign-up" className="font-semibold underline underline-offset-2">
+          <Link
+            href="/sign-up"
+            className="font-semibold underline underline-offset-2"
+          >
             create an account
           </Link>
           .
@@ -25,7 +28,7 @@ export default function SignInPage() {
         <>
           New to Heavenly Travel?{" "}
           <Link href="/sign-up" className={LINK}>
-            Create an account
+            Create an Account
           </Link>
         </>
       }

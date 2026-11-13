@@ -60,7 +60,7 @@ import { PartCard } from "./PartCard";
  * reported on the day, first once the trip is on the road or done. Beside
  * them the trip, the customer and the booking's other trips; its
  * reference opens a quick view of the booking. Opened from the Assign list and the booking's
- * "Who does it". See docs/261028-fulfilment-vendors-and-connect.md.
+ * "Who Does It". See docs/261028-fulfilment-vendors-and-connect.md.
  */
 export default async function AssignTripPage({
   params,
@@ -183,7 +183,7 @@ async function assignTripScreen(scope: ConsoleScope, tripId: string) {
         }
         action={
           <Button asChild variant="secondary">
-            <Link href={bookingHref(scope.slug, booking.id)}>Open booking</Link>
+            <Link href={bookingHref(scope.slug, booking.id)}>Open Booking</Link>
           </Button>
         }
       />
@@ -307,7 +307,7 @@ function OtherTrips({
 }) {
   return (
     <Card>
-      <CardTitle>Other trips</CardTitle>
+      <CardTitle>Other Trips</CardTitle>
       <ul className="grid gap-3 text-sm">
         {trips.map((t) => (
           <li

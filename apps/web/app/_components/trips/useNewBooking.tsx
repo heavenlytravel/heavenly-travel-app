@@ -27,8 +27,8 @@ export function useNewBooking() {
         description: `This search takes the place of the ${
           one ? "trip" : `${plan.trips.length} trips`
         } you have, with the flight numbers and notes for the driver. You cannot undo this.`,
-        action: "Start a new booking",
-        cancel: one ? "Keep my trip" : "Keep my trips",
+        action: "Start a New Booking",
+        cancel: one ? "Keep My Trip" : "Keep My Trips",
         danger: true,
       });
       if (!yes) return false;

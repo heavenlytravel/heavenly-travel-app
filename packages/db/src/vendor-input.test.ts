@@ -133,7 +133,7 @@ describe("suppliesIt", () => {
   it("names what it would have to offer", () => {
     assert.match(
       supplyRefusalOf("Lim Transport", "driver"),
-      /Lim Transport does not offer drivers. Change what it offers to Driver only or Vehicle and driver/,
+      /Lim Transport does not offer drivers. Change what it offers to Driver Only or Vehicle and Driver/,
     );
   });
 });
@@ -156,11 +156,11 @@ describe("serviceChangeRefusalOf", () => {
   it("refuses dropping drivers while it has some, naming how many", () => {
     assert.equal(
       serviceChangeRefusalOf(theirs, "vehicle", has(3, 2, 0)),
-      "Remove its 2 drivers first: Vehicle only does not cover drivers.",
+      "Remove its 2 drivers first: Vehicle Only does not cover drivers.",
     );
     assert.equal(
       serviceChangeRefusalOf(theirs, "driver", has(1, 4, 0)),
-      "Remove its 1 vehicle first: Driver only does not cover vehicles.",
+      "Remove its 1 vehicle first: Driver Only does not cover vehicles.",
     );
   });
 

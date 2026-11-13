@@ -726,8 +726,8 @@ export function vehicleLine(
  * drop-off; null, and none is kept, for a trip at no airport.
  */
 export function flightLabelOf(quote: PricedTrip | null): string | null {
-  if (quote?.pickupAirport) return "Arriving flight";
-  if (quote?.dropoffAirport) return "Departing flight";
+  if (quote?.pickupAirport) return "Arriving Flight";
+  if (quote?.dropoffAirport) return "Departing Flight";
   return null;
 }
 

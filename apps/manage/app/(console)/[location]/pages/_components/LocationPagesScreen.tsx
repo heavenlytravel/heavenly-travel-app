@@ -143,7 +143,7 @@ function StatusTiles({
   );
 }
 
-/** "All sections", then each of `sections`, each with the list's address narrowed to it. */
+/** "All Sections", then each of `sections`, each with the list's address narrowed to it. */
 function sectionOptions(
   scope: ScopeSlug,
   filter: LocationPagesFilter,
@@ -152,7 +152,7 @@ function sectionOptions(
   return [
     {
       value: "",
-      label: "All sections",
+      label: "All Sections",
       href: pagesHref(scope, { ...filter, section: undefined }),
     },
     ...sections.map((section) => ({
@@ -379,7 +379,7 @@ async function locationPages(id: string, filter: LocationPagesFilter) {
                 value: section ?? "",
               },
             }}
-            lead={isPlaces ? ["Saved address"] : []}
+            lead={isPlaces ? ["Saved Address"] : []}
             empty={emptyOf(filter.q)}
           />
         </Card>

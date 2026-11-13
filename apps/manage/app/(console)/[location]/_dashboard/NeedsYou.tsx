@@ -288,7 +288,7 @@ export function NeedsYou({ needs }: { needs: readonly Need[] }) {
   return (
     <Card flush className="overflow-hidden">
       <CardTitle inset meta={needs.length > 1 ? "Worst first" : undefined}>
-        Needs you
+        Needs You
       </CardTitle>
       {needs.length === 0 ? (
         <p className="flex items-center gap-3 px-5 py-5 text-sm text-muted">

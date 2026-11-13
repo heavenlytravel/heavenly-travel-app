@@ -10,7 +10,7 @@ import { Notice } from "@repo/ui/notice";
  * What "Publish" opens: the checks the page must pass, each ticked or
  * with what it still needs and a way to it, what the publish changes from
  * the copy the public has, and where it shows at once a word that it
- * does. "Publish now" waits until every check passes.
+ * does. "Publish Now" waits until every check passes.
  */
 export function PublishDialog({
   open,
@@ -59,7 +59,7 @@ export function PublishDialog({
         {goesLive ? <Notice>{goesLive}</Notice> : null}
 
         <section className="grid gap-2">
-          <h3 className="text-sm font-semibold text-ink">Before publishing</h3>
+          <h3 className="text-sm font-semibold text-ink">Before Publishing</h3>
           <ol className="divide-y divide-hairline rounded-card border border-card-edge">
             {checks.map((check) => {
               const done = check.missing.length === 0;
@@ -97,7 +97,7 @@ export function PublishDialog({
                       onClick={() => onGoTo(check)}
                       className="shrink-0 self-start rounded-sm text-xs text-link"
                     >
-                      Go to it
+                      Go to It
                     </button>
                   )}
                 </li>
@@ -110,7 +110,7 @@ export function PublishDialog({
         </section>
 
         <section className="grid gap-2">
-          <h3 className="text-sm font-semibold text-ink">What changes</h3>
+          <h3 className="text-sm font-semibold text-ink">What Changes</h3>
           {changes === null ? (
             <p className="text-sm text-muted">
               Nothing is published yet: this is the page&apos;s first publish.
@@ -142,7 +142,7 @@ export function PublishDialog({
             Cancel
           </Button>
           <Button disabled={!ready} pending={pending} onClick={onPublish}>
-            {pending ? "Publishing…" : "Publish now"}
+            {pending ? "Publishing…" : "Publish Now"}
           </Button>
         </DialogActions>
       </div>

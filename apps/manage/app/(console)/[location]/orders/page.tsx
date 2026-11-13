@@ -179,7 +179,7 @@ function StateOf({ row }: { row: OrderRow }) {
   if (!money) {
     return (
       <span className="text-caption text-muted">
-        {row.status === "received" ? "Not confirmed" : "Not invoiced"}
+        {row.status === "received" ? "Not Confirmed" : "Not Invoiced"}
       </span>
     );
   }

@@ -87,7 +87,7 @@ export const SECTIONS: Record<LocationSection, SectionDef> = {
     note: "Minibus or coach for groups",
   },
   "car-rental": {
-    label: "Car rental",
+    label: "Car Rental",
     kind: "service",
     // One page per class, as car with driver, once car rental is a
     // category with classes of its own.
@@ -120,7 +120,7 @@ export const SECTIONS: Record<LocationSection, SectionDef> = {
     note: "Stays picked by people who live here",
   },
   "popular-places": {
-    label: "Popular places",
+    label: "Popular Places",
     kind: "listing",
     children: {
       type: "entries",
@@ -147,7 +147,7 @@ export const SERVICE_SECTIONS = LOCATION_SECTIONS.filter(
 );
 
 export const LOCATION_PAGE_LABELS: Record<LocationPageKey, string> = {
-  landing: "Main page",
+  landing: "Main Page",
   ...(Object.fromEntries(
     LOCATION_SECTIONS.map((section) => [section, SECTIONS[section].label]),
   ) as Record<LocationSection, string>),
@@ -210,7 +210,7 @@ export function loggedPageRef(json: unknown): LocationPageRef | null {
 }
 
 /**
- * How a heading names a page: "Main page", "Coach charter page", and a page
+ * How a heading names a page: "Main Page", "Coach Charter page", and a page
  * under a section by its name, "Sedan", "Eagle Square". `name` is the
  * page's name where it has one: its class's, or its headline.
  */
@@ -299,7 +299,7 @@ export const isPlaceSection = guardFor(PLACE_SECTIONS);
 
 /** What a place of each section is, as its type: "Attraction". */
 export const PLACE_TYPE_LABELS: Record<PlaceSection, string> = {
-  "popular-places": "Popular place",
+  "popular-places": "Popular Place",
   attractions: "Attraction",
   hotels: "Hotel",
 };

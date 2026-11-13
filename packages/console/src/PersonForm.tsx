@@ -1,5 +1,6 @@
 "use client";
 
+import { sentenceCase, titleCase } from "@repo/db";
 import type { HeldBooking, LocationName, VendorOption } from "@repo/db/server";
 import { Button } from "@repo/ui/button";
 import { Checkbox, Field, Input, Textarea } from "@repo/ui/field";
@@ -85,12 +86,12 @@ export function PersonForm({
   held: readonly HeldBooking[];
 }) {
   const isNew = !record;
-  const Noun = noun.charAt(0).toUpperCase() + noun.slice(1);
+  const Noun = sentenceCase(noun);
   const outOfService = useOutOfServiceAsk({
     name: record?.name ?? "",
     wasActive: record?.isActive ?? false,
     held,
-    action: "Make inactive",
+    action: "Make Inactive",
   });
   const { pending, error, formProps, leaveDialog } = useActionForm(action, {
     ask: outOfService.ask,
@@ -195,7 +196,7 @@ export function PersonForm({
       <FormFoot
         submit={
           <Button type="submit" pending={pending}>
-            {pending ? "Saving…" : isNew ? `Add ${noun}` : "Save"}
+            {pending ? "Saving…" : isNew ? titleCase(`Add ${noun}`) : "Save"}
           </Button>
         }
         cancelHref={cancelHref}

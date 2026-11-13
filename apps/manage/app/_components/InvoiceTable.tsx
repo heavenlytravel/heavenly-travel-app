@@ -168,7 +168,7 @@ export function InvoiceTable({
             ) : (
               <Th>Number</Th>
             )}
-            {billTo ? <Th>Billed to</Th> : null}
+            {billTo ? <Th>Billed To</Th> : null}
             <Th>Issued</Th>
             <Th align="right">Total</Th>
             <Th align="right">Balance</Th>

@@ -69,12 +69,12 @@ export default async function DriversPage() {
           title: "No driver yet",
           text: fleet.adds.drivers
             ? "Add one to be offered jobs for them. Driving yourself? Add yourself, with your own email."
-            : "Your services do not include Car with driver, Coach charter or Driver only. Ask our team to add it to your business.",
+            : "Your services do not include Car with Driver, Coach Charter or Driver Only. Ask our team to add it to your business.",
           action: fleet.adds.drivers ? (
             <Button asChild>
               <Link href="/~/drivers/new">
                 <PlusIcon />
-                Add a driver
+                Add a Driver
               </Link>
             </Button>
           ) : null,

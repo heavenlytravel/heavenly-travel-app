@@ -39,7 +39,7 @@ export default async function DriverPage({
       band={
         <BandHeading
           eyebrow={member.vendor.name}
-          title={driver ? driver.name : "Add driver"}
+          title={driver ? driver.name : "Add Driver"}
         >
           We offer you jobs for them on the classes they may drive, where they
           are based.
@@ -61,10 +61,10 @@ export default async function DriverPage({
         {driver ? (
           <Card className="mt-5">
             <CardTitle description="For a driver entered by mistake, or with a mistyped email: delete them and add them again. One who has been on a job is made inactive instead.">
-              Delete driver
+              Delete Driver
             </CardTitle>
             <DeleteButton
-              label="Delete driver"
+              label="Delete Driver"
               title={`Delete ${driver.name}?`}
               impact={DRIVER_DELETE_IMPACT}
               action={deleteDriverAction.bind(null, driver.id)}

@@ -124,7 +124,7 @@ export function DetailsFields({
         />
       ) : null}
       {offersChildSeats(category) ? (
-        <Field label="Child seats">
+        <Field label="Child Seats">
           <Select
             value={details.childSeats}
             onValueChange={(childSeats) => onChange({ childSeats })}
@@ -139,7 +139,7 @@ export function DetailsFields({
         </Field>
       ) : null}
       <Field
-        label="Notes for the driver"
+        label="Notes for the Driver"
         hint="The customer sees these on their booking."
         className="sm:col-span-2"
       >
@@ -167,7 +167,7 @@ export function DetailsFields({
                 })
               }
             />
-            Tour guide
+            Tour Guide
           </label>
         ) : (
           <p className="text-sm text-muted">
@@ -178,7 +178,7 @@ export function DetailsFields({
         {guide.language !== null ? (
           <fieldset className="grid gap-2 pl-6">
             <legend className="mb-2 text-sm text-body">
-              The language the guide speaks
+              The Language the Guide Speaks
             </legend>
             <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
               {guideOffers.map((offer) => (

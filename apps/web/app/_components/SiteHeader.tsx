@@ -27,7 +27,7 @@ import { HomeLink } from "./Brand";
 /** A location the Destinations menu offers: the home page's top choices. */
 export type HeaderDestination = { slug: string; name: string };
 
-/** Where "All destinations" goes: the home page's "Choose your destination". */
+/** Where "All Destinations" goes: the home page's "Choose Your Destination". */
 const ALL_DESTINATIONS = "/#destinations";
 
 /** A link of the bar: the services and Destinations. */
@@ -65,8 +65,8 @@ function useScrolled() {
  * The header of every page of the customer site, held at the top as the
  * page scrolls. The logo; the services' hubs and Destinations, a menu of
  * the home page's top choices and the way to all of them; then the
- * account: signed out, "Sign in" and "Sign up", both coming back to the
- * page; signed in, "My bookings" and the account's menu. Below `lg` the
+ * account: signed out, "Sign In" and "Sign Up", both coming back to the
+ * page; signed in, "My Bookings" and the account's menu. Below `lg` the
  * links fold into a panel opened by the menu button. Many of these pages
  * are static, so the header asks Clerk in the browser and shows no account
  * button until it knows; its height is fixed, so nothing moves when they
@@ -149,7 +149,7 @@ export function SiteHeader({
               ))}
               {destinations.length > 0 && <MenuSeparator />}
               <MenuItem asChild className="py-2 text-copy font-semibold">
-                <Link href={ALL_DESTINATIONS}>All destinations</Link>
+                <Link href={ALL_DESTINATIONS}>All Destinations</Link>
               </MenuItem>
             </Menu>
           </nav>
@@ -164,7 +164,7 @@ export function SiteHeader({
                   aria-current={current(ACCOUNT_BOOKINGS_PATH)}
                   className={`${quiet} aria-[current=page]:text-brand max-sm:hidden`}
                 >
-                  My bookings
+                  My Bookings
                 </Link>
                 <span className="ml-1 flex">
                   <AccountMenu />
@@ -176,10 +176,10 @@ export function SiteHeader({
                   href={signInHref(pathname)}
                   className={`${quiet} max-sm:hidden`}
                 >
-                  Sign in
+                  Sign In
                 </Link>
                 <Link href={signUpHref(null, pathname)} className={pill}>
-                  Sign up
+                  Sign Up
                 </Link>
               </>
             ))}
@@ -197,7 +197,7 @@ export function SiteHeader({
         </div>
       </div>
 
-      <Sheet open={open} onOpenChange={setOpen} title="Site menu">
+      <Sheet open={open} onOpenChange={setOpen} title="Site Menu">
         <div className={`flex ${row} items-center justify-between px-5`}>
           <span className={eyebrow}>Menu</span>
           <button
@@ -236,7 +236,7 @@ export function SiteHeader({
             </Link>
           ))}
           <Link href={ALL_DESTINATIONS} onClick={close} className={sheetLink}>
-            All destinations
+            All Destinations
           </Link>
           {isLoaded && (
             <div className="mt-6 grid gap-2">
@@ -247,7 +247,7 @@ export function SiteHeader({
                     onClick={close}
                     className={sheetLink}
                   >
-                    My bookings
+                    My Bookings
                   </Link>
                   <Link
                     href={ACCOUNT_PATH}
@@ -263,7 +263,7 @@ export function SiteHeader({
                   onClick={close}
                   className={sheetLink}
                 >
-                  Sign in
+                  Sign In
                 </Link>
               )}
             </div>

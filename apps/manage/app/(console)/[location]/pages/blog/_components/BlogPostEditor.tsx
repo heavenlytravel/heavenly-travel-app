@@ -109,7 +109,7 @@ function RenameDialog({
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Change the slug"
+      title="Change the Slug"
       description="The end of the post's address. It is locked once the post is first published."
     >
       <form onSubmit={submit} className="grid gap-4">
@@ -132,7 +132,7 @@ function RenameDialog({
             Cancel
           </Button>
           <Button type="submit" disabled={slug === post.slug} pending={pending}>
-            {pending ? "Changing…" : "Change slug"}
+            {pending ? "Changing…" : "Change Slug"}
           </Button>
         </DialogActions>
       </form>

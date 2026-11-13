@@ -9,7 +9,7 @@ import { ACCOUNT_PATH } from "../../../_ui/nav";
 import { Panel } from "../../../_ui/parts";
 import { BandHeading, Screen } from "../../../_ui/Screen";
 
-export const metadata: Metadata = { title: "Your guide profile | Connect" };
+export const metadata: Metadata = { title: "Your Guide Profile | Connect" };
 
 /**
  * Route: /account/guide. The tour guide record whose Connect email is the
@@ -29,7 +29,7 @@ export default async function GuideProfilePage() {
       width="narrow"
       back={{ href: ACCOUNT_PATH, label: "Account" }}
       band={
-        <BandHeading eyebrow={guide.vendor.name} title="Your guide profile">
+        <BandHeading eyebrow={guide.vendor.name} title="Your Guide Profile">
           How {guide.vendor.name} has you as a tour guide, and where we pay you.
         </BandHeading>
       }

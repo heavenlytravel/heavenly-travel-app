@@ -65,7 +65,7 @@ export function SavedAddressPicker({
         value={value ?? ""}
         onValueChange={(next) => onChange(next || null)}
         options={[
-          { value: "", label: "No address" },
+          { value: "", label: "No Address" },
           ...all.map((address) => ({ value: address.id, label: address.name })),
         ]}
       />

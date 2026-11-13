@@ -9,7 +9,7 @@ import { memberOf, requireSignedIn, shellMember } from "../../_lib/access";
 import { Panel } from "../../_ui/parts";
 import { BandHeading, Screen } from "../../_ui/Screen";
 
-export const metadata: Metadata = { title: "Your account | Connect" };
+export const metadata: Metadata = { title: "Your Account | Connect" };
 
 /**
  * Route: /account. The signed-in person's own account, opened from their
@@ -47,7 +47,7 @@ export default async function AccountPage({
           {
             href: "/~/account/driver",
             icon: CarFront,
-            title: "Your driver profile",
+            title: "Your Driver Profile",
             line: "Your classes, licences and where we pay you.",
           },
         ]
@@ -57,7 +57,7 @@ export default async function AccountPage({
           {
             href: "/~/account/guide",
             icon: Languages,
-            title: "Your guide profile",
+            title: "Your Guide Profile",
             line: "Your languages, licence and where we pay you.",
           },
         ]
@@ -71,7 +71,7 @@ export default async function AccountPage({
       member={shellMember(member)}
       nav={access.status === "ok"}
       back={{ href: "/~", label: "Back" }}
-      band={<BandHeading title="Your account" />}
+      band={<BandHeading title="Your Account" />}
       width="narrow"
     >
       {profiles.length > 0 ? (

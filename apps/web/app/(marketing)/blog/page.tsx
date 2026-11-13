@@ -12,7 +12,7 @@ export const metadata: Metadata = blogListMetadata({
 
 /**
  * Route: /blog. The blog's home: the highlighted posts in Marketing's
- * order, the newest of the rest, and "View all". Static: it reads the
+ * order, the newest of the rest, and "View All". Static: it reads the
  * cached posts and nothing of the request, so the CDN keeps it until a
  * change to a post refreshes the `blog` tag.
  */

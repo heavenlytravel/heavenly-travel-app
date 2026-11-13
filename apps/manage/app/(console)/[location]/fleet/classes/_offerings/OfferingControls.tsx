@@ -45,7 +45,7 @@ export function OfferingActiveSwitch({
             !(await confirm({
               title: `Take ${vehicleClass.name} off sale?`,
               description: `It is the last class of ${categoryLabel} on sale here. With it off, the ${categoryLabel} tab has nothing to sell at this location.`,
-              action: "Take off sale",
+              action: "Take Off Sale",
             }))
           ) {
             return;

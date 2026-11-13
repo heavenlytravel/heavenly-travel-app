@@ -165,8 +165,8 @@ function OfferingCard({
             ) : (
               <ServiceBadge
                 active={offering.isActive}
-                on="On sale"
-                off="Off sale"
+                on="On Sale"
+                off="Off Sale"
               />
             )}
           </div>
@@ -184,7 +184,7 @@ function OfferingCard({
           </Button>
           <OfferingMoveButtons offering={offering} first={first} last={last} />
           <span className="ml-auto text-xs text-muted">
-            {offering.isActive ? "On sale" : "Off sale"}
+            {offering.isActive ? "On Sale" : "Off Sale"}
           </span>
         </TileFoot>
       ) : null}

@@ -74,7 +74,7 @@ const footerPageOf = (key: FooterKey): MediaPage => ({
   title: FOOTER_LABELS[key],
 });
 
-/** A location's page as a use names it: "Popular places page", "Eagle Square". */
+/** A location's page as a use names it: "Popular Places page", "Eagle Square". */
 function locationPageOf(
   location: { id: string; name: string; slug: string },
   ref: LocationPageRef,

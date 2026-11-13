@@ -40,7 +40,7 @@ export function AddedTh({
 }
 
 /**
- * The same for a list of cards, which has no heading: "Date added", a
+ * The same for a list of cards, which has no heading: "Date Added", a
  * link that sorts it by when each was added, the other way while it is,
  * its arrow the way in force.
  */
@@ -55,7 +55,7 @@ export function AddedSortLink({ sort }: { sort: MadeSort }) {
         direction ? "text-ink" : "text-muted",
       )}
     >
-      Date added
+      Date Added
       <SortArrow direction={direction} />
     </Link>
   );

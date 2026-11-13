@@ -53,7 +53,7 @@ export function PeopleTable<P extends Person>({
   people: readonly P[];
   scope: ScopeSlug;
   hrefOf: (scope: ScopeSlug, id: string) => string;
-  /** The first column's heading: "Driver", "Tour guide". */
+  /** The first column's heading: "Driver", "Tour Guide". */
   heading: string;
   lead: readonly Column<P>[];
   trail?: readonly Column<P>[];

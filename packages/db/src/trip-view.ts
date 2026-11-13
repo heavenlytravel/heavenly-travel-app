@@ -150,7 +150,7 @@ export function tripRows(trip: TripView): DetailRow[] {
   ];
   for (const stop of trip.stops) rows.push(["Stop", stop]);
   if (trip.dropoff) rows.push(["Drop-off", trip.dropoff]);
-  rows.push(["Pick-up time", formatLocalDateTime(trip.startsAt)]);
+  rows.push(["Pick-up Time", formatLocalDateTime(trip.startsAt)]);
   if (trip.hours !== null) {
     rows.push([
       "Duration",
@@ -160,7 +160,7 @@ export function tripRows(trip: TripView): DetailRow[] {
     ]);
   }
   if (trip.distanceKm !== null) {
-    rows.push(["Road distance", `${trip.distanceKm.toFixed(1)} km`]);
+    rows.push(["Road Distance", `${trip.distanceKm.toFixed(1)} km`]);
   }
   return rows;
 }
@@ -186,11 +186,11 @@ export function tripDetailRows(details: {
   if (details.vehicleModelName) rows.push(["Model", details.vehicleModelName]);
   rows.push(["Passengers", String(details.passengers)]);
   if (details.childSeats > 0) {
-    rows.push(["Child seats", String(details.childSeats)]);
+    rows.push(["Child Seats", String(details.childSeats)]);
   }
-  if (details.guideLanguage) rows.push(["Tour guide", details.guideLanguage]);
+  if (details.guideLanguage) rows.push(["Tour Guide", details.guideLanguage]);
   if (details.guideRequest) {
-    rows.push(["Guide asked for", `${details.guideRequest}, on request`]);
+    rows.push(["Guide Asked For", `${details.guideRequest}, on request`]);
   }
   if (details.flightNumber) rows.push(["Flight", details.flightNumber]);
   if (details.notes) rows.push(["Notes", details.notes]);
@@ -207,7 +207,7 @@ export function tripAddOns(details: {
   guideLanguage?: string | null;
 }): string[] {
   return [
-    ...(details.guideLanguage ? [`Tour guide (${details.guideLanguage})`] : []),
+    ...(details.guideLanguage ? [`Tour Guide (${details.guideLanguage})`] : []),
     ...(details.childSeats > 0
       ? [plural(details.childSeats, "child seat")]
       : []),
@@ -241,20 +241,20 @@ export function priceRows(
     const extra = price.zoneTrip;
     if (extra && extra.extraSen > 0) {
       rows.push([
-        `Extra road, ${kmLabel(extra.chargedKm)} × ${formatMyr(extra.perKmSen)}`,
+        `Extra Road, ${kmLabel(extra.chargedKm)} × ${formatMyr(extra.perKmSen)}`,
         formatMyr(extra.extraSen),
       ]);
     }
   } else if (price.mode === "oneway" && price.distanceKm !== null) {
     const { baseFareSen = 0, minimumFareSen = 0, perKmSen } = price.rates;
     const metered = baseFareSen + Math.round(perKmSen * price.distanceKm);
-    rows.push(["Base fare", formatMyr(baseFareSen)]);
+    rows.push(["Base Fare", formatMyr(baseFareSen)]);
     rows.push([
       `${formatMyr(perKmSen)} per km × ${price.distanceKm.toFixed(1)} km`,
       formatMyr(metered - baseFareSen),
     ]);
     if (metered < minimumFareSen) {
-      rows.push(["Minimum fare applies", formatMyr(price.subtotalSen)]);
+      rows.push(["Minimum Fare Applies", formatMyr(price.subtotalSen)]);
     }
   } else if (price.hourly) {
     const { hourly } = price;
@@ -266,13 +266,13 @@ export function priceRows(
     ]);
     if (hourly.extraHours > 0) {
       rows.push([
-        `Extra hours, ${hourly.extraHours} × ${formatMyr(hourly.extraHourSen)}`,
+        `Extra Hours, ${hourly.extraHours} × ${formatMyr(hourly.extraHourSen)}`,
         formatMyr(hourly.extraSen),
       ]);
     }
     if (hourly.road && hourly.road.extraSen > 0) {
       rows.push([
-        `Extra road, ${kmLabel(hourly.road.chargedKm)} × ${formatMyr(hourly.road.perKmSen)}`,
+        `Extra Road, ${kmLabel(hourly.road.chargedKm)} × ${formatMyr(hourly.road.perKmSen)}`,
         formatMyr(hourly.road.extraSen),
       ]);
     }
@@ -284,13 +284,13 @@ export function priceRows(
   }
   // Items priced before rates were set per location carry a state's multiplier.
   if (price.multiplier !== 1) {
-    rows.push([`Area rate × ${price.multiplier}`, formatMyr(price.totalSen)]);
+    rows.push([`Area Rate × ${price.multiplier}`, formatMyr(price.totalSen)]);
   }
   if (price.surcharge) {
     rows.push([
       price.surcharge.percent !== null
-        ? `Odd hours, +${price.surcharge.percent}%`
-        : "Odd hours",
+        ? `Odd Hours, +${price.surcharge.percent}%`
+        : "Odd Hours",
       formatMyr(price.surcharge.amountSen),
     ]);
   }

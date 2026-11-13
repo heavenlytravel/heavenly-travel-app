@@ -461,7 +461,7 @@ type OpenInvoice = NonNullable<Awaited<ReturnType<typeof ownOpenOf>>>;
 
 /**
  * A credit agent's booking billed on an invoice of its own: one Finance
- * split out ("Bill on its own"), or one invoiced on its own from before
+ * split out ("Bill on Its Own"), or one invoiced on its own from before
  * its agent was on credit. It is billed as a direct booking from then on.
  */
 async function billedAloneOf(client: Tx, bookingId: string) {
@@ -1166,7 +1166,7 @@ export type BookingBilling = {
 export type BookingPayment = {
   id: string;
   documentId: string;
-  /** The document it is on: HTI-0012, "Open invoice". */
+  /** The document it is on: HTI-0012, "Open Invoice". */
   document: string;
   /** Below nothing for a refund. */
   amountSen: number;
@@ -1444,7 +1444,7 @@ async function issueNow(
 }
 
 /**
- * Finance's "Bill on its own" for a booking on its agent's open month-end
+ * Finance's "Bill on Its Own" for a booking on its agent's open month-end
  * invoice: its line leaves that invoice for an invoice of its own, still
  * billed to the agent and due by the agent's days to pay. While the
  * booking is live the new one is open, numbered now and followed like any

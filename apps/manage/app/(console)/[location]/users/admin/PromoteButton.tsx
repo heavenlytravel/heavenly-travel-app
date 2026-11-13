@@ -4,13 +4,13 @@ import { Button } from "@repo/ui/button";
 import { useState } from "react";
 import { AdminAccessSheet } from "./AdminAccessSheet";
 
-/** "Make admin" on a user's page: opens the level and teams for that account. */
+/** "Make Admin" on a user's page: opens the level and teams for that account. */
 export function PromoteButton({ email }: { email: string }) {
   const [open, setOpen] = useState(false);
   return (
     <>
       <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
-        Make admin
+        Make Admin
       </Button>
       <AdminAccessSheet
         open={open}

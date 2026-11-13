@@ -145,7 +145,7 @@ export async function consoleMenu(
   })).filter((group) => group.sections.length > 0);
 
   return {
-    label: scope.location?.name ?? "All locations",
+    label: scope.location?.name ?? "All Locations",
     groups,
     foot:
       state && !isPublicState(state)

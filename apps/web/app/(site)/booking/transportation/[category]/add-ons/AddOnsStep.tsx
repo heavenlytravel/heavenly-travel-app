@@ -70,7 +70,7 @@ export function AddOnsStep({ category }: { category: TripCategory }) {
         level={1}
         title="Start with a search"
         message="Tell us where and when you need a driver, and we will show you prices."
-        linkLabel="Search for a trip"
+        linkLabel="Search for a Trip"
       />
     );
   }
@@ -82,7 +82,7 @@ export function AddOnsStep({ category }: { category: TripCategory }) {
         title="Choose a vehicle first"
         message="One vehicle does every trip. Choose it, then add what you need."
         href={tripBookingPath(category)}
-        linkLabel="Choose a vehicle"
+        linkLabel="Choose a Vehicle"
       />
     );
   }
@@ -95,7 +95,7 @@ export function AddOnsStep({ category }: { category: TripCategory }) {
             <span className="flex flex-wrap items-baseline gap-x-1">
               <FormError size="copy" error={error} />
               <button type="button" onClick={retry} className="text-link">
-                Try again
+                Try Again
               </button>
             </span>
           ) : (
@@ -114,7 +114,7 @@ export function AddOnsStep({ category }: { category: TripCategory }) {
       <div className="grid max-w-[760px] gap-6">
         <section className={`${panel} grid gap-4`}>
           <div className="flex items-baseline justify-between gap-4">
-            <h2 className="font-serif text-2xl leading-tight">Your vehicle</h2>
+            <h2 className="font-serif text-2xl leading-tight">Your Vehicle</h2>
             <Link
               href={tripBookingPath(category)}
               className="text-copy text-link"
@@ -169,7 +169,7 @@ export function AddOnsStep({ category }: { category: TripCategory }) {
             }}
             className="w-full sm:w-auto sm:justify-self-end sm:px-10"
           >
-            Book now
+            Book Now
           </Button>
           {addOn.issue ? <FormError size="copy" error={addOn.issue} /> : null}
         </div>

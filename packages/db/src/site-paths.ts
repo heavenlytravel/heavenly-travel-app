@@ -33,7 +33,7 @@ export function signInPath(returnTo: string) {
 
 /**
  * Sign-up coming back to `returnTo` afterwards, with the email filled in
- * when the caller knows it: the "Manage booking online" link a guest's
+ * when the caller knows it: the "Manage Booking Online" link a guest's
  * emails carry, and the offer on the received page, which does not.
  */
 export function signUpPath(email: string | null, returnTo: string) {

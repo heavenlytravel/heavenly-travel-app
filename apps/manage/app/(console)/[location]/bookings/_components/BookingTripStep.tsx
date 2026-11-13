@@ -78,7 +78,7 @@ export function BookingTripStep({
   onNext: () => void;
   hasGoogle: boolean;
   near?: BBox;
-  /** Beside its "Continue": "Remove trip". */
+  /** Beside its "Continue": "Remove Trip". */
   aside?: ReactNode;
 }) {
   const { trip, details } = item;
@@ -142,7 +142,7 @@ export function BookingTripStep({
           )}
         </Part>
         {quote ? (
-          <Part title="Details and add-ons" optional>
+          <Part title="Details and Add-ons" optional>
             <DetailsFields
               details={details}
               onChange={onDetails}

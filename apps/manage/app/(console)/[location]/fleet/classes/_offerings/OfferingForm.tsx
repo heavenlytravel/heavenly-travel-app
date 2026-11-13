@@ -116,7 +116,7 @@ function ModelChoiceField({ offering }: { offering?: Offering }) {
         <ChargeInput
           name={MODEL_CHOICE_FIELDS.amount}
           kindName={MODEL_CHOICE_FIELDS.kind}
-          label="Charge to choose a model"
+          label="Charge to Choose a Model"
           kind={kind}
           amount={amount}
           onKindChange={setKind}
@@ -207,10 +207,10 @@ export function OfferingForm({
         {isNew ? (
           <>
             <Card>
-              <CardTitle>Which class</CardTitle>
+              <CardTitle>Which Class</CardTitle>
               <div className="grid gap-4">
                 <fieldset className="grid gap-2">
-                  <legend className="sr-only">Which class</legend>
+                  <legend className="sr-only">Which Class</legend>
                   <label className="flex items-center gap-2 text-sm">
                     <Radio
                       name={SOURCE_FIELD}
@@ -222,7 +222,7 @@ export function OfferingForm({
                         setSource(SOURCES.catalogue);
                       }}
                     />
-                    One from the catalogue
+                    One from the Catalogue
                     {candidates.length === 0 ? (
                       <span className="text-muted">
                         (every class is offered here already)
@@ -239,7 +239,7 @@ export function OfferingForm({
                         setSource(SOURCES.new);
                       }}
                     />
-                    A new class, added to the catalogue
+                    A New Class, Added to the Catalogue
                   </label>
                 </fieldset>
                 {source === SOURCES.catalogue ? (
@@ -276,7 +276,7 @@ export function OfferingForm({
           </>
         ) : (
           <Card>
-            <CardTitle>The class</CardTitle>
+            <CardTitle>The Class</CardTitle>
             <p className="text-sm text-body">
               {offering.vehicleClass.description} Its seats, luggage and picture
               are the catalogue&apos;s, the same at every location.
@@ -287,7 +287,7 @@ export function OfferingForm({
         <Card>
           <CardTitle>
             <span className="inline-flex items-center gap-1.5">
-              Rates at this location
+              Rates at This Location
               <InfoTip text="A change to the rates or the rules applies to new quotes at once; a booking keeps its receipt and its cancellation cutoff." />
             </span>
           </CardTitle>
@@ -311,7 +311,7 @@ export function OfferingForm({
         </Card>
 
         <Card>
-          <CardTitle>Rules at this location</CardTitle>
+          <CardTitle>Rules at This Location</CardTitle>
           <div className="grid gap-4 sm:grid-cols-2">
             {OFFERING_RULE_FIELDS.map((field) => (
               <Field key={field} {...offeringField(field, "hours")}>
@@ -341,7 +341,7 @@ export function OfferingForm({
                 : pending
                   ? "Saving…"
                   : isNew
-                    ? "Add class"
+                    ? "Add Class"
                     : "Save"}
             </Button>
           }

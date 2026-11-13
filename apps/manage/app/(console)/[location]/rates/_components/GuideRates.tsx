@@ -184,7 +184,7 @@ export function GuideRates({
                 Language
               </th>
               <th scope="col" className={cx(HEADING, "text-left")}>
-                On the website
+                On the Website
               </th>
               {GUIDE_RATE_PRICES.map((key) => (
                 <th key={key} scope="col" className={cx(HEADING, "text-right")}>
@@ -294,7 +294,7 @@ export function GuideRates({
               setError(null);
             }}
             onSave={save}
-            label="Save tour guide rates"
+            label="Save Tour Guide Rates"
           />
           {leaveDialog}
         </>

@@ -132,7 +132,7 @@ function VehicleClassScreen({
                 action={
                   <Button asChild variant="secondary" size="sm">
                     <Link href={newVehicleHref(null, vehicleClass.id)}>
-                      Add vehicle
+                      Add Vehicle
                     </Link>
                   </Button>
                 }

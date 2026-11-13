@@ -28,7 +28,7 @@ export function RemoveZone({
     <DeleteButton
       look="row"
       label="Remove"
-      confirmLabel="Remove zone"
+      confirmLabel="Remove Zone"
       pendingLabel="Removing…"
       ariaLabel={`Remove the zone ${name}`}
       title={`Remove the zone ${name}?`}

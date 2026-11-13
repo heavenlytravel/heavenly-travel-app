@@ -33,7 +33,7 @@ export async function SitePagePreview({ page }: { page: SitePageKey }) {
     name: SITE_PAGE_LABELS[page],
     standing: shown.status,
     editHref: `${ADMIN_URL}${sitePageEditorPath(page)}`,
-    title: "Site pages",
+    title: "Site Pages",
     searchLabel: "Find a site page",
     groups: pages.map(({ page: other, status }) => ({
       href: sitePagePreviewPath(other),

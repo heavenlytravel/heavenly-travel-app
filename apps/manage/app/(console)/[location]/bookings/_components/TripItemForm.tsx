@@ -213,8 +213,8 @@ export function TripItemForm({
                   {pending
                     ? "Saving…"
                     : totalSen !== null
-                      ? `Save trip · ${formatMyr(totalSen)}`
-                      : "Save trip"}
+                      ? `Save Trip · ${formatMyr(totalSen)}`
+                      : "Save Trip"}
                 </Button>
               </>
             }

@@ -210,11 +210,11 @@ function waitingOn(
  * One booking for ops, under its number (HTB-1042): who made it, when and
  * where, and what it waits for. Then a card per trip holding all of it:
  * its steps, its stops and details, who does it and what the driver
- * reported, its price and its own changes ("Change trip"), and the
+ * reported, its price and its own changes ("Change Trip"), and the
  * booking's revisions with what each billed. Beside them its money in
  * one place (what it charges, its invoices, what is paid and the
  * balance), the customer, the staff's notes and the last of its history.
- * "History" and "Change booking" (add a trip, a booking charge, cancel)
+ * "History" and "Change Booking" (add a trip, a booking charge, cancel)
  * stand in the header. Every change says what it bills before it is
  * saved. After an amend that no longer fits what is assigned, the page
  * says so (`warn`). Every team opens it; the controls follow what the
@@ -429,7 +429,7 @@ function DocumentLine({
 }) {
   const what =
     doc.type === "credit"
-      ? "Credit note"
+      ? "Credit Note"
       : doc.period
         ? doc.status === "open"
           ? `Agent's ${doc.period} invoice: numbered and issued when the period ends`
@@ -572,7 +572,7 @@ function MoneyCard({
         <>
           {billing.documents.length > 0 ? (
             <>
-              <h3 className="border-t border-hairline px-5 pt-4 pb-1 text-caption font-semibold tracking-wide text-muted uppercase">
+              <h3 className="border-t border-hairline px-5 pt-4 pb-1 text-sm font-semibold text-ink">
                 {invoices.length === 1 ? "Invoice" : "Invoices"}
               </h3>
               <CardRows>
@@ -608,7 +608,7 @@ function MoneyCard({
                 rows={[
                   ["Paid", formatMyr(billing.money.paidSen)],
                   [
-                    billing.money.balanceSen < 0 ? "To refund" : "Balance",
+                    billing.money.balanceSen < 0 ? "To Refund" : "Balance",
                     <strong key="b" className="font-bold text-ink">
                       {formatMyr(Math.abs(billing.money.balanceSen))}
                     </strong>,
@@ -619,7 +619,7 @@ function MoneyCard({
             {billing.payLater ? (
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-brand-tint px-3 py-2 text-sm text-brand-strong">
                 <span>
-                  <span className="block font-semibold">Pay later</span>
+                  <span className="block font-semibold">Pay Later</span>
                   <span className="block text-caption">
                     {billing.payLater.byTerms
                       ? billing.payLater.dueOn
@@ -672,9 +672,7 @@ function MoneyCard({
             ) : null}
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-hairline px-5 pt-4 pb-1">
-            <h3 className="text-caption font-semibold tracking-wide text-muted uppercase">
-              Payments
-            </h3>
+            <h3 className="text-sm font-semibold text-ink">Payments</h3>
             {finance && (billing.payTo || billing.refundFrom) ? (
               <span className="flex flex-wrap gap-2">
                 {billing.payTo ? (
@@ -713,7 +711,7 @@ function MoneyCard({
       {billing && (billing.oldInvoiceNumber !== null || manage) ? (
         <div className="flex flex-wrap items-center justify-between gap-2 border-t border-hairline px-5 py-3 text-caption">
           <span>
-            <span className="text-muted">Old invoice number </span>
+            <span className="text-muted">Old Invoice Number </span>
             <span className="text-ink">
               {billing.oldInvoiceNumber ?? "None"}
             </span>
@@ -962,7 +960,7 @@ export function CustomerCard({
 
 /**
  * One trip of a booking, everything about it in one card: its title and
- * "Change trip", its steps, its stops, its details, who does it and what
+ * "Change Trip", its steps, its stops, its details, who does it and what
  * the driver reported on the day, its price (folded to its total, opened
  * for what it is made of) and its next step.
  */
@@ -1000,7 +998,7 @@ function TripCard({
     ? tripDetailRows(details).filter(([label]) => label !== "Vehicle")
     : [];
   if (!trip)
-    facts.unshift(["Pick-up time", formatLocalDateTime(item.startsAt)]);
+    facts.unshift(["Pick-up Time", formatLocalDateTime(item.startsAt)]);
   if (item.district) {
     facts.push([
       "District",
@@ -1040,9 +1038,9 @@ function TripCard({
     }
   }
   if (agreed) {
-    price.push(["Quoted price", formatMyr(quote)]);
+    price.push(["Quoted Price", formatMyr(quote)]);
     price.push([
-      "Agreed price",
+      "Agreed Price",
       <span key="o">
         <span className="block">{formatMyr(item.priceTotalSen)}</span>
         {item.priceOverrideReason ? (
@@ -1147,7 +1145,7 @@ function TripCard({
         ) : null}
         {fulfilment && events.length > 0 ? (
           <section className="grid gap-3 border-t border-hairline pt-4">
-            <h3 className="text-sm font-semibold text-ink">On the day</h3>
+            <h3 className="text-sm font-semibold text-ink">On the Day</h3>
             <TripDay
               bookingId={bookingId}
               trip={fulfilment}

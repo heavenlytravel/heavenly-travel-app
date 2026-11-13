@@ -12,7 +12,7 @@ export type ConfirmRequest = {
   title: string;
   /** What going ahead does. */
   description?: ReactNode;
-  /** The button that goes ahead, named for what it does: "Pause", "Delete location". */
+  /** The button that goes ahead, named for what it does: "Pause", "Delete Location". */
   action: string;
   /** The button that keeps things as they are; "Cancel" when left out. */
   cancel?: string;

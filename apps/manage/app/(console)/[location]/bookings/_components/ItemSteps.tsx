@@ -84,7 +84,7 @@ export function TripStep({
   near?: BBox;
   /** The trip starts while another of the booking is going. */
   clash?: TripClashNote | null;
-  /** Beside the step's "Continue": "Remove trip". */
+  /** Beside the step's "Continue": "Remove Trip". */
   aside?: ReactNode;
 }) {
   const done = tripDone(draft, clash);
@@ -236,7 +236,7 @@ export function TripFields({
                 options={DURATION_CHOICES}
               />
             </Field>
-            <Field label="Extra hours">
+            <Field label="Extra Hours">
               <Select
                 value={trip.extraHours}
                 onValueChange={(extraHours) => changeTrip({ extraHours })}
@@ -246,9 +246,9 @@ export function TripFields({
           </div>
         ) : null}
         <div className="grid gap-1.5">
-          <Field label="Pick-up date and time">
+          <Field label="Pick-up Date and Time">
             <DateTimeField
-              title="Pick-up date and time"
+              title="Pick-up Date and Time"
               value={{ date: trip.date, time: trip.time }}
               onChange={({ date, time }) => changeTrip({ date, time })}
               timeZone={BOOKING_RULES.timeZone}
@@ -274,7 +274,7 @@ export function TripFields({
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-danger">
             {draft.quoteError}
             <Button variant="secondary" size="sm" onClick={retry}>
-              Try again
+              Try Again
             </Button>
           </p>
         ) : quote ? (

@@ -43,7 +43,7 @@ import { slugify } from "./slug";
  * docs/261025-marketing-pages.md.
  */
 
-/** A saved address as the search card offers it and "Take me here" fills it in. */
+/** A saved address as the search card offers it and "Take Me Here" fills it in. */
 export type LocationViewAddress = {
   id: string;
   /** What the customer reads: "Kuah Jetty". */

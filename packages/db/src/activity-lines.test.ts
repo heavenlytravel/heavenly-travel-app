@@ -72,7 +72,7 @@ describe("activityChangesOf", () => {
         before: { position: 2, priceTotalSen: 25000, note: "x" },
         after: { position: 2, priceTotalSen: 30000, note: "x" },
       }),
-      [{ label: "Price total", before: "RM 250.00", after: "RM 300.00" }],
+      [{ label: "Price Total", before: "RM 250.00", after: "RM 300.00" }],
     );
   });
 
@@ -89,7 +89,7 @@ describe("activityChangesOf", () => {
       }),
       [
         { label: "Plate", before: null, after: "WXY 1234" },
-        { label: "Is active", before: null, after: "Yes" },
+        { label: "Is Active", before: null, after: "Yes" },
       ],
     );
   });
@@ -102,7 +102,7 @@ describe("activityChangesOf", () => {
           imageUrls: ["https://abc123.ufs.sh/f/a", "https://abc123.ufs.sh/f/b"],
         },
       }),
-      [{ label: "Image urls", before: "1 image", after: "2 images" }],
+      [{ label: "Image Urls", before: "1 image", after: "2 images" }],
     );
   });
 });

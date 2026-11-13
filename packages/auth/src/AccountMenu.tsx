@@ -12,7 +12,7 @@ export type AccountMenuLink = { label: string; href: string; icon?: ReactNode };
 /**
  * The signed-in person's menu, ours in place of Clerk's user button: their
  * picture or initials, which open their name and email, the app's own
- * links ("My bookings"), "Your account" and "Sign out". In a header it is
+ * links ("My Bookings"), "Your Account" and "Sign Out". In a header it is
  * the round picture alone; in Connect's side menu (`showName`) the name
  * and email stand beside it. While Clerk loads, a circle keeps its place;
  * signed out, nothing.
@@ -48,7 +48,7 @@ export function AccountMenu({
 
   return (
     <Menu
-      label="Your account"
+      label="Your Account"
       align={align}
       trigger={
         <button
@@ -97,13 +97,13 @@ export function AccountMenu({
       <MenuItem asChild>
         <Link href={accountHref}>
           <PersonIcon />
-          Your account
+          Your Account
         </Link>
       </MenuItem>
       <MenuSeparator />
       <MenuItem onSelect={() => void signOut({ redirectUrl: afterSignOutUrl })}>
         <LogOutIcon />
-        Sign out
+        Sign Out
       </MenuItem>
     </Menu>
   );

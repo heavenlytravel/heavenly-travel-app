@@ -58,7 +58,7 @@ export function NextJobCard({ trip, now }: { trip: Trip; now: Date }) {
       <div className="grid gap-5 p-5">
         <div className="flex items-center justify-between gap-3">
           <span className="flex items-center gap-2 text-xs font-bold tracking-kicker text-brand uppercase">
-            {going ? "On the job" : "Next job"}
+            {going ? "On the Job" : "Next Job"}
           </span>
           <Pill tone={state.tone} live={state.live}>
             {state.label}
@@ -88,7 +88,7 @@ export function NextJobCard({ trip, now }: { trip: Trip; now: Date }) {
       {/* Square, across the card's foot: the card's corners round it. */}
       <Button asChild size="lg" className="w-full rounded-none">
         <Link href={`/~/jobs/${trip.itemId}`}>
-          {going ? "Continue the job" : "Open job"}
+          {going ? "Continue the Job" : "Open Job"}
           <ArrowRightIcon className="size-5" />
         </Link>
       </Button>
@@ -143,7 +143,7 @@ export function TripRow({
                     {vendor.driver.split(" ")[0]}
                   </span>
                 ) : vendor.guide && !vendor.vehicle ? null : (
-                  <span className="font-medium text-warning">No driver</span>
+                  <span className="font-medium text-warning">No Driver</span>
                 )}
                 {vendor.guide ? (
                   <span className="inline-flex items-center gap-1 font-medium text-body">
@@ -157,7 +157,7 @@ export function TripRow({
         </span>
         <span className="flex shrink-0 items-center gap-1">
           {vendor && vendor.driver && !vendor.driverAccepted ? (
-            <Pill tone="amber">Driver to accept</Pill>
+            <Pill tone="amber">Driver to Accept</Pill>
           ) : state.tone === "brand" ? null : (
             <Pill tone={state.tone} live={state.live}>
               {state.label}
@@ -211,7 +211,7 @@ export function DoneTrips({ trips, now }: { trips: Trip[]; now: Date }) {
       {/* A section's heading, as `SectionTitle` draws it, that folds. */}
       <summary className="flex cursor-pointer list-none items-center justify-between rounded-control py-1 text-ink focus-ring [&::-webkit-details-marker]:hidden">
         <span className="flex items-center gap-3">
-          <span className="text-lg font-bold tracking-title">Done lately</span>
+          <span className="text-lg font-bold tracking-title">Done Lately</span>
           <Badge className="tabular-nums">{trips.length}</Badge>
         </span>
         <ChevronDownIcon className="size-4 text-muted transition-transform group-open:rotate-180" />

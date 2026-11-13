@@ -5,7 +5,7 @@ import { blogListMetadata } from "../../../_blog/routes";
 import { SiteFrame } from "../../../_site/SiteFrame";
 
 export const metadata: Metadata = blogListMetadata({
-  title: `All posts | ${SITE_NAME}`,
+  title: `All Posts | ${SITE_NAME}`,
   description: "Every post on the Heavenly Travel blog, the newest first.",
   path: BLOG_ALL_PATH,
 });

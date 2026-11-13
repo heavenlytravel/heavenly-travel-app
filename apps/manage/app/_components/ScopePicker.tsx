@@ -34,7 +34,7 @@ export type PickerLocation = {
  * the address starts with, every location or one. Picking another changes
  * the address's first segment and keeps the rest, the list's filters with
  * it: from /~/bookings?status=received to /langkawi/bookings?status=received.
- * A console-wide screen (Media, Team) is under All locations alone. See
+ * A console-wide screen (Media, Team) is under All Locations alone. See
  * docs/261029-manage-signature-overhaul.md, "How scope works".
  */
 export function ScopePicker({
@@ -83,7 +83,7 @@ export function ScopePicker({
           <span className="grid min-w-0 leading-tight">
             <span className="text-2xs font-medium text-muted">Location</span>
             <span className="truncate text-sm font-semibold text-ink">
-              {current?.name ?? "All locations"}
+              {current?.name ?? "All Locations"}
             </span>
           </span>
           <ChevronDownIcon className="ml-auto text-muted" />
@@ -93,7 +93,7 @@ export function ScopePicker({
       <MenuItem asChild current={current === null}>
         <Link href={hrefTo(null)}>
           <ScopeMark location={null} small />
-          All locations
+          All Locations
           {current === null ? <MenuCheck /> : null}
         </Link>
       </MenuItem>
@@ -124,7 +124,7 @@ export function ScopePicker({
           <MenuItem asChild current={pathname === NEW_LOCATION_PATH}>
             <Link href={NEW_LOCATION_PATH}>
               <CirclePlusIcon className="text-muted" />
-              Add location
+              Add Location
             </Link>
           </MenuItem>
         </>

@@ -113,7 +113,7 @@ async function usersList({
           />
         }
       >
-        Every account
+        Every Account
       </CardTitle>
       <Table bare>
         <THead>

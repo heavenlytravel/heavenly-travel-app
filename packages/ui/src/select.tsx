@@ -14,7 +14,7 @@ export type SelectGroup = { label: string; options: SelectOption[] };
 
 /**
  * Radix keeps "" for "nothing chosen", so a real option worth "" (such as
- * "No address") is carried as this inside the list and handed out as "".
+ * "No Address") is carried as this inside the list and handed out as "".
  * Without such an option, "" stays "" and Radix shows the placeholder.
  */
 const EMPTY = "\u0000empty";

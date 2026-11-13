@@ -135,7 +135,7 @@ describe("a stored vehicle", () => {
       vehicleDocumentsDue(stored, NOW).map((d) => [d.label, d.state]),
       [
         ["Insurance", "expired"],
-        ["Road tax", "due"],
+        ["Road Tax", "due"],
       ],
     );
   });

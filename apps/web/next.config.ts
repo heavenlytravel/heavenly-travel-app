@@ -17,7 +17,7 @@ const nextConfig: NextConfig = {
   },
   // The site stays out of search engines until the move to
   // heavenlytravel.my. Set here, not in proxy.ts, so static files carry it
-  // too. See docs/261001-locations-and-pages.md, "Search engines".
+  // too. See docs/261001-locations-and-pages.md, "Search Engines".
   async headers() {
     return [
       {

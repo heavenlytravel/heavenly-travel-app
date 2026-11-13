@@ -41,7 +41,7 @@ export function AddAgentForm() {
       <FormError error={error} />
       <div>
         <Button type="submit" pending={pending}>
-          {pending ? "Adding…" : "Add agent"}
+          {pending ? "Adding…" : "Add Agent"}
         </Button>
       </div>
       {leaveDialog}
@@ -96,7 +96,7 @@ export function EditAgentControl({
   );
 }
 
-/** Finance's "Change terms": the new terms and days to pay, going forward, with why. */
+/** Finance's "Change Terms": the new terms and days to pay, going forward, with why. */
 export function ChangeTermsControl({
   id,
   terms,
@@ -109,11 +109,11 @@ export function ChangeTermsControl({
   return (
     <ActionDialog
       action={changeTermsAction}
-      label="Change terms"
-      title="Change payment terms"
+      label="Change Terms"
+      title="Change Payment Terms"
       description="From now on: what is billed already stays as it is. What is not billed yet is billed by the new terms."
       done="Payment terms changed."
-      submit="Change terms"
+      submit="Change Terms"
       hidden={{ id }}
       width="md"
     >
@@ -148,7 +148,7 @@ export function AgentStatusControl({
             title: `Make ${name} inactive?`,
             description:
               "It takes no new bookings. Its bookings stay, and are still billed.",
-            action: "Make inactive",
+            action: "Make Inactive",
           })
       : undefined,
     done: active ? `${name} is inactive.` : `${name} is active again.`,
@@ -162,7 +162,7 @@ export function AgentStatusControl({
         value={active ? "inactive" : "active"}
       />
       <Button type="submit" variant="secondary" pending={pending}>
-        {active ? "Make inactive" : "Make active"}
+        {active ? "Make Inactive" : "Make Active"}
       </Button>
       <FormError error={error} size="xs" />
       {dialog}

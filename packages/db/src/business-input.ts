@@ -45,13 +45,13 @@ export type BusinessField = keyof BusinessFields;
 /** How the screens and the activity log name each field. */
 export const BUSINESS_FIELD_LABELS: Record<BusinessField, string> = {
   name: "Name",
-  registrationNo: "SSM number",
-  contactName: "Contact person",
-  contactPhone: "Contact phone",
-  contactEmail: "Billing email",
-  address: "Billing address",
-  paymentTerms: "Payment terms",
-  daysToPay: "Days to pay",
+  registrationNo: "SSM Number",
+  contactName: "Contact Person",
+  contactPhone: "Contact Phone",
+  contactEmail: "Billing Email",
+  address: "Billing Address",
+  paymentTerms: "Payment Terms",
+  daysToPay: "Days to Pay",
 };
 
 /** The rules on a profile; a field left out is not checked. */

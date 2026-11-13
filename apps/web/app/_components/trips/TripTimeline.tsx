@@ -35,7 +35,7 @@ export function TripNumber({
 }
 
 /**
- * "Your trips": the trips by start, numbered as they are booked and
+ * "Your Trips": the trips by start, numbered as they are booked and
  * priced, each with its price and what the page needs to say about it. A
  * trip that starts with another or during a hire says so in place of its
  * route. With `onPick` a trip opens in the form; without, the list only
@@ -75,7 +75,7 @@ export function TripTimeline({
       className={`@container rounded-2xl bg-mist p-2.5 sm:p-3.5 ${className}`}
     >
       <div className="mx-1 mb-2 flex flex-wrap items-baseline gap-x-2.5 text-copy">
-        <b className="text-ink">Your trips</b>
+        <b className="text-ink">Your Trips</b>
         {onPick ? (
           <span className="text-muted">Choose one to change it</span>
         ) : null}

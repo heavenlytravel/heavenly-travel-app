@@ -3,7 +3,7 @@ import Link from "next/link";
 import { SignInFlow } from "@repo/auth/SignInFlow";
 import { ACCOUNT_PATH, HOME_PATH } from "../../_ui/nav";
 
-export const metadata: Metadata = { title: "Sign in | Connect" };
+export const metadata: Metadata = { title: "Sign In | Connect" };
 
 // A vendor's owner signs up by registering the business; a driver signs in
 // with the email their vendor or Operation entered on their driver row,
@@ -23,7 +23,7 @@ export default function SignInPage() {
             href="/register"
             className="font-semibold text-brand underline-offset-4 hover:underline"
           >
-            Register your business
+            Register Your Business
           </Link>
         </>
       }

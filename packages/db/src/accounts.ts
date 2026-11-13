@@ -340,7 +340,7 @@ export async function createUser(
 }
 
 /**
- * Adds a member of staff by email, as Admin's "Add admin" does: an email
+ * Adds a member of staff by email, as Admin's "Add Admin" does: an email
  * with an account is promoted, its names left as they are; one without
  * is given an account first, as `createUser` makes it for All Users, and
  * promoted in the same go. Someone on the staff already is refused: their

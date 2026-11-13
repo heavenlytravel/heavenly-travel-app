@@ -7,7 +7,7 @@ import { HomeLink } from "./Brand";
 /**
  * A calm page for an error that kept a page from drawing, in place of the
  * browser's bare "Application error": the logo, which goes home, what
- * happened, and "Try again", `onRetry`. The error boundary shows it under
+ * happened, and "Try Again", `onRetry`. The error boundary shows it under
  * the site's own document; the one for the root layout in a document of
  * its own.
  */
@@ -22,7 +22,7 @@ export function ErrorNotice({ onRetry }: { onRetry: () => void }) {
           message="This page could not load. Try again, or come back in a minute."
           action={
             <Button size="lg" onClick={onRetry} className="mt-6">
-              Try again
+              Try Again
             </Button>
           }
         />

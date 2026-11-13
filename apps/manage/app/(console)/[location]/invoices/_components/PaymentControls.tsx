@@ -46,7 +46,7 @@ export type PayableBooking = {
 const EVERY = "";
 
 /**
- * "Record payment" on an open or issued invoice, or "Record refund" on a
+ * "Record Payment" on an open or issued invoice, or "Record Refund" on a
  * credit note or an invoice paid over:
  * the amount, how, the day, and a note (the bank's reference, who handed
  * the cash in). It starts at what is left, which Finance changes for a
@@ -94,7 +94,7 @@ export function RecordPaymentControl({
   return (
     <ActionDialog
       action={recordPaymentAction}
-      label={refund ? "Record refund" : "Record payment"}
+      label={refund ? "Record Refund" : "Record Payment"}
       title={refund ? `Refund on ${label}` : `Payment on ${label}`}
       description={
         refund
@@ -102,7 +102,7 @@ export function RecordPaymentControl({
           : "Money in against this invoice. A part payment leaves the rest owed."
       }
       done={refund ? "Refund recorded." : "Payment recorded."}
-      submit={refund ? "Record refund" : "Record payment"}
+      submit={refund ? "Record Refund" : "Record Payment"}
       hidden={{
         invoiceId,
         ...(refund ? { refund: "true" } : {}),
@@ -133,7 +133,7 @@ export function RecordPaymentControl({
             options={[
               ...(refund
                 ? []
-                : [{ value: EVERY, label: "Every booking, oldest first" }]),
+                : [{ value: EVERY, label: "Every Booking, Oldest First" }]),
               ...choices.map((b) => ({ value: b.id, label: b.label })),
             ]}
           />
@@ -157,7 +157,7 @@ export function RecordPaymentControl({
             onChange={(event) => setAmount(event.target.value)}
           />
         </Field>
-        <Field label="Day it came in">
+        <Field label="Day It Came In">
           <Input
             name="paidOn"
             type="date"

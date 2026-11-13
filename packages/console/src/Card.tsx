@@ -91,7 +91,7 @@ export function CardTitle({
   );
 }
 
-/** A link at a card title's right: "All bookings →". */
+/** A link at a card title's right: "All Bookings →". */
 export const CARD_LINK = "rounded-sm text-caption text-link";
 
 /** The card's surface with nothing else: around a table that stands alone, or a figure. */
@@ -163,7 +163,7 @@ export function TileFoot({ children }: { children: ReactNode }) {
 
 /**
  * Rows split by hairlines across a `flush` card: a list of things, each
- * with its own line, as the dashboard's "Needs you" and a vehicle's
+ * with its own line, as the dashboard's "Needs You" and a vehicle's
  * documents have.
  */
 export function CardRows({ children }: { children: ReactNode }) {

@@ -35,7 +35,7 @@ export default async function ClassesPage({
             <Button asChild>
               <Link href={newClassHref(scope.slug)}>
                 <PlusIcon />
-                Add class
+                Add Class
               </Link>
             </Button>
           ) : null

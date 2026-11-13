@@ -62,7 +62,7 @@ async function locationClasses({
       action={
         manages ? (
           <Link href={classesHref(location.slug)} className={CARD_LINK}>
-            Edit classes on sale
+            Edit Classes on Sale
           </Link>
         ) : null
       }

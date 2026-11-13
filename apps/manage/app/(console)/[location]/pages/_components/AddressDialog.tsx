@@ -85,7 +85,7 @@ export function AddressDialog({
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      title={mode?.kind === "rename" ? `Rename ${mode.name}` : "Add an address"}
+      title={mode?.kind === "rename" ? `Rename ${mode.name}` : "Add an Address"}
       description={
         mode?.kind === "rename"
           ? "The name customers see in the drop-off's list. The place stays the same."
@@ -254,7 +254,7 @@ function AddressForm({
       {mode.kind === "add" && place && pagesUnder ? (
         <>
           <Field
-            label="Its page"
+            label="Its Page"
             hint="Optional. A popular place, an attraction or a hotel gets a draft page of its own, named as the address, with “Take me here” to it."
           >
             <Select
@@ -265,7 +265,7 @@ function AddressForm({
                 setError(null);
               }}
               options={[
-                { value: NO_PAGE, label: "No page" },
+                { value: NO_PAGE, label: "No Page" },
                 ...PLACE_SECTIONS.map((value) => ({
                   value,
                   label: PLACE_TYPE_LABELS[value],
@@ -311,8 +311,8 @@ function AddressForm({
             : saving
               ? "Adding…"
               : section
-                ? "Add address and page"
-                : "Add address"}
+                ? "Add Address and Page"
+                : "Add Address"}
         </Button>
       </DialogActions>
     </form>

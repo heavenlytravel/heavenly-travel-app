@@ -28,7 +28,7 @@ export function StopPayForm({
     <form {...formProps} className="grid gap-4">
       <input type="hidden" name="locationId" value={locationId} />
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Pay per extra km (RM)" hint="For the road a stop adds.">
+        <Field label="Pay per Extra km (RM)" hint="For the road a stop adds.">
           <Input
             name="driverPayPerKm"
             inputMode="decimal"
@@ -37,7 +37,7 @@ export function StopPayForm({
             defaultValue={perKmSen === null ? "" : ringgitInputValue(perKmSen)}
           />
         </Field>
-        <Field label="Fee a stop (RM)" hint="On top, for each stop.">
+        <Field label="Fee a Stop (RM)" hint="On top, for each stop.">
           <Input
             name="stopFee"
             inputMode="decimal"

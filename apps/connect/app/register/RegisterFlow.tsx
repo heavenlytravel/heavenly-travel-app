@@ -334,7 +334,7 @@ export function RegisterFlow({
 
   const stepCopy: Record<string, { title: string; description: ReactNode }> = {
     new: {
-      title: "Check your email",
+      title: "Check Your Email",
       description: (
         <>
           We sent a 6-digit code to{" "}
@@ -359,7 +359,7 @@ export function RegisterFlow({
       ),
     },
     trust: {
-      title: "Confirm this browser",
+      title: "Confirm This Browser",
       description: (
         <>
           It&rsquo;s the first time this browser signs in to your account. We
@@ -382,7 +382,7 @@ export function RegisterFlow({
         <Card>
           <CardTitle>You</CardTitle>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="First name">
+            <Field label="First Name">
               <Input
                 name="firstName"
                 required
@@ -390,7 +390,7 @@ export function RegisterFlow({
                 defaultValue={signedIn?.firstName}
               />
             </Field>
-            <Field label="Last name">
+            <Field label="Last Name">
               <Input
                 name="lastName"
                 autoComplete="family-name"
@@ -415,7 +415,7 @@ export function RegisterFlow({
               />
             </Field>
             <Field
-              label="Phone number"
+              label="Phone Number"
               hint="Your WhatsApp, with the country code. We reach you here, and keep it on your account."
             >
               <Input
@@ -433,7 +433,7 @@ export function RegisterFlow({
 
         {signedIn ? null : (
           <Card>
-            <CardTitle>Signing in</CardTitle>
+            <CardTitle>Signing In</CardTitle>
             <div className="grid gap-4">
               <Field
                 label="Password"
@@ -446,7 +446,7 @@ export function RegisterFlow({
                   required
                 />
               </Field>
-              <Field label="Confirm password">
+              <Field label="Confirm Password">
                 <PasswordInput
                   name={CONFIRM_PASSWORD_FIELD}
                   autoComplete="new-password"
@@ -472,7 +472,7 @@ export function RegisterFlow({
           </p>
           <Button type="submit" size="lg" pending={busy && step === null}>
             <Send aria-hidden className="size-4" />
-            Send my registration
+            Send My Registration
           </Button>
         </div>
         <FormError error={error} />
@@ -542,10 +542,10 @@ export function RegisterFlow({
           )}
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button variant="secondary" onClick={() => setStep(null)}>
-              {step?.name === "new" ? "Change my email" : "Cancel"}
+              {step?.name === "new" ? "Change My Email" : "Cancel"}
             </Button>
             <Button type="submit" pending={busy}>
-              Confirm and send
+              Confirm and Send
             </Button>
           </div>
         </form>

@@ -45,11 +45,11 @@ const tooMany: TripSearchIssue = {
 /**
  * The trip planner's state: the list of trips by start, and the form that
  * adds a trip to it or changes one. The search card and the vehicle page
- * share it, so a trip is typed and changed the same way in both. "Add trip"
+ * share it, so a trip is typed and changed the same way in both. "Add Trip"
  * puts the form's trip in the list when it is complete and starts on time;
  * choosing a trip of the list opens it in the form, and a new trip half
  * typed waits until the change is done. Once a trip is added or saved the
- * form closes and "Add a trip" opens it again; `openWhenEmpty` keeps a
+ * form closes and "Add a Trip" opens it again; `openWhenEmpty` keeps a
  * blank form open while the list is empty, as on the search card, where
  * the first trip is typed straight away. The list itself is the caller's,
  * changed through `onTrips`.

@@ -108,7 +108,7 @@ async function existingOffering(
         action={
           <Button asChild variant="secondary">
             <Link href={classHref(null, offering.vehicleClassId)}>
-              The class in the catalogue
+              The Class in the Catalogue
             </Link>
           </Button>
         }
@@ -130,7 +130,7 @@ async function existingOffering(
                 <Link
                   href={newVehicleHref(location.slug, offering.vehicleClassId)}
                 >
-                  Add vehicle
+                  Add Vehicle
                 </Link>
               </Button>
             }

@@ -64,11 +64,11 @@ import { StateMove } from "./StateMove";
  * its cards (`settings.view`): Marketing, Operation and SUPER. Under `~`
  * the locations, a tile each with its main page's hero image, its state,
  * its numbers and how far its setup has come, opening its own settings,
- * and for SUPER "Add location". Under a location its own settings: for
+ * and for SUPER "Add Location". Under a location its own settings: for
  * Marketing its details, step 1 of the setup (the name, the slug and the
  * states it lies in); where it stands with the public, with what still
  * stands in the way of going live; for Operation the time between its
- * jobs; and for SUPER the one move its state allows, "Go live", "Pause"
+ * jobs; and for SUPER the one move its state allows, "Go Live", "Pause"
  * or "Resume", then its deletion. Its saved addresses are with its
  * pages. See docs/261015-locations-as-operation-areas.md.
  */
@@ -109,7 +109,7 @@ export default async function SettingsPage({
             <Button asChild>
               <Link href={NEW_LOCATION_PATH}>
                 <PlusIcon />
-                Add location
+                Add Location
               </Link>
             </Button>
           ) : null
@@ -409,7 +409,7 @@ async function locationSettings({
       ) : null}
       {moves ? (
         <Card>
-          <CardTitle>Delete location</CardTitle>
+          <CardTitle>Delete Location</CardTitle>
           <DeleteLocation
             locationId={location.id}
             name={location.name}

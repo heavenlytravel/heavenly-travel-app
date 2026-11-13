@@ -46,7 +46,7 @@ type KindRule = {
   /** Markdown, for a post or a document. */
   body: boolean;
   faqs: Exclude<Need, "none">;
-  /** The saved address "Take me here" fills in. */
+  /** The saved address "Take Me Here" fills in. */
   address: boolean;
 };
 
@@ -182,7 +182,7 @@ export type PageContent = {
   /** Markdown, on a post or a document only. */
   body: string;
   faqs: PageFaq[];
-  /** On a place only: the saved address "Take me here" fills in; null for none. */
+  /** On a place only: the saved address "Take Me Here" fills in; null for none. */
   addressId: string | null;
   /**
    * Whether search engines may list the page; true until Marketing turns it
@@ -408,10 +408,10 @@ export function pageChecks(kind: PageKind, content: PageContent): PageCheck[] {
   const labels = heroLabelsOf(kind);
 
   const search: string[] = [];
-  if (content.metaTitle === "") search.push("Meta title");
-  if (content.metaDescription === "") search.push("Meta description");
+  if (content.metaTitle === "") search.push("Meta Title");
+  if (content.metaDescription === "") search.push("Meta Description");
   if (content.shareImage && content.shareImage.alt === "") {
-    search.push("Share image: the alt text");
+    search.push("Share Image: the alt text");
   }
 
   const hero: string[] = [];
@@ -421,8 +421,8 @@ export function pageChecks(kind: PageKind, content: PageContent): PageCheck[] {
     hero.push(
       ...missingOfImage(
         content.heroImage,
-        "Hero image",
-        "Hero image: the alt text",
+        "Hero Image",
+        "Hero Image: the alt text",
       ),
     );
   }
@@ -499,7 +499,7 @@ export function pageChecks(kind: PageKind, content: PageContent): PageCheck[] {
 
 /**
  * What the page still needs before it can be published, in the order of the
- * editor: "Meta title", "Intro: at least 100 words (62 so far)", "FAQ 2:
+ * editor: "Meta Title", "Intro: at least 100 words (62 so far)", "FAQ 2:
  * the answer". Empty when the page is complete.
  */
 export function missingFields(kind: PageKind, content: PageContent): string[] {
@@ -508,18 +508,18 @@ export function missingFields(kind: PageKind, content: PageContent): string[] {
 
 /** The parts of a page as a person names them, in the order of the editor. */
 const PAGE_PARTS: readonly (readonly [keyof PageContent, string])[] = [
-  ["metaTitle", "Meta title"],
-  ["metaDescription", "Meta description"],
-  ["shareImage", "Share image"],
+  ["metaTitle", "Meta Title"],
+  ["metaDescription", "Meta Description"],
+  ["shareImage", "Share Image"],
   ["tagline", "Tagline"],
   ["heroHeadline", "Headline"],
   ["heroSubheadline", "Subheadline"],
-  ["heroImage", "Hero image"],
+  ["heroImage", "Hero Image"],
   ["intro", "Intro"],
   ["body", "Text"],
   ["faqs", "FAQs"],
-  ["addressId", "Saved address"],
-  ["indexable", "Search engines"],
+  ["addressId", "Saved Address"],
+  ["indexable", "Search Engines"],
 ];
 
 /** The parts in which two contents differ, by name: what a publish would change. */
@@ -581,9 +581,9 @@ export function pageImageKeys(content: PageContent): string[] {
 export const PAGE_STATUSES = ["unpublished", "published", "changed"] as const;
 export type PageStatus = (typeof PAGE_STATUSES)[number];
 export const PAGE_STATUS_LABELS: Record<PageStatus, string> = {
-  unpublished: "Not published",
+  unpublished: "Not Published",
   published: "Published",
-  changed: "Published, edits waiting",
+  changed: "Published, Edits Waiting",
 };
 
 /** What a list of pages narrows to: a page's standing, or a class's page paused. */

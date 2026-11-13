@@ -37,7 +37,7 @@ export default async function BusinessPage() {
         {owner ? (
           <div className="grid gap-2">
             <Button asChild className="justify-self-start">
-              <Link href="/~/account/business/edit">Edit details</Link>
+              <Link href="/~/account/business/edit">Edit Details</Link>
             </Button>
             <p className="text-xs text-muted">
               What you offer is set by the team. To change it, WhatsApp the

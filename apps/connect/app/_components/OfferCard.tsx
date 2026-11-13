@@ -30,7 +30,7 @@ export function OfferCard({ offer, now }: { offer: DriverOffer; now: Date }) {
     <OfferPanel
       head={
         <>
-          <Pill tone="amber">New offer</Pill>
+          <Pill tone="amber">New Offer</Pill>
           <span className="text-xs font-semibold text-muted tabular-nums">
             {offer.bookingLabel}
           </span>
@@ -179,7 +179,7 @@ export function OfferAnswer({
           </fieldset>
           <label className="grid gap-1.5">
             <span className="text-sm font-semibold text-body">
-              A few words{" "}
+              A Few Words{" "}
               <span className="font-normal text-muted">
                 (needed for “Other”)
               </span>
@@ -195,7 +195,7 @@ export function OfferAnswer({
               Back
             </Button>
             <Button type="submit" variant="danger" size="lg" pending={pending}>
-              {pending ? "Sending…" : "Decline offer"}
+              {pending ? "Sending…" : "Decline Offer"}
             </Button>
           </div>
         </div>

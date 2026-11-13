@@ -20,7 +20,7 @@ export function HistoryPager({
     <PagerNav
       links={[
         { label: "Newest", href: newestHref },
-        { label: "Older changes", href: olderHref },
+        { label: "Older Changes", href: olderHref },
       ]}
     />
   );

@@ -1,4 +1,5 @@
 import { formatMyr } from "./money";
+import { titleCase } from "./names";
 import { isUploadUrl } from "./images";
 
 /**
@@ -85,13 +86,13 @@ const UNREAD = /(^id$|Id$|Ids$|^key$|^position$|^via$|^moved$)/;
 /** The most fields a line opens on: a record created is listed whole. */
 const MOST_CHANGES = 12;
 
-/** "pickupTime" as a person reads it: "Pickup time"; "priceTotalSen", "Price total". */
+/** "pickupTime" as a person reads it: "Pickup Time"; "priceTotalSen", "Price Total". */
 function labelOf(key: string) {
   const words = key
     .replace(/Sen$/, "")
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .toLowerCase();
-  return words.charAt(0).toUpperCase() + words.slice(1);
+  return titleCase(words);
 }
 
 /** A stored value as text, or null when it is not one a line can show. */

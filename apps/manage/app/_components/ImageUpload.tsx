@@ -37,7 +37,7 @@ export function ImageUpload({
   look = "picture",
   size: recommended,
 }: {
-  /** What the image is, as a screen reader hears the controls: "Hero image". */
+  /** What the image is, as a screen reader hears the controls: "Hero Image". */
   label: string;
   /** The route that stores the file and answers it as an `UploadedImage`. */
   uploadPath: string;
@@ -110,7 +110,7 @@ export function ImageUpload({
           pending={uploading}
           onClick={() => input.current?.click()}
         >
-          {uploading ? "Uploading…" : src ? "Replace" : "Upload image"}
+          {uploading ? "Uploading…" : src ? "Replace" : "Upload Image"}
         </Button>
         <MediaPicker
           label={label}

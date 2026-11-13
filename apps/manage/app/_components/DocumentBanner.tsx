@@ -65,7 +65,7 @@ export function DocumentBanner({
           className={cx("shrink-0", tone.link)}
         >
           <a href={`#${card.id}`}>
-            {several ? "Update the dates" : "Update the date"}
+            {several ? "Update the Dates" : "Update the Date"}
           </a>
         </Button>
       </Notice>

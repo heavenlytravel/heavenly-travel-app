@@ -24,7 +24,7 @@ export function PhoneShowcase({ image }: { image: PageImage | null }) {
         <div className="overflow-hidden rounded-[1.75rem] bg-mist">
           <div className="bg-band px-4 pt-5 pb-8 text-white">
             <p className="text-[0.6rem] font-bold tracking-kicker text-azure-light uppercase">
-              Good morning
+              Good Morning
             </p>
             <p className="font-serif text-lg">Langkawi Cars</p>
           </div>
@@ -32,7 +32,7 @@ export function PhoneShowcase({ image }: { image: PageImage | null }) {
             <div className="rounded-control bg-white p-3 shadow-card">
               <div className="flex items-center justify-between">
                 <span className="text-[0.6rem] font-bold tracking-kicker text-muted uppercase">
-                  New offer
+                  New Offer
                 </span>
                 <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[0.6rem] font-semibold text-warning">
                   Answer 1:42
@@ -46,7 +46,7 @@ export function PhoneShowcase({ image }: { image: PageImage | null }) {
               </p>
               <div className="mt-2.5 flex items-end justify-between">
                 <span className="grid">
-                  <span className="text-[0.6rem] text-muted">We pay</span>
+                  <span className="text-[0.6rem] text-muted">We Pay</span>
                   <span className="font-serif text-xl text-ink">RM 85</span>
                 </span>
                 <span className="rounded-control bg-brand px-3 py-1.5 text-xs font-semibold text-white">
@@ -67,7 +67,7 @@ export function PhoneShowcase({ image }: { image: PageImage | null }) {
                 </span>
               </span>
               <span className="rounded-full bg-navy/10 px-2 py-0.5 text-[0.6rem] font-semibold text-navy">
-                On the way
+                On the Way
               </span>
             </div>
             <div className="flex items-center gap-2.5 rounded-control bg-white p-3 shadow-card">

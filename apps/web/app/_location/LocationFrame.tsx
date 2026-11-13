@@ -94,7 +94,7 @@ function LocationPreviewBar({
     href: locationPreviewPath(location.slug, entry),
     name:
       entry.page === LANDING_REF.page
-        ? "Main page"
+        ? "Main Page"
         : pageNameInView(location, entry),
     standing: standingOf(entry),
     current: entry.page === shown.page && entry.slug === shown.slug,

@@ -41,9 +41,9 @@ describe("parseOfferingFields", () => {
   });
 
   it("keeps the hours whole", () => {
-    assert.match(errorOf({ minLeadHours: "-1" }) ?? "", /Notice needed/);
+    assert.match(errorOf({ minLeadHours: "-1" }) ?? "", /Notice Needed/);
     assert.match(errorOf({ cancellationCutoffHours: "1.5" }) ?? "", /Cancel/);
-    assert.match(errorOf({ minLeadHours: "" }) ?? "", /Notice needed/);
+    assert.match(errorOf({ minLeadHours: "" }) ?? "", /Notice Needed/);
     assert.equal(
       errorOf({ minLeadHours: "0", cancellationCutoffHours: "0" }),
       null,

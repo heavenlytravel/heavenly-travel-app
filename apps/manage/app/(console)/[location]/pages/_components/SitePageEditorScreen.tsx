@@ -110,7 +110,7 @@ async function editorDetails({ page }: { page: SitePageKey }) {
       {page === HOME_PAGE ? (
         <div className="mt-8 grid gap-4">
           <SectionHeader
-            title="Top choices"
+            title="Top Choices"
             badge={
               <InfoTip text="The location cards on the home page, in this order. Each shows the location's name and its main page's tagline and hero image, and opens the location's page." />
             }

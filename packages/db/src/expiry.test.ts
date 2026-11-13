@@ -32,7 +32,7 @@ describe("days", () => {
 
   it("reads a date input: empty is none", () => {
     const read = (text: string) =>
-      parseDay(text, "Road tax", "roadTaxExpiresOn");
+      parseDay(text, "Road Tax", "roadTaxExpiresOn");
     assert.deepEqual(read(""), { ok: true, value: null });
     assert.deepEqual(read(" 2027-03-12 "), {
       ok: true,
@@ -73,7 +73,7 @@ describe("documentsDue", () => {
         inspection: null,
       },
       {
-        roadTax: "Road tax",
+        roadTax: "Road Tax",
         insurance: "Insurance",
         permit: "Permit",
         inspection: "Inspection",
@@ -82,7 +82,7 @@ describe("documentsDue", () => {
     );
     assert.deepEqual(due, [
       { label: "Insurance", expiresOn: "2026-10-01", state: "expired" },
-      { label: "Road tax", expiresOn: "2026-11-01", state: "due" },
+      { label: "Road Tax", expiresOn: "2026-11-01", state: "due" },
     ]);
   });
 });

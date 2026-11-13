@@ -23,11 +23,11 @@ import {
 /** An agent a booking may come through, and its `PaymentTerms`. */
 export type Agent = { id: string; name: string; paymentTerms: string };
 
-/** "Monthly credit", "Twice a month credit" or "No credit": how an agent pays, beside its name. */
+/** "Monthly Credit", "Twice a Month Credit" or "No Credit": how an agent pays, beside its name. */
 export function agentTermsLabel(agent: Agent): string {
   if (!isPaymentTerms(agent.paymentTerms)) return "";
   return isCredit(agent.paymentTerms)
-    ? `${PAYMENT_TERMS_LABELS[agent.paymentTerms]} credit`
+    ? `${PAYMENT_TERMS_LABELS[agent.paymentTerms]} Credit`
     : PAYMENT_TERMS_LABELS.none;
 }
 
@@ -63,7 +63,7 @@ export function AgentPicker({
           value={value}
           onValueChange={onChange}
           options={[
-            { value: "", label: "None: our own customer" },
+            { value: "", label: "None: Our Own Customer" },
             ...agents.map((a) => ({
               value: a.id,
               label: [a.name, agentTermsLabel(a)].filter(Boolean).join(" · "),
@@ -142,7 +142,7 @@ function AddAgentDialog({
       onOpenChange={(open) => {
         if (!open && !pending) onClose();
       }}
-      title="Add an agent"
+      title="Add an Agent"
       description="An agent the booking comes through, chosen for it once added. The rest is on its page under Agents."
       width="md"
     >
@@ -165,7 +165,7 @@ function AddAgentDialog({
             Cancel
           </Button>
           <Button type="submit" pending={pending}>
-            {pending ? "Adding…" : "Add agent"}
+            {pending ? "Adding…" : "Add Agent"}
           </Button>
         </DialogActions>
       </form>

@@ -170,7 +170,7 @@ function stateFigures(
       key: state,
       label:
         state === "done" && !filter.date
-          ? "Done today"
+          ? "Done Today"
           : ASSIGN_STATE_LABELS[state],
       value: valueOf(state),
       tone: ASSIGN_TONES[state],
@@ -215,7 +215,7 @@ function groupsOf(rows: readonly AssignRow[], view: AssignView) {
     }),
     {
       param: "only",
-      label: "Needs attention",
+      label: "Needs Attention",
       value: view.only ?? "",
       options: ASSIGN_ONLY.map((value) => ({
         value,
@@ -291,7 +291,7 @@ async function assignList(
               href={hrefOf(scope, state, { ...filter, date: undefined })}
               className="font-medium text-link"
             >
-              Back to upcoming
+              Back to Upcoming
             </Link>
           </div>
         ) : null}

@@ -15,11 +15,11 @@ export default async function RestrictedPage() {
 
   return (
     <StopScreen
-      title="This Screen Belongs to Another Team"
+      title="This screen belongs to another team"
       action={
         home ? (
           <Button asChild variant="secondary">
-            <Link href={home}>Back to your start page</Link>
+            <Link href={home}>Back to Your Start Page</Link>
           </Button>
         ) : null
       }

@@ -82,7 +82,7 @@ export function Stop({
   title,
   message,
   href = "/#booking",
-  linkLabel = "Change the search",
+  linkLabel = "Change the Search",
   action,
   level = 2,
 }: {

@@ -27,7 +27,7 @@ export function SafetyBufferForm({
     <form {...formProps} className="grid gap-4">
       <input type="hidden" name="locationId" value={locationId} />
       <Field
-        label="Safety buffer (minutes)"
+        label="Safety Buffer (minutes)"
         hint="Added after a job's estimated end and the drive to the next pickup. 0 turns it off."
       >
         <NumberField

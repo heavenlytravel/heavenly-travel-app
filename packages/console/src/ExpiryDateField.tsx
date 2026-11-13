@@ -25,7 +25,7 @@ export function ExpiryDateField({
   defaultValue,
 }: {
   name: string;
-  /** The document: "Road tax". */
+  /** The document: "Road Tax". */
   label: string;
   defaultValue: string | null;
 }) {
@@ -41,7 +41,7 @@ export function ExpiryDateField({
             {state ? (
               <span title={expiryText(day)}>
                 <Badge dot tone={CHIP_TONES[state]}>
-                  {state === "valid" ? "In date" : expiryText(day)}
+                  {state === "valid" ? "In Date" : expiryText(day)}
                 </Badge>
               </span>
             ) : null}

@@ -75,10 +75,10 @@ const formContentOf = (content: PageContent): FormContent => ({
   faqs: content.faqs.map((faq, i) => ({ ...faq, key: `faq-${i}` })),
 });
 
-/** The id of the part of the editor a check is about, which "Go to it" scrolls to. */
+/** The id of the part of the editor a check is about, which "Go to It" scrolls to. */
 const partId = (key: PageCheck["key"]) => `page-${key}`;
 
-/** Where a part lands when "Go to it" scrolls to it: clear of the console's top bar and the publish bar. */
+/** Where a part lands when "Go to It" scrolls to it: clear of the console's top bar and the publish bar. */
 const PART_SCROLL = "scroll-mt-52";
 
 /** How the tagline is asked for, on the kinds that have one. */
@@ -91,7 +91,7 @@ const TAGLINE_FIELD: Partial<
     hint: "The short line over the headline, and under the name on a home page card. Optional.",
   },
   home: {
-    label: "Handwritten word",
+    label: "Handwritten Word",
     placeholder: "Travel",
     hint: "The word over the headline, in the handwriting type. Optional.",
   },
@@ -104,7 +104,7 @@ const TAGLINE_FIELD: Partial<
 
 /**
  * One part of a card of the editor, under its name and a line of help,
- * split from the one before by a hairline. "Go to it" lands on it by its
+ * split from the one before by a hairline. "Go to It" lands on it by its
  * `id`.
  */
 function Part({
@@ -151,7 +151,7 @@ export type EntryControls = {
  * The editor of one page: a location's or one of the site's own, under
  * its header (`EditorHeader`). On top, the publish bar, held in view while
  * the form scrolls: where the page stands and what that means for the
- * public, level with "Preview" of the saved draft, "Save draft" (also
+ * public, level with "Preview" of the saved draft, "Save Draft" (also
  * Ctrl+S) and "Publish"; under them its address and the quiet moves:
  * "Compare" while the draft differs from what the public sees,
  * "Unpublish" where allowed, and on a page added on demand "Delete".
@@ -159,7 +159,7 @@ export type EntryControls = {
  * its SEO, what search engines and shared links show with a preview of
  * each, each card counting what it still needs before a publish.
  * "Publish" opens the checks the page must pass, each with a way to the
- * part that needs work, and what the publish changes; "Publish now" waits
+ * part that needs work, and what the publish changes; "Publish Now" waits
  * until every check passes. A save is refused when someone else changed
  * the page since the form was opened.
  */
@@ -412,7 +412,7 @@ export function PageEditor({
   if (status === "changed" && published) {
     moves.push(
       <BarLink key="compare" onClick={() => setComparing(true)}>
-        Compare with published
+        Compare with Published
       </BarLink>,
     );
   }
@@ -461,7 +461,7 @@ export function PageEditor({
         {notice}
 
         <Card>
-          <CardTitle meta={toDoIn("content")}>Page content</CardTitle>
+          <CardTitle meta={toDoIn("content")}>Page Content</CardTitle>
           <div className="grid gap-5">
             <Part
               id={partId("hero")}
@@ -538,7 +538,7 @@ export function PageEditor({
                 </Field>
                 <div>
                   <p className="mb-1.5 text-sm font-medium text-body">
-                    {kind === "article" ? "Cover image" : "Image"}
+                    {kind === "article" ? "Cover Image" : "Image"}
                     {rule.heroImage === "optional" ? (
                       <span className="font-normal text-muted">
                         {" "}
@@ -558,7 +558,7 @@ export function PageEditor({
 
             {rule.address && places ? (
               <Part
-                title="Saved address"
+                title="Saved Address"
                 hint="Optional. With an address, the page and its card show “Take me here”, which fills the drop-off with it. Not saved yet? Add it with the plus: it is saved at once, to the location's saved addresses."
               >
                 <SavedAddressPicker
@@ -734,7 +734,7 @@ export function PageEditor({
           <div className="grid gap-5">
             <Part
               id={partId("search")}
-              title="In a search result"
+              title="In a Search Result"
               hint="What a search result shows. Not on the page itself."
             >
               <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
@@ -742,7 +742,7 @@ export function PageEditor({
                   <Field
                     label={
                       <Counted
-                        label="Meta title"
+                        label="Meta Title"
                         value={normal.metaTitle}
                         limit={PAGE_LIMITS.metaTitle}
                       />
@@ -759,7 +759,7 @@ export function PageEditor({
                   <Field
                     label={
                       <Counted
-                        label="Meta description"
+                        label="Meta Description"
                         value={normal.metaDescription}
                         limit={PAGE_LIMITS.metaDescription}
                       />
@@ -784,16 +784,16 @@ export function PageEditor({
             </Part>
 
             <Part
-              title="When it is shared"
+              title="When It Is Shared"
               hint="What WhatsApp, Facebook and others show when someone shares the page: the meta title and description, with this image."
             >
               <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
                 <div>
                   <p className="mb-1.5 text-sm font-medium text-body">
-                    Share image
+                    Share Image
                   </p>
                   <ImageField
-                    label="Share image"
+                    label="Share Image"
                     size={IMAGE_SIZES.share}
                     image={content.shareImage}
                     onChange={(shareImage) => edit({ shareImage })}
@@ -813,7 +813,7 @@ export function PageEditor({
             </Part>
 
             <Part
-              title="Search engines"
+              title="Search Engines"
               hint="Whether Google and other search engines may list this page in their results."
             >
               <div className="flex items-start gap-3">
@@ -842,7 +842,7 @@ export function PageEditor({
 
             {entry ? (
               <Part
-                title={entry.type ? "Type and slug" : "Slug"}
+                title={entry.type ? "Type and Slug" : "Slug"}
                 hint={
                   entry.slugLocked
                     ? `Locked since the page was first published: a new ${entry.type ? "type or slug" : "slug"} needs a redirect from the old address, which comes with the move to heavenlytravel.my.`
@@ -864,7 +864,7 @@ export function PageEditor({
                         disabled={busy || dirty}
                         onClick={entry.onRename}
                       >
-                        {entry.type ? "Change type or slug" : "Change slug"}
+                        {entry.type ? "Change Type or Slug" : "Change Slug"}
                       </Button>
                     </Tooltip>
                   )}
@@ -872,7 +872,7 @@ export function PageEditor({
               </Part>
             ) : null}
 
-            <Part title="Set for you">
+            <Part title="Set for You">
               <Notice className="mb-3">
                 Until the site moves to heavenlytravel.my, search engines are
                 asked not to list any of its pages. These fields count from

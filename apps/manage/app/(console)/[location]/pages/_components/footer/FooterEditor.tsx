@@ -250,7 +250,7 @@ export function FooterEditor({
   if (status === "changed" && published) {
     moves.push(
       <BarLink key="compare" onClick={() => setComparing(true)}>
-        Compare with published
+        Compare with Published
       </BarLink>,
     );
   }
@@ -351,11 +351,11 @@ export function FooterEditor({
                       })
                     }
                   >
-                    Add a column
+                    Add a Column
                   </Button>
                 }
               >
-                Link columns
+                Link Columns
               </CardTitle>
               {content.columns.length === 0 ? (
                 <p className="text-sm text-muted">No columns yet.</p>
@@ -447,16 +447,16 @@ export function FooterEditor({
                       })
                     }
                   >
-                    Add a network
+                    Add a Network
                   </Button>
                 }
               >
-                Follow us on
+                Follow Us On
               </CardTitle>
               <div className="grid gap-4">
                 <HeadingField
                   value={content.socialHeading}
-                  placeholder="Follow us on"
+                  placeholder="Follow Us On"
                   onChange={(socialHeading) => edit({ socialHeading })}
                 />
                 {content.social.length > 0 ? (
@@ -523,17 +523,17 @@ export function FooterEditor({
 
             <Card>
               <CardTitle description="Each one left empty is left out. Contact us shows these too, with the company's name and registration below.">
-                Get in touch
+                Get in Touch
               </CardTitle>
               <div className="grid gap-4 sm:grid-cols-2">
                 <HeadingField
                   className="sm:col-span-2"
                   value={content.contactHeading}
-                  placeholder="Get in touch"
+                  placeholder="Get in Touch"
                   onChange={(contactHeading) => edit({ contactHeading })}
                 />
                 <Field
-                  label="WhatsApp number"
+                  label="WhatsApp Number"
                   hint="The footer links it as WhatsApp us."
                 >
                   <Input
@@ -566,7 +566,7 @@ export function FooterEditor({
                   className="sm:col-span-2"
                   label={
                     <Counted
-                      label="Office address"
+                      label="Office Address"
                       value={normal.address}
                       limit={L.address}
                     />
@@ -604,16 +604,16 @@ export function FooterEditor({
                       })
                     }
                   >
-                    Add a registration
+                    Add a Registration
                   </Button>
                 }
               >
-                Registered with
+                Registered With
               </CardTitle>
               <div className="grid gap-4">
                 <HeadingField
                   value={content.badgesHeading}
-                  placeholder="Registered with"
+                  placeholder="Registered With"
                   onChange={(badgesHeading) => edit({ badgesHeading })}
                 />
                 {content.badges.length === 0 ? (
@@ -629,7 +629,7 @@ export function FooterEditor({
                         })
                       }
                     >
-                      Add the old site&apos;s three
+                      Add the Old Site&apos;s Three
                     </Button>
                   </div>
                 ) : (
@@ -687,7 +687,7 @@ export function FooterEditor({
                               <Field
                                 label={
                                   <Counted
-                                    label="Registration no"
+                                    label="Registration No"
                                     value={badge.detail.trim()}
                                     limit={L.badgeDetail}
                                   />
@@ -704,7 +704,7 @@ export function FooterEditor({
                               </Field>
                             </div>
                             <Field
-                              label="Certificate link"
+                              label="Certificate Link"
                               hint="Optional. The certificate on the body's site, or a file of it. The footer's badge opens it."
                             >
                               <Input
@@ -759,14 +759,14 @@ export function FooterEditor({
 
             <Card>
               <CardTitle description="The last line of the footer: the company and its registration, then links such as the terms. Contact us shows the name and the registration too.">
-                Copyright line
+                Copyright Line
               </CardTitle>
               <div className="grid gap-4">
                 <div className="grid gap-4 sm:grid-cols-[1fr_1fr_8rem]">
                   <Field
                     label={
                       <Counted
-                        label="Company name"
+                        label="Company Name"
                         value={normal.legalName}
                         limit={L.legalName}
                       />
@@ -835,7 +835,7 @@ export function FooterEditor({
         <Dialog
           open={publishing}
           onOpenChange={setPublishing}
-          title="Publish the footer"
+          title="Publish the Footer"
           description={
             problems.length > 0
               ? `${problems.length === 1 ? "One thing needs" : `${problems.length} things need`} fixing before the footer can be published.`
@@ -877,7 +877,7 @@ export function FooterEditor({
                 pending={pending}
                 onClick={() => write(true)}
               >
-                {pending ? "Publishing…" : "Publish now"}
+                {pending ? "Publishing…" : "Publish Now"}
               </Button>
             </DialogActions>
           </div>
@@ -886,7 +886,7 @@ export function FooterEditor({
           <Dialog
             open={comparing}
             onOpenChange={setComparing}
-            title="The published footer and this draft"
+            title="The Published Footer and This Draft"
             description={`What ${where.toLowerCase()} shows now beside what you are editing. The parts that differ are marked Changed.`}
             width="lg"
           >
@@ -1021,8 +1021,11 @@ function LinkRows({
         : t.kind === "location"
           ? locations.find((l) => l.slug === t.slug)?.name
           : undefined;
+    // Compared in small letters: a footer saved before 2026-11-13 has
+    // "About us" where the page is now named "About Us".
+    const was = nameOf(link.target)?.toLowerCase();
     const label =
-      link.label.trim() === "" || link.label === nameOf(link.target)
+      link.label.trim() === "" || link.label.toLowerCase() === was
         ? (nameOf(target) ?? link.label)
         : link.label;
     update(link.rowId, { target, label });
@@ -1139,7 +1142,7 @@ function LinkRows({
           disabled={links.length >= max}
           onClick={() => onChange([...links, newLink()])}
         >
-          Add a link
+          Add a Link
         </Button>
       </div>
     </div>
@@ -1195,7 +1198,7 @@ function PaymentCard({
                 disabled={room <= 0}
                 options={[
                   ...(missing.length > 1
-                    ? [{ value: ALL_MARKS, label: "All of them" }]
+                    ? [{ value: ALL_MARKS, label: "All of Them" }]
                     : []),
                   ...missing.map((mark) => ({
                     value: mark.url,
@@ -1234,18 +1237,18 @@ function PaymentCard({
               pending={uploading}
               onClick={() => input.current?.click()}
             >
-              {uploading ? "Uploading…" : "Upload logos"}
+              {uploading ? "Uploading…" : "Upload Logos"}
             </Button>
           </div>
         }
       >
-        Payment partners
+        Payment Partners
       </CardTitle>
       <div className="grid gap-4">
         <ImageSizeHint size={IMAGE_SIZES.logo} />
         <HeadingField
           value={content.paymentHeading}
-          placeholder="Payment partners"
+          placeholder="Payment Partners"
           onChange={(paymentHeading) => onEdit({ paymentHeading })}
         />
         <FormError error={error} size="xs" />
@@ -1302,7 +1305,7 @@ function PaymentCard({
         <Field
           label={
             <Counted
-              label="Line under the logos"
+              label="Line Under the Logos"
               value={content.paymentNote.trim()}
               limit={L.paymentNote}
             />

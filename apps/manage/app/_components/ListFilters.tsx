@@ -156,7 +156,7 @@ export function FiltersButton({
             className="self-start"
             onClick={() => onChange(clearedOf(groups))}
           >
-            Clear all
+            Clear All
           </Button>
         ) : null}
       </div>
@@ -181,7 +181,7 @@ function ChipRow({ children }: { children: ReactNode }) {
 
 /**
  * The Filters in force, as chips under a list's bar, each taking its own
- * off, and "Clear all" when there are two or more. Nothing while none is.
+ * off, and "Clear All" when there are two or more. Nothing while none is.
  * `href` is the list's address as filtered, without a page.
  */
 export function FilterChips({
@@ -213,7 +213,7 @@ export function FilterChips({
           scroll={false}
           className={CLEAR_ALL}
         >
-          Clear all
+          Clear All
         </Link>
       ) : null}
     </ChipRow>
@@ -250,7 +250,7 @@ export function StateFilterChips({
           className={CLEAR_ALL}
           onClick={() => onChange(clearedOf(groups))}
         >
-          Clear all
+          Clear All
         </button>
       ) : null}
     </ChipRow>

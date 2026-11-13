@@ -35,13 +35,13 @@ export type NewRoute = {
 };
 
 /**
- * "Add route" as a dialog: the two zones of the route, then its price
+ * "Add Route" as a dialog: the two zones of the route, then its price
  * for each class on sale, a row each in a table grouped by category,
  * its cells drawn as the grid's, an empty one hatched. Only the zones with a pair
  * still free are offered, and only the free partners of the zone picked
  * first, so a route cannot be added twice or the other way round. "To"
  * offers this location's zones, the one picked first among them as
- * "Within this zone": the zone's within-zone price. Given other
+ * "Within This Zone": the zone's within-zone price. Given other
  * locations' zones, while cross-location is on, "To" offers those too,
  * grouped by location: such a route ends at that zone itself, which stays
  * its location's, and prices trips from here to it only. At least
@@ -72,7 +72,7 @@ export function AddRouteDialog({
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Add a route"
+      title="Add a Route"
       description={
         elsewhere.length > 0
           ? "Pick the two zones, the same one for a trip within it, then price the route for the classes it serves. A route here costs the same both ways; one to another location's zone prices trips from here to it only."
@@ -130,7 +130,7 @@ function RouteForm({
   }
   const option = (zone: Zone) => {
     const taken = paired.has(pairKey(from, zone.id));
-    const name = zone.id === from ? "Within this zone" : zone.name;
+    const name = zone.id === from ? "Within This Zone" : zone.name;
     return {
       value: zone.id,
       label: taken ? `${name} (on the grid)` : name,
@@ -194,7 +194,7 @@ function RouteForm({
             options={
               elsewhere.length > 0
                 ? [
-                    { label: "This location", options: zones.map(option) },
+                    { label: "This Location", options: zones.map(option) },
                     ...[...byLocation].map(([location, list]) => ({
                       label: `In ${location}`,
                       options: list.map(option),
@@ -299,7 +299,7 @@ function RouteForm({
           Cancel
         </Button>
         <Button type="submit" disabled={!toId} pending={pending}>
-          {pending ? "Adding…" : "Add route"}
+          {pending ? "Adding…" : "Add Route"}
         </Button>
       </DialogActions>
     </form>

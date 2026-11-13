@@ -33,14 +33,14 @@ function Picture({ image }: { image: PageImage | null }) {
         sizes="240px"
         className="h-28 w-auto max-w-full rounded-md border border-card-edge object-contain"
       />
-      <span className="text-xs text-muted">Alt text: {image.alt}</span>
+      <span className="text-xs text-muted">Alt Text: {image.alt}</span>
       <a
         href={image.url}
         target="_blank"
         rel="noreferrer"
         className="text-xs font-semibold text-brand underline-offset-4 hover:underline"
       >
-        Open the file
+        Open the File
       </a>
     </div>
   );
@@ -73,19 +73,19 @@ export function PageContentView({
 
   return (
     <dl className="grid gap-4">
-      <ContentPart label="Meta title" changed={changed("metaTitle")}>
+      <ContentPart label="Meta Title" changed={changed("metaTitle")}>
         {content.metaTitle || NONE}
       </ContentPart>
       <ContentPart
-        label="Meta description"
+        label="Meta Description"
         changed={changed("metaDescription")}
       >
         {content.metaDescription || NONE}
       </ContentPart>
-      <ContentPart label="Search engines" changed={changed("indexable")}>
+      <ContentPart label="Search Engines" changed={changed("indexable")}>
         {content.indexable ? "Shown" : "Hidden"}
       </ContentPart>
-      <ContentPart label="Share image" changed={changed("shareImage")}>
+      <ContentPart label="Share Image" changed={changed("shareImage")}>
         {content.shareImage ? (
           <Picture image={content.shareImage} />
         ) : (
@@ -106,11 +106,11 @@ export function PageContentView({
       >
         {content.heroSubheadline || NONE}
       </ContentPart>
-      <ContentPart label="Hero image" changed={changed("heroImage")}>
+      <ContentPart label="Hero Image" changed={changed("heroImage")}>
         <Picture image={content.heroImage} />
       </ContentPart>
       {rule.address ? (
-        <ContentPart label="Saved address" changed={changed("addressId")}>
+        <ContentPart label="Saved Address" changed={changed("addressId")}>
           {content.addressId === null
             ? NONE
             : (addressNames.get(content.addressId) ??

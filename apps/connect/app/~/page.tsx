@@ -96,7 +96,7 @@ async function DriverHome({
             items={[
               { label: "Offers", value: jobs.offers.length, alert: true },
               { label: "Today", value: jobs.today.length },
-              { label: "Coming up", value: jobs.coming.length },
+              { label: "Coming Up", value: jobs.coming.length },
             ]}
           />
         </div>
@@ -106,7 +106,7 @@ async function DriverHome({
       {jobs.offers.length > 0 ? (
         <section className="grid gap-3">
           <SectionTitle count={jobs.offers.length}>
-            Waiting for your answer
+            Waiting for Your Answer
           </SectionTitle>
           {jobs.offers.map((offer) => (
             <OfferCard key={offer.offerId} offer={offer} now={now} />
@@ -120,7 +120,7 @@ async function DriverHome({
         </EmptyState>
       ) : null}
       <TripDays title="Today" trips={others(jobs.today)} now={now} />
-      <TripDays title="Coming up" trips={others(jobs.coming)} now={now} />
+      <TripDays title="Coming Up" trips={others(jobs.coming)} now={now} />
       <DoneTrips trips={jobs.done} now={now} />
     </Screen>
   );
@@ -190,8 +190,8 @@ async function MemberHome({
           <BandStats
             items={[
               { label: "Offers", value: offerCount, alert: true },
-              { label: "Coming up", value: jobs.coming.length },
-              { label: "Need a driver", value: toFix, alert: true },
+              { label: "Coming Up", value: jobs.coming.length },
+              { label: "Need a Driver", value: toFix, alert: true },
             ]}
           />
         </div>
@@ -201,7 +201,7 @@ async function MemberHome({
       {offerCount > 0 ? (
         <section className="grid gap-3">
           <SectionTitle count={offerCount}>
-            Waiting for your answer
+            Waiting for Your Answer
           </SectionTitle>
           {offers.map((offer) => (
             <VendorOfferCard key={offer.offerId} offer={offer} now={now} />
@@ -217,10 +217,10 @@ async function MemberHome({
           and drivers in service to be offered more.
         </EmptyState>
       ) : null}
-      <TripDays title="Coming up" trips={jobs.coming} now={now} />
+      <TripDays title="Coming Up" trips={jobs.coming} now={now} />
       {ownJobs && !drivesHere ? (
         <TripDays
-          title="Your own driving"
+          title="Your Own Driving"
           trips={[...ownJobs.today, ...ownJobs.coming]}
           now={now}
         />

@@ -47,12 +47,12 @@ export type HourlyChoice = {
   extraHours: number;
 };
 
-/** A duration as every screen names it: "4 hours". */
+/** A duration as every screen names it: "4 Hours". */
 export function durationLabel(hours: number) {
   return `${hours} ${hours === 1 ? "hour" : "hours"}`;
 }
 
-/** The durations a booking form offers: "4 hours", "8 hours", "12 hours". */
+/** The durations a booking form offers: "4 Hours", "8 Hours", "12 Hours". */
 export const DURATION_CHOICES = HOURLY_PACKAGES.map((hours) => ({
   value: String(hours),
   label: durationLabel(hours),

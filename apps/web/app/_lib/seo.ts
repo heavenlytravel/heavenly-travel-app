@@ -12,7 +12,7 @@ import type { Crumb } from "../_components/page-parts";
  * What a marketing page tells search engines and link previews, a
  * location's or the site's: its metadata, with the canonical address on
  * `SITE_URL` so it follows the host at cutover, and the structured data of
- * its FAQs. See docs/261001-locations-and-pages.md, "Search engines".
+ * its FAQs. See docs/261001-locations-and-pages.md, "Search Engines".
  */
 
 /**

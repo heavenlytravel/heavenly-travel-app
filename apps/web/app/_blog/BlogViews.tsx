@@ -62,7 +62,7 @@ function ListHeader({
 
 /**
  * /blog: the highlighted posts first, in Marketing's order, then the
- * newest of the rest, then "View all".
+ * newest of the rest, then "View All".
  */
 export async function BlogHome() {
   const posts = await publishedBlogPosts();
@@ -78,14 +78,14 @@ export async function BlogHome() {
       />
       <BlogCards
         id="latest"
-        title="Latest posts"
+        title="Latest Posts"
         posts={newest}
         preview={false}
       />
       <div className={`pt-10 ${gutter}`}>
         <p className={column}>
           {posts.length > 0 ? (
-            <MoreLink href={BLOG_ALL_PATH}>View all</MoreLink>
+            <MoreLink href={BLOG_ALL_PATH}>View All</MoreLink>
           ) : (
             <span className="text-muted">
               The first posts are on their way.
@@ -103,8 +103,8 @@ export async function BlogAll() {
   return (
     <main className="pb-[60px] sm:pb-[88px]">
       <ListHeader
-        crumbs={blogCrumbsOf({ name: "All posts", path: BLOG_ALL_PATH })}
-        title="All posts"
+        crumbs={blogCrumbsOf({ name: "All Posts", path: BLOG_ALL_PATH })}
+        title="All Posts"
         line="Every post on the blog, the newest first."
       />
       <BlogCards
@@ -173,13 +173,13 @@ export async function BlogPostPage({
           </div>
         </div>
       </article>
-      <Faqs title="Good to know" faqs={post.content.faqs} empty={empty.faqs} />
+      <Faqs title="Good to Know" faqs={post.content.faqs} empty={empty.faqs} />
       <BlogCards
         id="more-posts"
         eyebrow={BLOG_LABEL}
-        title="More from the blog"
+        title="More from the Blog"
         posts={others}
-        action={<MoreLink href={BLOG_PATH}>All posts</MoreLink>}
+        action={<MoreLink href={BLOG_PATH}>All Posts</MoreLink>}
         preview={preview}
       />
     </main>

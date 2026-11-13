@@ -191,7 +191,7 @@ export function getRevision(bookingId: string, number: number) {
 /** A revision as staff read it: what it changed from the one before, and who made it. */
 export type StaffRevision<R> = R & {
   details: RevisionDetail[];
-  /** Who made it; "System" for none, "Former staff" for a deleted account. */
+  /** Who made it; "System" for none, "Former Staff" for a deleted account. */
   by: string;
 };
 
@@ -222,7 +222,7 @@ export async function withDetails<
       ...row,
       details,
       by: row.createdById
-        ? (names.get(row.createdById) ?? "Former staff")
+        ? (names.get(row.createdById) ?? "Former Staff")
         : "System",
     };
   });

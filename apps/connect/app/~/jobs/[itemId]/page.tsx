@@ -52,7 +52,7 @@ import { TripTaps } from "./TripTaps";
  * after it, with the trip's tour guide to call for the driver, and the
  * trip's steps to report on the day. Opening the
  * customer's details is logged. See
- * docs/261028-fulfilment-vendors-and-connect.md, "On the day".
+ * docs/261028-fulfilment-vendors-and-connect.md, "On the Day".
  */
 export default async function JobPage({
   params,
@@ -81,7 +81,7 @@ export default async function JobPage({
 
   const onTheDay = job.accepted ? (
     <Panel className="grid gap-5 p-5">
-      <h2 className="text-lg font-bold tracking-title text-ink">On the day</h2>
+      <h2 className="text-lg font-bold tracking-title text-ink">On the Day</h2>
       {driverJob ? (
         <TripTaps
           itemId={job.itemId}
@@ -207,7 +207,7 @@ export default async function JobPage({
                 </Fact>
               ) : null}
               {job.customer.notes ? (
-                <Fact icon={NotebookText} label="Notes from the customer">
+                <Fact icon={NotebookText} label="Notes from the Customer">
                   {job.customer.notes}
                 </Fact>
               ) : null}
@@ -241,7 +241,7 @@ export default async function JobPage({
       {job.pay.totalSen > 0 || job.pay.lines.length > 0 ? (
         <Panel className="grid gap-3 p-5">
           <h2 className="text-caps font-semibold text-muted">
-            {vendorJob ? "Your pay for this trip" : "Your pay"}
+            {vendorJob ? "Your Pay for This Trip" : "Your Pay"}
           </h2>
           {job.pay.lines.length > 0 ? (
             <ul className="grid gap-1.5 text-sm">
@@ -272,7 +272,7 @@ export default async function JobPage({
 
       {driverJob?.guide ? (
         <Panel className="grid gap-4 p-5">
-          <h2 className="text-caps font-semibold text-muted">Tour guide</h2>
+          <h2 className="text-caps font-semibold text-muted">Tour Guide</h2>
           <div className="flex items-center gap-3">
             <Avatar name={driverJob.guide.name} size="sm" />
             <div className="grid min-w-0 gap-0.5">
@@ -310,12 +310,12 @@ export default async function JobPage({
 
       {vendorJob ? (
         <Panel className="grid gap-4 p-5">
-          <h2 className="text-caps font-semibold text-muted">Who does it</h2>
+          <h2 className="text-caps font-semibold text-muted">Who Does It</h2>
           <div className="flex flex-wrap items-center justify-between gap-3">
             {vendorJob.vehicle ? (
               <Plate>{vendorJob.vehicle}</Plate>
             ) : (
-              <span className="text-sm text-muted">Vehicle not yours</span>
+              <span className="text-sm text-muted">Vehicle Not Yours</span>
             )}
             {vendorJob.driver ? (
               <span className="flex items-center gap-2 text-sm font-semibold">
@@ -323,12 +323,12 @@ export default async function JobPage({
                 {vendorJob.driver}
               </span>
             ) : (
-              <span className="text-sm text-muted">Driver not yours</span>
+              <span className="text-sm text-muted">Driver Not Yours</span>
             )}
           </div>
           {vendorJob.guide ? (
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-hairline pt-4">
-              <span className="text-sm text-muted">Tour guide</span>
+              <span className="text-sm text-muted">Tour Guide</span>
               <span className="flex items-center gap-2 text-sm font-semibold">
                 <Avatar name={vendorJob.guide} size="sm" />
                 {vendorJob.guide}
@@ -349,7 +349,7 @@ function RouteThrough({ places }: { places: JobStop[] }) {
   return (
     <Button asChild variant="outline" size="lg" className="w-full">
       <a href={href} target="_blank" rel="noreferrer">
-        Open the whole route in Google Maps
+        Open the Whole Route in Google Maps
       </a>
     </Button>
   );

@@ -20,7 +20,7 @@ import {
 } from "../../../_lib/routes";
 
 export const metadata: Metadata = {
-  title: "My bookings | Heavenly Travel",
+  title: "My Bookings | Heavenly Travel",
 };
 
 /** Route: /account/bookings. The customer's bookings, newest first. */
@@ -34,14 +34,14 @@ export default async function BookingsPage() {
 
   return (
     <>
-      <PageTitle eyebrow="Account" title="My bookings.">
+      <PageTitle eyebrow="Account" title="My Bookings">
         Every booking you have made with us, newest first.
       </PageTitle>
       {bookings.length === 0 ? (
         <Stop
           title="No bookings yet"
           message="Your bookings will appear here once you have made one."
-          linkLabel="Book a trip"
+          linkLabel="Book a Trip"
         />
       ) : (
         <ul className="grid gap-4">

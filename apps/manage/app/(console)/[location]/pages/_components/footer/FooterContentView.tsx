@@ -15,7 +15,7 @@ import {
 } from "../../../../../_components/page-editor/ContentPart";
 import { logoSrc } from "./logo-src";
 
-/** Where a link goes, as the editor names it: "About us", "Location: langkawi", the address. */
+/** Where a link goes, as the editor names it: "About Us", "Location: langkawi", the address. */
 function targetName({ target }: FooterLink) {
   switch (target.kind) {
     case "page":
@@ -58,9 +58,7 @@ function Logo({ image, siteUrl }: { image: PageImage; siteUrl: string }) {
 /** A heading as the view shows it: in small capitals over its part, or a note that there is none. */
 function Heading({ text }: { text: string }) {
   return text ? (
-    <span className="text-xs font-semibold tracking-wide text-muted uppercase">
-      {text}
-    </span>
+    <span className="text-caps font-semibold text-muted">{text}</span>
   ) : (
     <span className="text-xs text-muted">No heading</span>
   );
@@ -100,7 +98,7 @@ export function FooterContentView({
       <ContentPart label="Tagline" changed={changed.has("Tagline")}>
         {content.tagline || NONE}
       </ContentPart>
-      <ContentPart label="Link columns" changed={changed.has("Link columns")}>
+      <ContentPart label="Link Columns" changed={changed.has("Link Columns")}>
         {content.columns.length === 0
           ? NONE
           : content.columns.map((column, i) => (
@@ -110,7 +108,7 @@ export function FooterContentView({
               </div>
             ))}
       </ContentPart>
-      <ContentPart label="Social links" changed={changed.has("Social links")}>
+      <ContentPart label="Social Links" changed={changed.has("Social Links")}>
         <Heading text={content.socialHeading} />
         {content.social.length === 0 ? (
           NONE
@@ -126,8 +124,8 @@ export function FooterContentView({
         )}
       </ContentPart>
       <ContentPart
-        label="Contact details"
-        changed={changed.has("Contact details")}
+        label="Contact Details"
+        changed={changed.has("Contact Details")}
       >
         <Heading text={content.contactHeading} />
         <span>WhatsApp: {content.whatsapp || "None"}</span>
@@ -168,7 +166,7 @@ export function FooterContentView({
               </div>
             ))}
       </ContentPart>
-      <ContentPart label="Payment logos" changed={changed.has("Payment logos")}>
+      <ContentPart label="Payment Logos" changed={changed.has("Payment Logos")}>
         <Heading text={content.paymentHeading} />
         {content.paymentLogos.length === 0 ? (
           NONE
@@ -184,8 +182,8 @@ export function FooterContentView({
         {content.paymentNote ? <span>{content.paymentNote}</span> : null}
       </ContentPart>
       <ContentPart
-        label="Copyright line"
-        changed={changed.has("Copyright line")}
+        label="Copyright Line"
+        changed={changed.has("Copyright Line")}
       >
         <span>
           {content.legalName || "No company name"}

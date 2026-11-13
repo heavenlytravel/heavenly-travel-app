@@ -317,9 +317,9 @@ describe("describeActivity", () => {
         before: { page: "coach-charter", isOn: !isOn },
         after: { page: "coach-charter", isOn },
       });
-    assert.equal(flip(false), "Unpublished the Coach charter page");
+    assert.equal(flip(false), "Unpublished the Coach Charter page");
     // Logged while a page still had a switch beside its publish.
-    assert.equal(flip(true), "Turned the Coach charter page on");
+    assert.equal(flip(true), "Turned the Coach Charter page on");
   });
 
   it("says which saved addresses were added, removed, renamed or reordered", () => {

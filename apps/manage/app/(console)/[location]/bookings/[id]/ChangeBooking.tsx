@@ -88,7 +88,7 @@ const CHARGE_KIND_TEXT: Record<
     hint: "Something more, before or during the trip: an extra hour, a child seat.",
   },
   "late-charge": {
-    label: "Late charge",
+    label: "Late Charge",
     hint: "Found after the trip: toll, parking, overtime.",
   },
 };
@@ -203,7 +203,7 @@ export function ChangeBooking({
 }
 
 /**
- * "Change trip" on a trip's card: amend it, add a stop or a charge, a
+ * "Change Trip" on a trip's card: amend it, add a stop or a charge, a
  * discount or a correction, cancel it; or, cancelled, reinstate it.
  * Nothing for an admin who may do none of them.
  */
@@ -221,7 +221,7 @@ export function TripChangeMenu({ tripId }: { tripId: string }) {
         variant="secondary"
         onClick={() => change({ kind: "reinstate-trip", trip })}
       >
-        Reinstate trip
+        Reinstate Trip
       </Button>
     );
   }
@@ -230,21 +230,21 @@ export function TripChangeMenu({ tripId }: { tripId: string }) {
   if (trip.amendHref) {
     items.push(
       <MenuItem key="amend" asChild>
-        <Link href={trip.amendHref}>Amend trip</Link>
+        <Link href={trip.amendHref}>Amend Trip</Link>
       </MenuItem>,
     );
   }
   if (rights.extras && trip.open) {
     items.push(
       <MenuItem key="stop" onSelect={() => change({ kind: "stop", trip })}>
-        Add stop
+        Add Stop
       </MenuItem>,
     );
   }
   if (rights.extras) {
     items.push(
       <MenuItem key="charge" onSelect={() => change({ kind: "charge", trip })}>
-        Add charge
+        Add Charge
       </MenuItem>,
     );
   }
@@ -260,7 +260,7 @@ export function TripChangeMenu({ tripId }: { tripId: string }) {
         key="correction"
         onSelect={() => change({ kind: "price", trip, price: "correction" })}
       >
-        Correct the price
+        Correct the Price
       </MenuItem>,
     );
   }
@@ -270,11 +270,11 @@ export function TripChangeMenu({ tripId }: { tripId: string }) {
 
   return (
     <Menu
-      label={`Change trip ${trip.position}`}
+      label={`Change Trip ${trip.position}`}
       align="end"
       trigger={
         <Button size="sm" variant="secondary">
-          Change trip
+          Change Trip
           <ChevronDownIcon className="size-4" />
         </Button>
       }
@@ -287,7 +287,7 @@ export function TripChangeMenu({ tripId }: { tripId: string }) {
             className="text-danger"
             onSelect={() => change({ kind: "cancel-trip", trip })}
           >
-            Cancel trip
+            Cancel Trip
           </MenuItem>
         </>
       ) : null}
@@ -296,7 +296,7 @@ export function TripChangeMenu({ tripId }: { tripId: string }) {
 }
 
 /**
- * "Change booking" in the booking's header: what belongs to the booking
+ * "Change Booking" in the booking's header: what belongs to the booking
  * rather than one trip: add a trip, a charge to the whole booking, cancel
  * it. Each trip's own changes are on its card. Nothing for an admin who
  * may do none of them.
@@ -314,23 +314,23 @@ export function BookingChangeMenu({
   if (!addTripHref && !rights.extras && !cancel) return null;
   return (
     <Menu
-      label="Change booking"
+      label="Change Booking"
       align="end"
       trigger={
         <Button variant="primary">
-          Change booking
+          Change Booking
           <ChevronDownIcon className="size-4" />
         </Button>
       }
     >
       {addTripHref ? (
         <MenuItem asChild>
-          <Link href={addTripHref}>Add trip</Link>
+          <Link href={addTripHref}>Add Trip</Link>
         </MenuItem>
       ) : null}
       {rights.extras ? (
         <MenuItem onSelect={() => change({ kind: "charge", trip: null })}>
-          Add charge to the booking
+          Add Charge to the Booking
         </MenuItem>
       ) : null}
       {cancel ? (
@@ -340,7 +340,7 @@ export function BookingChangeMenu({
             className="text-danger"
             onSelect={() => change({ kind: "cancel-booking" })}
           >
-            Cancel booking
+            Cancel Booking
           </MenuItem>
         </>
       ) : null}
@@ -441,14 +441,14 @@ function PriceDialog({
       }
       action={priceItemAction}
       done="Price saved."
-      submit="Save price"
+      submit="Save Price"
       onClose={onClose}
     >
       <input type="hidden" name="itemId" value={trip.id} />
       <input type="hidden" name="kind" value={kind} />
       <div className="grid gap-4 sm:grid-cols-[11rem_1fr]">
         <Field
-          label="Trip's price (RM)"
+          label="Trip's Price (RM)"
           hint={`Now ${formatMyr(trip.priceSen)}.`}
         >
           <Input
@@ -503,11 +503,11 @@ function ChargeDialog({
   const charge = senOf(amount);
   return (
     <ChangeDialog
-      title={trip ? `Add a charge to trip ${trip.position}` : "Add a charge"}
+      title={trip ? `Add a Charge to Trip ${trip.position}` : "Add a Charge"}
       description="The customer sees what it is for and the amount."
       action={addChargeAction}
       done="Charge added."
-      submit="Add charge"
+      submit="Add Charge"
       onClose={onClose}
     >
       <input type="hidden" name="bookingId" value={bookingId} />
@@ -543,7 +543,7 @@ function ChargeDialog({
             value={itemId}
             onValueChange={setItemId}
             options={[
-              { value: "", label: "The whole booking" },
+              { value: "", label: "The Whole Booking" },
               ...trips.map((t) => ({
                 value: t.id,
                 label: `Trip ${t.position} · ${t.headline}`,
@@ -553,7 +553,7 @@ function ChargeDialog({
         </Field>
       ) : null}
       <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
-        <Field label="What it is for" hint="The customer reads this.">
+        <Field label="What It Is For" hint="The customer reads this.">
           <Input
             name="label"
             required
@@ -575,7 +575,7 @@ function ChargeDialog({
       </div>
       {itemId ? (
         <Field
-          label="Driver's pay for it (RM)"
+          label="Driver's Pay for It (RM)"
           hint="Paid back or earned by the trip's driver: the toll they paid, their overtime. 0 for none."
           className="max-w-64"
         >
@@ -646,7 +646,7 @@ function CancelDialog({
             onChange={(event) => setFee(event.currentTarget.value)}
           />
         </Field>
-        <Field label="Reason for the fee" hint="Needed with a fee. Staff only.">
+        <Field label="Reason for the Fee" hint="Needed with a fee. Staff only.">
           <Input
             name="reason"
             maxLength={200}
@@ -712,7 +712,7 @@ export function ReinstateBookingButton({
   return (
     <>
       <Button variant="secondary" onClick={() => setOpen(true)}>
-        Reinstate booking
+        Reinstate Booking
       </Button>
       {open ? (
         <ReinstateDialog
@@ -788,7 +788,7 @@ function StopDialog({
       (current.paySuggestionSen !== null &&
         senOf(pay) !== current.paySuggestionSen));
   const positions = [
-    { value: "0", label: "First, after the pick-up" },
+    { value: "0", label: "First, After the Pick-up" },
     ...trip.stops.map((stop, index) => ({
       value: String(index + 1),
       label: `After ${stop}`,
@@ -797,11 +797,11 @@ function StopDialog({
 
   return (
     <ChangeDialog
-      title={`Add a stop to trip ${trip.position}`}
+      title={`Add a Stop to Trip ${trip.position}`}
       description={`Still one trip: ${trip.headline}, by the stop. The vehicle and the driver stay.`}
       action={addStopAction}
       done="Stop added."
-      submit="Add stop"
+      submit="Add Stop"
       onClose={onClose}
     >
       <input type="hidden" name="itemId" value={trip.id} />
@@ -825,14 +825,14 @@ function StopDialog({
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         {trip.stops.length > 0 ? (
-          <Field label="Where on the way">
+          <Field label="Where on the Way">
             <input type="hidden" name="at" value={at} />
             <Select value={at} onValueChange={setAt} options={positions} />
           </Field>
         ) : (
           <input type="hidden" name="at" value="0" />
         )}
-        <Field label="Wait there (minutes)" className="max-w-48">
+        <Field label="Wait There (minutes)" className="max-w-48">
           <Input
             name="waitMinutes"
             inputMode="numeric"
@@ -864,7 +864,7 @@ function StopDialog({
                 }. Suggested: ${formatMyr(current.suggestedSen)}, now ${formatMyr(current.chargedSen)} plus that.`}
           </Notice>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Trip's price with the stop (RM)">
+            <Field label="Trip's Price with the Stop (RM)">
               <Input
                 name="chargedAmount"
                 inputMode="decimal"
@@ -875,7 +875,7 @@ function StopDialog({
               />
             </Field>
             <Field
-              label="Driver's stop pay (RM)"
+              label="Driver's Stop Pay (RM)"
               hint={
                 current.paySuggestionSen === null
                   ? "No pay rates entered for the location: type it."

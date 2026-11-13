@@ -24,8 +24,8 @@ export const MUKIM_KIND_LABELS: Record<MukimKind, string> = {
   mukim: "Mukim",
   bandar: "Bandar",
   pekan: "Pekan",
-  "land-district": "Land district",
-  "town-district": "Town district",
+  "land-district": "Land District",
+  "town-district": "Town District",
 };
 
 export type MukimShape = {

@@ -26,7 +26,7 @@ export function AddStaffForm() {
       />
       <Button type="submit" size="lg" pending={pending} className="w-full">
         <UserPlus aria-hidden className="size-5" />
-        {pending ? "Adding…" : "Add to the team"}
+        {pending ? "Adding…" : "Add to the Team"}
       </Button>
       <FormError error={error} />
     </form>

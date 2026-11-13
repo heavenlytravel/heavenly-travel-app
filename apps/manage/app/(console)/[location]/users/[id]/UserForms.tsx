@@ -36,7 +36,7 @@ export function ProfileForm({
       <form {...formProps} className="grid gap-4">
         <input type="hidden" name="userId" value={user.id} />
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="First name">
+          <Field label="First Name">
             <Input
               name="firstName"
               autoComplete="off"
@@ -44,7 +44,7 @@ export function ProfileForm({
               required
             />
           </Field>
-          <Field label="Last name">
+          <Field label="Last Name">
             <Input
               name="lastName"
               autoComplete="off"
@@ -63,7 +63,7 @@ export function ProfileForm({
         </Field>
         <div>
           <Button type="submit" pending={pending}>
-            {pending ? "Saving…" : "Save profile"}
+            {pending ? "Saving…" : "Save Profile"}
           </Button>
         </div>
         <FormError error={error} />
@@ -96,7 +96,7 @@ export function EmailForm({ user }: { user: { id: string; email: string } }) {
         </Field>
         <div>
           <Button type="submit" pending={pending}>
-            {pending ? "Changing…" : "Change email"}
+            {pending ? "Changing…" : "Change Email"}
           </Button>
         </div>
         <FormError error={error} />
@@ -125,7 +125,7 @@ export function PasswordForm({
       <form {...formProps} className="grid gap-4">
         <input type="hidden" name="userId" value={user.id} />
         <Field
-          label="New password"
+          label="New Password"
           hint={`At least ${minLength} characters. Clerk refuses one found in a data leak.`}
         >
           <PasswordInput
@@ -135,7 +135,7 @@ export function PasswordForm({
             required
           />
         </Field>
-        <Field label="Confirm password">
+        <Field label="Confirm Password">
           <PasswordInput
             name={CONFIRM_PASSWORD_FIELD}
             autoComplete="new-password"
@@ -144,7 +144,7 @@ export function PasswordForm({
         </Field>
         <div>
           <Button type="submit" pending={pending}>
-            {pending ? "Setting…" : "Set password"}
+            {pending ? "Setting…" : "Set Password"}
           </Button>
         </div>
         <FormError error={error} />

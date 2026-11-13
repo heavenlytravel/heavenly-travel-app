@@ -36,7 +36,7 @@ describe("document numbers", () => {
   it("names an open invoice until it is numbered", () => {
     assert.equal(
       documentLabelOf({ type: "invoice", number: null }),
-      "Open invoice",
+      "Open Invoice",
     );
     assert.equal(documentLabelOf({ type: "invoice", number: 12 }), "HTI-0012");
     assert.equal(documentLabelOf({ type: "credit", number: 3 }), "HTC-0003");

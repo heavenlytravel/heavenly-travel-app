@@ -26,7 +26,7 @@ export function DriverDetails({ driver }: { driver: DriverWithClasses }) {
     <Rows
       rows={[
         [DRIVER_FIELD_LABELS.name, driver.name],
-        ["Driver for", driver.vendor.name],
+        ["Driver For", driver.vendor.name],
         [DRIVER_FIELD_LABELS.locationId, driver.location.name],
         [DRIVER_FIELD_LABELS.phone, masked(driver.phone, "phone")],
         [DRIVER_FIELD_LABELS.email, masked(driver.email, "email")],
@@ -39,7 +39,7 @@ export function DriverDetails({ driver }: { driver: DriverWithClasses }) {
           dayCell(driver.licenceExpiresOn),
         ],
         [DRIVER_FIELD_LABELS.psvExpiresOn, dayCell(driver.psvExpiresOn)],
-        ["Paid to", bankCell(driver, driver.vendor.name)],
+        ["Paid To", bankCell(driver, driver.vendor.name)],
       ]}
     />
   );
@@ -50,12 +50,12 @@ export function GuideDetails({ guide }: { guide: GuideWithVendor }) {
     <Rows
       rows={[
         [GUIDE_FIELD_LABELS.name, guide.name],
-        ["Guide for", guide.vendor.name],
+        ["Guide For", guide.vendor.name],
         [GUIDE_FIELD_LABELS.locationId, guide.location.name],
         [GUIDE_FIELD_LABELS.phone, masked(guide.phone, "phone")],
         [GUIDE_FIELD_LABELS.languages, guide.languages.join(", ")],
         [GUIDE_FIELD_LABELS.motacExpiresOn, dayCell(guide.motacExpiresOn)],
-        ["Paid to", bankCell(guide, guide.vendor.name)],
+        ["Paid To", bankCell(guide, guide.vendor.name)],
       ]}
     />
   );

@@ -52,7 +52,7 @@ async function backHref(locationId: string, formData: FormData) {
 }
 
 /**
- * "Add class": the rates, and either the catalogue class picked or the
+ * "Add Class": the rates, and either the catalogue class picked or the
  * fields of a new one. A saved offering goes back.
  */
 export async function createOfferingAction(

@@ -27,7 +27,7 @@ export function OldInvoiceNumberControl({
     <ActionDialog
       action={setLegacyAction}
       label={value ? "Change" : "Add"}
-      title="Old invoice number"
+      title="Old Invoice Number"
       description="The old system's invoice number, for the team's reference. It bills nothing: the booking is billed here."
       done="Old invoice number saved."
       submit="Save"
@@ -35,7 +35,7 @@ export function OldInvoiceNumberControl({
       variant="ghost"
     >
       <Field
-        label="Old invoice number"
+        label="Old Invoice Number"
         hint="As it was written: HT1223, HTI-1295-03. Empty to remove it."
       >
         <Input
@@ -79,7 +79,7 @@ export function BookingAgentControl({
           value={chosen}
           onValueChange={setChosen}
           options={[
-            { value: "", label: "None: our own customer" },
+            { value: "", label: "None: Our Own Customer" },
             ...agents.map((a) => ({ value: a.id, label: a.name })),
           ]}
         />
@@ -91,7 +91,7 @@ export function BookingAgentControl({
 /**
  * Pay later on a booking nothing is paid for yet: agreed, by the day it is
  * due (for reference, it marks nothing overdue). Set again to change the
- * day; `dueOn` given, "Back to pending" undoes it. The first payment
+ * day; `dueOn` given, "Back to Pending" undoes it. The first payment
  * ends it.
  */
 export function PayLaterControl({
@@ -106,15 +106,15 @@ export function PayLaterControl({
     <span className="flex flex-wrap gap-2">
       <ActionDialog
         action={setPayLaterAction}
-        label={dueOn ? "Change day" : "Pay later"}
-        title="Pay later"
+        label={dueOn ? "Change Day" : "Pay Later"}
+        title="Pay Later"
         description="Agreed that it is paid later, so it reads Pay later, not Pending. The day is for reference: nothing is blocked or marked overdue. The first payment recorded ends it."
         done="Set to Pay later."
         submit="Save"
         hidden={{ bookingId }}
         variant={dueOn ? "ghost" : "secondary"}
       >
-        <Field label="To be paid by">
+        <Field label="To Be Paid By">
           <Input
             name="dueOn"
             type="date"
@@ -126,11 +126,11 @@ export function PayLaterControl({
       {dueOn ? (
         <ActionDialog
           action={setPayLaterAction}
-          label="Back to pending"
+          label="Back to Pending"
           title="Back to Pending?"
           description="It reads Pending again: no payment yet, and none agreed for later."
           done="Back to Pending."
-          submit="Back to pending"
+          submit="Back to Pending"
           hidden={{ bookingId, clear: "true" }}
           variant="ghost"
         >

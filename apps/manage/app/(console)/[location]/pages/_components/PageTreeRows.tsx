@@ -78,7 +78,7 @@ export function FoldAllToggle() {
     return <span aria-hidden="true" className="size-6 shrink-0" />;
   }
   const anyOpen = folds.ids.some((id) => !folds.closed.has(id));
-  const label = anyOpen ? "Collapse all" : "Expand all";
+  const label = anyOpen ? "Collapse All" : "Expand All";
   return (
     <Tooltip content={label}>
       <FoldChevron

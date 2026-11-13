@@ -7,8 +7,8 @@ import { Choices } from "./Choices";
 
 /** The two kinds of charge, as the switch beside the amount shows them. */
 const KINDS = [
-  { value: "percent", label: "%", name: "A percentage" },
-  { value: "flat", label: "RM", name: "A flat amount" },
+  { value: "percent", label: "%", name: "A Percentage" },
+  { value: "flat", label: "RM", name: "A Flat Amount" },
 ] as const;
 
 /**

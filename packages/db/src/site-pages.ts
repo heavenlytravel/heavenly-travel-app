@@ -40,7 +40,7 @@ import {
  * ./page-content says and, but for a draft save, log against the page's
  * key. They work as a location's pages do (./location-pages), with no
  * location around them: a published site page is public at once. See
- * docs/261025-marketing-pages.md, "Site pages".
+ * docs/261025-marketing-pages.md, "Site Pages".
  */
 
 const pageKey = (page: SitePageKey) => ({

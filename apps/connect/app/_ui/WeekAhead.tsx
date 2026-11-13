@@ -38,7 +38,7 @@ export function WeekAhead({
   return (
     <Panel className="hidden gap-4 p-5 lg:grid">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-sm font-bold text-ink">Next 7 days</h2>
+        <h2 className="text-sm font-bold text-ink">Next 7 Days</h2>
         <span className="text-xs font-semibold text-muted">
           {total} {total === 1 ? "trip" : "trips"}
         </span>

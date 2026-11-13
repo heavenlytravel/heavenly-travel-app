@@ -15,7 +15,7 @@ import {
 import { ConfirmStep } from "./ConfirmStep";
 
 export const metadata: Metadata = {
-  title: "Confirm your booking | Heavenly Travel",
+  title: "Confirm Your Booking | Heavenly Travel",
 };
 
 /**

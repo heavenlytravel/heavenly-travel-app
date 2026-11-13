@@ -12,7 +12,7 @@ import { FORM_WIDTH } from "@repo/console/PageColumn";
 
 /**
  * The form for one catalogue class, new or existing: its fields, then
- * "Add class" or "Save". The rates and rules are each location's, on its
+ * "Add Class" or "Save". The rates and rules are each location's, on its
  * classes. A saved class goes back to the catalogue.
  */
 export function VehicleClassForm({
@@ -51,7 +51,7 @@ export function VehicleClassForm({
                 : pending
                   ? "Saving…"
                   : isNew
-                    ? "Add class"
+                    ? "Add Class"
                     : "Save"}
             </Button>
           }

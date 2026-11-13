@@ -433,7 +433,7 @@ function Workspace({
                   />
                 </div>
                 <div className="grid min-w-0 gap-1.5 sm:w-32">
-                  <span className={LABEL}>Extra hours</span>
+                  <span className={LABEL}>Extra Hours</span>
                   <Select
                     aria-label="Extra hours"
                     value={String(extraHours)}
@@ -465,7 +465,7 @@ function Workspace({
               />
             </div>
             <div className="grid min-w-0 gap-1.5 sm:w-44">
-              <span className={LABEL}>Pickup day</span>
+              <span className={LABEL}>Pickup Day</span>
               <DateField
                 aria-label="Pickup day"
                 value={date}
@@ -473,7 +473,7 @@ function Workspace({
               />
             </div>
             <div className="grid min-w-0 gap-1.5 sm:w-32">
-              <span className={LABEL}>Pickup time</span>
+              <span className={LABEL}>Pickup Time</span>
               <TimeField
                 aria-label="Pickup time"
                 value={time}
@@ -492,7 +492,7 @@ function Workspace({
       >
         <Card flush className="flex flex-col lg:min-h-0">
           <CardTitle inset action={examplesMenu}>
-            The trip
+            The Trip
           </CardTitle>
           {/* Isolated: the map's buttons and its legend stay under the
               console's sticky header on a scroll. */}
@@ -560,7 +560,7 @@ function Workspace({
               answered && !pending ? (
                 <Button variant="secondary" size="sm" onClick={copy}>
                   <CopyIcon />
-                  {copied ? "Copied" : "Copy breakdown"}
+                  {copied ? "Copied" : "Copy Breakdown"}
                 </Button>
               ) : null
             }
@@ -738,7 +738,7 @@ function Fare({
       </span>
       {answer.refused ? (
         <>
-          <span className="text-lg font-semibold text-ink">Not priced</span>
+          <span className="text-lg font-semibold text-ink">Not Priced</span>
           <span className="text-sm text-muted">
             {answer.refused.message}
             {answer.refused.reason ? ` Why: ${answer.refused.reason}.` : ""}
@@ -789,11 +789,11 @@ function noPrice(quote: Extract<TryTripAnswer, { ok: true }>["quote"]) {
 /** What the map's colours mean: in a corner over it, under it on a phone. */
 function Legend() {
   const items: [string, string, string][] = [
-    ["Trip, from the zone edges", MAP_COLORS.trip, "solid"],
-    ["Extra road", MAP_COLORS.extra, "dashed"],
-    ["Grid trip", MAP_COLORS.grid, "dotted"],
-    ["Entry spot", MAP_COLORS.entry, "dot"],
-    ["Route as Google drew it", MAP_COLORS.route, "solid"],
+    ["Trip, from the Zone Edges", MAP_COLORS.trip, "solid"],
+    ["Extra Road", MAP_COLORS.extra, "dashed"],
+    ["Grid Trip", MAP_COLORS.grid, "dotted"],
+    ["Entry Spot", MAP_COLORS.entry, "dot"],
+    ["Route as Google Drew It", MAP_COLORS.route, "solid"],
   ];
   return (
     <ul className="flex flex-wrap gap-x-4 gap-y-1 px-1 text-xs text-body sm:absolute sm:bottom-8 sm:left-5 sm:z-(--layer-raised) sm:grid sm:gap-1 sm:rounded-sm sm:bg-white/95 sm:px-3 sm:py-2 sm:shadow-map">

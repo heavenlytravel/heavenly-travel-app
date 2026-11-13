@@ -106,11 +106,11 @@ function PickupsCard({
         meta={plural(total, "trip")}
         action={
           <Link href={bookingsHref(scope)} className={CARD_LINK}>
-            All bookings →
+            All Bookings →
           </Link>
         }
       >
-        Today&apos;s pick-ups
+        Today&apos;s Pick-ups
       </CardTitle>
       <Table bare>
         <THead>
@@ -168,7 +168,7 @@ function PickupsCard({
         <p className="flex flex-wrap items-center justify-between gap-2 border-t border-hairline px-5 py-3 text-caption text-muted">
           {pickups.length} of {total} shown
           <Link href={todayHref} className={CARD_LINK}>
-            All of today →
+            All of Today →
           </Link>
         </p>
       ) : null}

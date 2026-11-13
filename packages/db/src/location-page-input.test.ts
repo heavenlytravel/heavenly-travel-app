@@ -81,17 +81,17 @@ describe("the pages of a location", () => {
   it("are named as a heading and a sentence name them", () => {
     const place = { page: "popular-places", slug: "eagle-square" } as const;
     const sedan = { page: "car-with-driver", slug: "sedan" } as const;
-    assert.equal(pageTitleOf(LANDING_REF), "Main page");
+    assert.equal(pageTitleOf(LANDING_REF), "Main Page");
     assert.equal(
       pageTitleOf({ page: "coach-charter", slug: "" }),
-      "Coach charter page",
+      "Coach Charter page",
     );
     assert.equal(pageTitleOf(place, "Eagle Square"), "Eagle Square");
     assert.equal(pageTitleOf(place), "eagle-square");
     assert.equal(pageNameOf(LANDING_REF), "the main page");
     assert.equal(
       pageNameOf({ page: "coach-charter", slug: "" }),
-      "the Coach charter page",
+      "the Coach Charter page",
     );
     assert.equal(
       pageNameOf(place, "Eagle Square"),
@@ -178,7 +178,7 @@ describe("a location page's title without a meta title", () => {
         { page: "car-with-driver", slug: "" },
         "ignored",
       ),
-      "Car with driver in Langkawi | Heavenly Travel",
+      "Car with Driver in Langkawi | Heavenly Travel",
     );
     assert.equal(
       locationPageFallbackTitle(

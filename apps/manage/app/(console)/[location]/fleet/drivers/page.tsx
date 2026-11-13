@@ -37,7 +37,7 @@ export default async function DriversPage({
           <Button asChild>
             <Link href={newDriverHref(scope.slug)}>
               <PlusIcon />
-              Add driver
+              Add Driver
             </Link>
           </Button>
         }

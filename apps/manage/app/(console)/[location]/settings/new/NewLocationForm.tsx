@@ -73,7 +73,7 @@ export function NewLocationForm({ states }: { states: StateOption[] }) {
           disabled={stateCodes.length === 0}
           pending={pending}
         >
-          {pending ? "Adding…" : "Add location"}
+          {pending ? "Adding…" : "Add Location"}
         </Button>
         <Button asChild variant="ghost">
           <Link href={settingsHref(null)}>Cancel</Link>

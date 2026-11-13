@@ -62,7 +62,7 @@ export const FOOTER_LABEL = "Footer";
 /** Each footer's name where the app is not plain: the activity log, Media. */
 export const FOOTER_LABELS: Record<FooterKey, string> = {
   footer: "Footer",
-  "connect-footer": "Connect footer",
+  "connect-footer": "Connect Footer",
 };
 
 /** Where a footer is edited in the console, among its app's pages. */
@@ -78,9 +78,9 @@ export type FooterLinkKind = (typeof FOOTER_LINK_KINDS)[number];
 export const isFooterLinkKind = guardFor(FOOTER_LINK_KINDS);
 
 export const FOOTER_LINK_KIND_LABELS: Record<FooterLinkKind, string> = {
-  page: "Site page",
+  page: "Site Page",
   location: "Location",
-  url: "Web address",
+  url: "Web Address",
 };
 
 export type FooterLinkTarget =
@@ -216,10 +216,10 @@ export type FooterContent = {
   tagline: string;
   /** "Destinations", "About Heavenly Travel". */
   columns: FooterColumn[];
-  /** "Follow us on". */
+  /** "Follow Us On". */
   socialHeading: string;
   social: FooterSocial[];
-  /** "Get in touch". */
+  /** "Get in Touch". */
   contactHeading: string;
   /** The number customers message, as shown: "+60 12-527 8808". */
   whatsapp: string;
@@ -227,10 +227,10 @@ export type FooterContent = {
   email: string;
   /** The office, a line each. */
   address: string;
-  /** "Registered with". */
+  /** "Registered With". */
   badgesHeading: string;
   badges: FooterBadge[];
-  /** "Payment partners". */
+  /** "Payment Partners". */
   paymentHeading: string;
   /** The logos of the ways to pay, each named in its alt text. */
   paymentLogos: FooterImage[];
@@ -401,12 +401,12 @@ export function defaultFooterContent(
       {
         heading: "About Heavenly Travel",
         links: [
-          pageLink("about-us", "About us"),
-          pageLink("contact-us", "Contact us"),
+          pageLink("about-us", "About Us"),
+          pageLink("contact-us", "Contact Us"),
         ],
       },
     ],
-    socialHeading: "Follow us on",
+    socialHeading: "Follow Us On",
     social: [
       {
         network: "facebook",
@@ -418,7 +418,7 @@ export function defaultFooterContent(
       },
       { network: "x", url: "https://twitter.com/HEHMalaysia" },
     ],
-    contactHeading: "Get in touch",
+    contactHeading: "Get in Touch",
     whatsapp: CONTACT.whatsappNumber,
     phone: "012-527 8808",
     email: "sales@heavenlytravel.my",
@@ -427,9 +427,9 @@ export function defaultFooterContent(
       "Jalan Mahawangsa 1, Kuah",
       "07000 Langkawi, Kedah",
     ].join("\n"),
-    badgesHeading: "Registered with",
+    badgesHeading: "Registered With",
     badges: [...BUNDLED_BADGES],
-    paymentHeading: "Payment partners",
+    paymentHeading: "Payment Partners",
     paymentLogos: [...BUNDLED_PAYMENT_LOGOS],
     paymentNote: "Payments are processed securely by HitPay.",
     legalName: "Heavenly Travel Sdn Bhd",
@@ -734,17 +734,17 @@ export function checkFooterComplete(content: FooterContent): Change {
 const FOOTER_PARTS: [(content: FooterContent) => unknown, string][] = [
   [(c) => c.sameAsWebsite, "Same as Website"],
   [(c) => c.tagline, "Tagline"],
-  [(c) => c.columns, "Link columns"],
-  [(c) => [c.socialHeading, c.social], "Social links"],
+  [(c) => c.columns, "Link Columns"],
+  [(c) => [c.socialHeading, c.social], "Social Links"],
   [
     (c) => [c.contactHeading, c.whatsapp, c.phone, c.email, c.address],
-    "Contact details",
+    "Contact Details",
   ],
   [(c) => [c.badgesHeading, c.badges], "Registrations"],
-  [(c) => [c.paymentHeading, c.paymentLogos, c.paymentNote], "Payment logos"],
+  [(c) => [c.paymentHeading, c.paymentLogos, c.paymentNote], "Payment Logos"],
   [
     (c) => [c.legalName, c.registration, c.since, c.legalLinks],
-    "Copyright line",
+    "Copyright Line",
   ],
 ];
 

@@ -110,7 +110,7 @@ export function QuickViewButton({
           )}
           <div className="flex justify-end">
             <Button asChild variant="secondary" size="sm">
-              <Link href={href}>Open booking</Link>
+              <Link href={href}>Open Booking</Link>
             </Button>
           </div>
         </div>

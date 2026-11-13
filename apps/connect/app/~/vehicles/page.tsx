@@ -62,12 +62,12 @@ export default async function VehiclesPage() {
           title: "No vehicle yet",
           text: fleet.adds.vehicles
             ? "Add one to be offered jobs for it. It can take jobs as soon as it is saved."
-            : "Your services do not include Car with driver or Coach charter. Ask our team to add it to your business.",
+            : "Your services do not include Car with Driver or Coach Charter. Ask our team to add it to your business.",
           action: fleet.adds.vehicles ? (
             <Button asChild>
               <Link href="/~/vehicles/new">
                 <PlusIcon />
-                Add a vehicle
+                Add a Vehicle
               </Link>
             </Button>
           ) : null,

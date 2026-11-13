@@ -33,7 +33,7 @@ import { AddPostDialog } from "./AddPostDialog";
 import { HighlightControl } from "./HighlightControl";
 
 /**
- * The blog under Website: "Add post" in its header, the highlighted
+ * The blog under Website: "Add Post" in its header, the highlighted
  * posts the blog's home shows first, then every post, the newest first
  * and drafts before them, as the site's pages are listed: the strip
  * counting them by status, then the list, which the strip and a search
@@ -142,7 +142,7 @@ async function blogDetails({
           <PageTree
             parts={groups.length > 0 ? [{ key: "part:blog", groups }] : []}
             filters={{ searchHref: blogHref({ status }), q }}
-            lead={["Locations", "First published"]}
+            lead={["Locations", "First Published"]}
             empty={posts.length === 0 ? "No post yet. Add one." : emptyOf(q)}
           />
         </Card>

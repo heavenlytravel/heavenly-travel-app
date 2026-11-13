@@ -178,7 +178,7 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
                       <Button asChild variant="secondary" size="sm">
                         <Link href={newVendorVehicleHref(scope.slug, id)}>
                           <PlusIcon />
-                          Add vehicle
+                          Add Vehicle
                         </Link>
                       </Button>
                     ) : null
@@ -204,7 +204,7 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
                       <Button asChild variant="secondary" size="sm">
                         <Link href={newVendorDriverHref(scope.slug, id)}>
                           <PlusIcon />
-                          Add driver
+                          Add Driver
                         </Link>
                       </Button>
                     ) : null
@@ -230,7 +230,7 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
                       <Button asChild variant="secondary" size="sm">
                         <Link href={newVendorGuideHref(scope.slug, id)}>
                           <PlusIcon />
-                          Add tour guide
+                          Add Tour Guide
                         </Link>
                       </Button>
                     ) : null
@@ -258,7 +258,7 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
                         {owner ? (
                           <VendorAccountButton
                             vendorId={id}
-                            label="Add staff"
+                            label="Add Staff"
                             description={`They sign in to Connect with this email and see ${vendor.name}'s offers, jobs and fleet. An email with no account gets one now, so they need no sign-up.`}
                             done="Added to the staff."
                             action={addVendorStaffAction}
@@ -267,7 +267,7 @@ async function vendorScreen(scope: ConsoleScope, id: string) {
                         ) : null}
                         <VendorAccountButton
                           vendorId={id}
-                          label={owner ? "Replace owner" : "Set owner"}
+                          label={owner ? "Replace Owner" : "Set Owner"}
                           description={
                             owner
                               ? `${owner.email} stops owning ${vendor.name} in Connect. Their account is deleted too if it was never used, as one made with a mistyped email. An email with no account gets one now.`

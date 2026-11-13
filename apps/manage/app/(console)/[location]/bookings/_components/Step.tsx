@@ -116,7 +116,7 @@ export function Step({
 /**
  * The foot of an open step: what is still missing, then its button to the
  * next step at the end, and before them anything else the step does, as
- * "Remove trip".
+ * "Remove Trip".
  */
 export function StepFoot({
   label = "Continue",

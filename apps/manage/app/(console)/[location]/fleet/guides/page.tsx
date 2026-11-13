@@ -35,7 +35,7 @@ export default async function GuidesPage({
           <Button asChild>
             <Link href={newGuideHref(scope.slug)}>
               <PlusIcon />
-              Add tour guide
+              Add Tour Guide
             </Link>
           </Button>
         }

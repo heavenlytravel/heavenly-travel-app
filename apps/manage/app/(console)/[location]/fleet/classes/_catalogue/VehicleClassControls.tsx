@@ -43,7 +43,7 @@ export function VehicleClassActiveSwitch({
             !(await confirm({
               title: `Turn ${vehicleClass.name} off?`,
               description: `It is the last active class of ${categoryLabel}. With it off, the ${categoryLabel} tab has nothing to sell.`,
-              action: "Turn off",
+              action: "Turn Off",
             }))
           ) {
             return;

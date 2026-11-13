@@ -56,7 +56,7 @@ export function GettingStarted({
       <div className="grid gap-3 p-5 pb-4">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="text-lg font-bold tracking-title text-ink">
-            Get set up
+            Get Set Up
           </h2>
           <span className="text-sm font-semibold text-muted tabular-nums">
             {doneCount} of {steps.length}

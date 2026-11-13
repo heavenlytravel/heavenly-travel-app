@@ -5,7 +5,7 @@ import { PublishHistoryButton, type PagePublishEntry } from "./PageHistory";
 /**
  * The top of an editor of what the customer site shows, a page or the
  * footer: its name, where it is under it ("Langkawi · Popular places",
- * "Website"), and once it has been published, "Publish history" at the
+ * "Website"), and once it has been published, "Publish History" at the
  * right. The publish bar follows it, in the
  * editor.
  */

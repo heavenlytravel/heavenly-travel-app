@@ -33,12 +33,12 @@ export const REVISION_KINDS = [
 export type RevisionKind = (typeof REVISION_KINDS)[number];
 export const isRevisionKind = guardFor(REVISION_KINDS);
 export const REVISION_KIND_LABELS: Record<RevisionKind, string> = {
-  booked: "Original booking",
-  change: "Trip changed",
-  "add-trip": "Trip added",
-  stop: "Stop added",
+  booked: "Original Booking",
+  change: "Trip Changed",
+  "add-trip": "Trip Added",
+  stop: "Stop Added",
   "add-on": "Add-on",
-  "late-charge": "Late charge",
+  "late-charge": "Late Charge",
   discount: "Discount",
   correction: "Correction",
   cancel: "Cancelled",
@@ -259,9 +259,9 @@ export function revisionText(typed: string): string {
 
 /* What a revision changed */
 
-/** One thing a revision changed, for staff: "Trip 1 · Pick-up time", what it was and what it is. */
+/** One thing a revision changed, for staff: "Trip 1 · Pick-up Time", what it was and what it is. */
 export type RevisionDetail = {
-  /** "Trip 1 · Pick-up time"; "Charge added"; "Trip 2 added". */
+  /** "Trip 1 · Pick-up Time"; "Charge Added"; "Trip 2 Added". */
   label: string;
   before: string | null;
   after: string | null;
@@ -278,7 +278,7 @@ const TRIP_FIELDS: readonly {
       isItemStatus(t.status) ? ITEM_STATUS_LABELS[t.status] : t.status,
   },
   {
-    label: "Pick-up time",
+    label: "Pick-up Time",
     of: (t) => formatLocalDateTime(new Date(t.startsAt)),
   },
   {
@@ -303,9 +303,9 @@ const TRIP_FIELDS: readonly {
     label: "Passengers",
     of: (t) => (t.passengers === null ? null : String(t.passengers)),
   },
-  { label: "Tour guide", of: (t) => t.guideLanguage },
+  { label: "Tour Guide", of: (t) => t.guideLanguage },
   { label: "Price", of: (t) => formatMyr(t.chargedSen) },
-  { label: "Why the price", of: (t) => t.agreedReason },
+  { label: "Why the Price", of: (t) => t.agreedReason },
 ];
 
 const chargeKey = (c: SnapshotCharge) =>
@@ -331,7 +331,7 @@ export function revisionDetailsOf(
     const name = `Trip ${trip.position}`;
     if (!was) {
       details.push({
-        label: `${name} added`,
+        label: `${name} Added`,
         before: null,
         after: [
           trip.heading,
@@ -362,7 +362,7 @@ export function revisionDetailsOf(
     if (n > 0) left.set(chargeKey(c), n - 1);
     else
       details.push({
-        label: "Charge added",
+        label: "Charge Added",
         before: null,
         after: chargeText(c),
       });
@@ -372,7 +372,7 @@ export function revisionDetailsOf(
     if (n > 0) {
       left.set(chargeKey(c), n - 1);
       details.push({
-        label: "Charge taken off",
+        label: "Charge Taken Off",
         before: chargeText(c),
         after: null,
       });
@@ -394,8 +394,10 @@ export function amendSummaryOf(
   const fields = details
     .filter((d) => d.label.startsWith(prefix))
     .map((d) => d.label.slice(prefix.length))
-    .filter((field) => field !== "Why the price" && field !== "Status")
-    .map((field) => field.toLowerCase());
+    // In small letters first: a revision saved before 2026-11-13 has its
+    // labels in sentence case ("Why the price").
+    .map((field) => field.toLowerCase())
+    .filter((field) => field !== "why the price" && field !== "status");
   if (fields.length === 0) return `Trip ${position} changed`;
   const list =
     fields.length === 1

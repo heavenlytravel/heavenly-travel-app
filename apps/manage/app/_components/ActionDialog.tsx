@@ -41,7 +41,7 @@ export function ActionDialog({
   description?: ReactNode;
   /** The toast once saved. */
   done: string;
-  /** The submit button's words: "Record payment". */
+  /** The submit button's words: "Record Payment". */
   submit: string;
   pending?: string;
   /** Values posted with the fields: the record's id. */

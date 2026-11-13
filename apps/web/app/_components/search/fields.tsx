@@ -29,7 +29,7 @@ const MAX_COUNT = 99;
 const { timeZone } = BOOKING_RULES;
 
 /**
- * The night hours the pickers tag "Odd hours": a fixed guide, the same in
+ * The night hours the pickers tag "Odd Hours": a fixed guide, the same in
  * every location, since a search does not know its location's window yet.
  * The price, read from the location's rules, is what holds.
  */

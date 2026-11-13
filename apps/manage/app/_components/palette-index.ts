@@ -62,7 +62,7 @@ export function paletteIndex({
   ).map((page) => ({
     href: pageHref(page, null),
     title: page.label,
-    meta: page.wide ? undefined : "All locations",
+    meta: page.wide ? undefined : "All Locations",
     icon: page.icon,
     words: page.words,
   }));

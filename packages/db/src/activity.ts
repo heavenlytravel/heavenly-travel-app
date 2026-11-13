@@ -91,7 +91,7 @@ export function changedFields<P extends Record<string, Scalar>>(
 
 /** An entry with its actor and record named, ready to show. */
 export type ActivityEntry = ActivityLog & {
-  /** "Nurul Aina", the email when there is no name, "Guest", "System", or "Former staff". */
+  /** "Nurul Aina", the email when there is no name, "Guest", "System", or "Former Staff". */
   actorName: string;
   /** "HTB-1042", "Selangor", "Petaling", "Langkawi", the admin's email, "The wall", "Media", "VLE1234", a driver's name; the id when unknown. */
   entityLabel: string;
@@ -406,7 +406,7 @@ function entityLabelOf(
   switch (entityType) {
     case "user":
     case "admin":
-      return labels[entityType].get(row.entityId) ?? "Former user";
+      return labels[entityType].get(row.entityId) ?? "Former User";
     case "setting":
       return "The wall";
     case "media":
@@ -427,7 +427,7 @@ function entityLabelOf(
       return labels[entityType].get(row.entityId) ?? row.entityId;
     case "invoice":
       // An open invoice dropped is gone: its entry says why.
-      return labels[entityType].get(row.entityId) ?? "Former open invoice";
+      return labels[entityType].get(row.entityId) ?? "Former Open Invoice";
     default:
       return row.entityId;
   }

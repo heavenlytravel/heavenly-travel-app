@@ -138,7 +138,7 @@ export function Sidebar({
   tone = "light",
   children,
 }: {
-  /** The panel's accessible name: "Console menu". */
+  /** The panel's accessible name: "Console Menu". */
   title: string;
   /** The `SidebarDock` the page has, drawn again over the panel. */
   dock?: ReactNode;

@@ -77,7 +77,7 @@ export function TakeMeHere({ address }: { address: LocationViewAddress }) {
       }
       className="mt-4 inline-flex min-h-11 cursor-pointer items-center rounded-full border border-brand/35 px-[17px] text-copy font-bold text-brand hover:border-brand hover:bg-brand-tint focus-ring"
     >
-      Take me here{" "}
+      Take Me Here{" "}
       <span aria-hidden className="ml-2.5">
         →
       </span>

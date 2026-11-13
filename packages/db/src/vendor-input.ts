@@ -38,9 +38,9 @@ export const VENDOR_STATUSES = [
 export type VendorStatus = (typeof VENDOR_STATUSES)[number];
 export const isVendorStatus = guardFor(VENDOR_STATUSES);
 export const VENDOR_STATUS_LABELS: Record<VendorStatus, string> = {
-  pending: "Waiting for approval",
+  pending: "Waiting for Approval",
   active: "Active",
-  refused: "Not approved",
+  refused: "Not Approved",
   suspended: "Suspended",
 };
 
@@ -63,10 +63,10 @@ export const VENDOR_SERVICES = [
 export type VendorService = (typeof VENDOR_SERVICES)[number];
 export const isVendorService = guardFor(VENDOR_SERVICES);
 export const VENDOR_SERVICE_LABELS: Record<VendorService, string> = {
-  vehicle: "Vehicle only",
-  driver: "Driver only",
-  "vehicle-driver": "Vehicle and driver",
-  "tour-guide": "Tour guide",
+  vehicle: "Vehicle Only",
+  driver: "Driver Only",
+  "vehicle-driver": "Vehicle and Driver",
+  "tour-guide": "Tour Guide",
   attraction: "Attraction",
   accommodation: "Accommodation",
 };
@@ -265,14 +265,14 @@ export type VendorField = keyof VendorFields;
 /** How the screens and the activity log name each field. */
 export const VENDOR_FIELD_LABELS: Record<VendorField, string> = {
   name: "Name",
-  kind: "Company or individual",
-  registrationNo: "SSM or IC number",
-  contactName: "Contact person",
-  contactPhone: "Contact phone",
-  contactEmail: "Contact email",
+  kind: "Company or Individual",
+  registrationNo: "SSM or IC Number",
+  contactName: "Contact Person",
+  contactPhone: "Contact Phone",
+  contactEmail: "Contact Email",
   address: "Address",
-  services: "What it offers",
-  locationIds: "Locations served",
+  services: "What It Offers",
+  locationIds: "Locations Served",
   ...BANK_FIELD_LABELS,
 };
 

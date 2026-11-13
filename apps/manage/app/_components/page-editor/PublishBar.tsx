@@ -92,7 +92,7 @@ export function PublishBar({
                   aria-hidden="true"
                   className="size-1.5 rounded-full bg-current"
                 />
-                Unsaved edits
+                Unsaved Edits
               </span>
             ) : null}
             <span className="min-w-0">{message}</span>
@@ -113,7 +113,7 @@ export function PublishBar({
               disabled={!canSave}
               onClick={onSave}
             >
-              Save draft
+              Save Draft
             </Button>
             <Tooltip content={publishHint}>
               <Button size="sm" disabled={!canPublish} onClick={onPublish}>

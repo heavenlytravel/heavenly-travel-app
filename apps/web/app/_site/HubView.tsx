@@ -45,7 +45,7 @@ export const HUB_DEFAULTS: Record<
   { headline: string; subheadline: string; description: string; image: string }
 > = {
   "car-with-driver": {
-    headline: "Car with driver",
+    headline: "Car with Driver",
     subheadline:
       "A private car and a local driver for airport transfers, day trips and hourly hire.",
     description:
@@ -53,7 +53,7 @@ export const HUB_DEFAULTS: Record<
     image: "/brand/chauffeur.jpg",
   },
   "coach-charter": {
-    headline: "Coach charter",
+    headline: "Coach Charter",
     subheadline:
       "Minibuses and coaches with a driver, for groups, events and tours.",
     description:
@@ -125,7 +125,7 @@ export function HubView({
             )}
             <HomeCrumbs current={label} />
             <HeroHeading
-              eyebrow="Our services"
+              eyebrow="Our Services"
               line={
                 <>
                   {subheadline}
@@ -146,8 +146,8 @@ export function HubView({
 
       <Section
         id="locations"
-        eyebrow="Choose a location"
-        title="Where we offer it"
+        eyebrow="Choose a Location"
+        title="Where We Offer It"
       >
         {locations.length > 0 ? (
           <PageCards
@@ -157,7 +157,7 @@ export function HubView({
               title: location.name,
               text: location.text,
               image: location.image,
-              cta: "See vehicles and prices",
+              cta: "See Vehicles and Prices",
             }))}
           />
         ) : preview ? (
@@ -175,12 +175,12 @@ export function HubView({
       {content && (
         <>
           <Intro
-            title={`About ${label.toLowerCase()}`}
+            title={`About ${label}`}
             text={content.intro}
             empty={empty.intro}
           />
           <Faqs
-            title={`Questions about ${label.toLowerCase()}`}
+            title={`Questions About ${label}`}
             faqs={content.faqs}
             empty={empty.faqs}
           />

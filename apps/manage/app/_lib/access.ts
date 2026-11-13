@@ -87,7 +87,7 @@ export async function getPerson(): Promise<{
     name: fullName(user) || user.email,
     role:
       adminLevelOf(level) === "SUPER"
-        ? "Super admin"
+        ? "Super Admin"
         : teamNames.length > 0
           ? andList(teamNames)
           : "No team yet",

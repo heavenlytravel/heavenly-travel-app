@@ -26,7 +26,7 @@ import {
   type MediaChoice,
 } from "../_lib/media-actions";
 
-/** How many tiles show at first, and how many more each "Show more" adds. */
+/** How many tiles show at first, and how many more each "Show More" adds. */
 const TILES = 48;
 
 /**
@@ -194,7 +194,7 @@ export function MediaPicker({
                       size="sm"
                       onClick={() => setLimit((was) => was + TILES)}
                     >
-                      Show more
+                      Show More
                     </Button>
                   </div>
                 ) : null}
@@ -218,7 +218,7 @@ export function MediaPicker({
             >
               {chosen.length > 1
                 ? `Use ${plural(chosen.length, "image")}`
-                : "Use image"}
+                : "Use Image"}
             </Button>
           </DialogActions>
         </div>

@@ -4,7 +4,7 @@ import { memo } from "react";
 
 /**
  * How a price cell looks wherever routes are priced, the rate grid and
- * its "Add route" dialog alike: a box drawn in every cell, so a cell looks
+ * its "Add Route" dialog alike: a box drawn in every cell, so a cell looks
  * editable before it is clicked, inside a little padding (`CELL_PAD`).
  * Its state gives its colours, exactly one of them with `CELL_INPUT`:
  * plain (hatched too when empty, which is not offered as the legend under

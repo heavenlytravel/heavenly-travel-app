@@ -46,7 +46,7 @@ export function AppSidebar({
 
   return (
     <>
-      <Sidebar title="Console menu" tone="navy" dock={<ConsoleDock />}>
+      <Sidebar title="Console Menu" tone="navy" dock={<ConsoleDock />}>
         <SidebarHeader className="border-b border-white/10 p-3 md:hidden">
           <ScopePicker locations={locations} permissions={permissions} full />
         </SidebarHeader>

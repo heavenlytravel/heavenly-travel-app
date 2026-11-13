@@ -13,7 +13,7 @@ import { AdminFields } from "./admin/AdminFields";
 import { createUserAction } from "./actions";
 
 /**
- * "Create an account" in All Users' header: a panel that makes an account
+ * "Create an Account" in All Users' header: a panel that makes an account
  * on someone's behalf. For an admin who manages admins (`mayMakeStaff`),
  * Make admin, off at first, asks the level and the teams too, and the
  * account is made staff in the same go. A refused create keeps what was
@@ -35,12 +35,12 @@ export function CreateUserForm({ mayMakeStaff }: { mayMakeStaff: boolean }) {
     <>
       <Button onClick={() => setOpen(true)}>
         <PlusIcon />
-        Create an account
+        Create an Account
       </Button>
-      <Sheet open={open} onOpenChange={setOpen} title="Create an account">
+      <Sheet open={open} onOpenChange={setOpen} title="Create an Account">
         <form {...formProps} className="grid gap-5 p-6 text-left">
           <SheetHeader
-            title="Create an account"
+            title="Create an Account"
             description="Made in Clerk with the email verified, and nothing is sent to them."
           />
           <AccountFields

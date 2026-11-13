@@ -4,7 +4,7 @@ import { RegistrationStatus } from "../_components/RegistrationStatus";
 import { requireSignedIn } from "../_lib/access";
 import { HOME_PATH } from "../_ui/nav";
 
-export const metadata: Metadata = { title: "Your registration | Connect" };
+export const metadata: Metadata = { title: "Your Registration | Connect" };
 
 /**
  * Route: /status. Where a registration waiting for approval stands, the

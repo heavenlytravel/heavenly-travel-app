@@ -49,11 +49,11 @@ const STEP_PROMPTS: Partial<
   Record<TripEventKind, { label: string; hint: string }>
 > = {
   arrived: {
-    label: "I've arrived",
+    label: "I've Arrived",
     hint: "Slide when you are at the pick-up.",
   },
   "dropped-off": {
-    label: "Dropped off",
+    label: "Dropped Off",
     hint: "Slide at the drop-off. This ends the trip.",
   },
 };
@@ -243,7 +243,7 @@ export function TripTaps({
               className="mx-auto flex items-center gap-1.5 rounded-sm py-1.5 text-sm text-link"
             >
               <PenLine aria-hidden className="size-4" />
-              Add a note
+              Add a Note
             </button>
           )}
         </div>
@@ -307,7 +307,7 @@ export function TripTaps({
                   confirming ? tap("no-show", noShow) : askNoShow()
                 }
               >
-                {confirming ? "Yes, report no-show" : "Report no-show"}
+                {confirming ? "Yes, Report No-show" : "Report No-show"}
               </Button>
             </div>
           </div>
@@ -322,7 +322,7 @@ export function TripTaps({
             onClick={undo}
           >
             <Undo2 aria-hidden className="size-5" />
-            The passenger came: undo no-show
+            The Passenger Came: Undo No-show
           </Button>
           <p className="text-center text-caption text-muted">
             You can take it back until{" "}

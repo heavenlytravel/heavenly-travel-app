@@ -115,7 +115,7 @@ export function listLocationNames(): Promise<LocationName[]> {
   });
 }
 
-/** A saved address with the names of the pages whose "Take me here" goes to it. */
+/** A saved address with the names of the pages whose "Take Me Here" goes to it. */
 export type LocationAddressWithUses = LocationAddress & {
   usedBy: string[];
   /** It lies outside the location's states: saved before the rule, or before the states changed. */

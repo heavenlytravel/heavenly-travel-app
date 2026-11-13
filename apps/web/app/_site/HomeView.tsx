@@ -155,10 +155,10 @@ export function HomeView({
         >
           <HomeSectionHeading
             id="services-title"
-            eyebrow="What we offer"
+            eyebrow="What We Offer"
             lead="See where each one runs."
           >
-            Our services
+            Our Services
           </HomeSectionHeading>
           <PhotoCards cards={services} />
         </section>
@@ -170,10 +170,10 @@ export function HomeView({
         >
           <HomeSectionHeading
             id="destinations-title"
-            eyebrow="Locations we cover"
+            eyebrow="Locations We Cover"
             lead="Start with where you are going."
           >
-            Choose your destination
+            Choose Your Destination
           </HomeSectionHeading>
           <DestinationCards choices={choices} />
         </section>
@@ -186,7 +186,7 @@ export function HomeView({
               empty={empty.intro}
             />
             <Faqs
-              title="Questions about travelling with us"
+              title="Questions About Travelling with Us"
               faqs={content.faqs}
               empty={empty.faqs}
             />

@@ -33,8 +33,8 @@ const TABS: Product[] = [
  * vehicle page: the kind of trip as two radios, the places, the hours of
  * a hire and when, in one joined row. Car with driver and coach charter
  * can be sent; the other tabs are disabled until their flows exist. One
- * trip is typed and priced as before; "Add another trip" puts it in
- * "Your trips", by date, which stays open, and opens the next; choosing a
+ * trip is typed and priced as before; "Add Another Trip" puts it in
+ * "Your Trips", by date, which stays open, and opens the next; choosing a
  * trip of the list opens it in the row to change. Once the card scrolls
  * away the trips follow the page in a bar under the header. The group's
  * size is asked once, beside the send button, for the one vehicle that

@@ -88,7 +88,7 @@ async function revisionScreen(id: string, number: number, scope: ConsoleScope) {
   if (revision.reason) facts.push(["Reason", revision.reason]);
   facts.push(["Quoted", formatMyr(revision.quotedSen)]);
   facts.push([
-    "Customer pays",
+    "Customer Pays",
     <strong key="c" className="font-bold text-ink">
       {formatMyr(revision.chargedSen)}
     </strong>,
@@ -168,7 +168,7 @@ async function revisionScreen(id: string, number: number, scope: ConsoleScope) {
         }
         side={
           <Card>
-            <CardTitle>This amendment</CardTitle>
+            <CardTitle>This Amendment</CardTitle>
             <Rows rows={facts} className="text-sm" />
           </Card>
         }
@@ -179,14 +179,14 @@ async function revisionScreen(id: string, number: number, scope: ConsoleScope) {
 
 function SnapshotTripCard({ trip }: { trip: SnapshotTrip }) {
   const rows: [string, ReactNode][] = [
-    ["Pick-up time", formatLocalDateTime(new Date(trip.startsAt))],
+    ["Pick-up Time", formatLocalDateTime(new Date(trip.startsAt))],
   ];
   if (trip.pickup) rows.push(["Pick-up", trip.pickup]);
   for (const stop of trip.stops) rows.push(["Stop", stop]);
   if (trip.dropoff) rows.push(["Drop-off", trip.dropoff]);
   if (trip.hours !== null) rows.push(["Duration", `${trip.hours} hours`]);
   if (trip.distanceKm !== null)
-    rows.push(["Road distance", `${trip.distanceKm.toFixed(1)} km`]);
+    rows.push(["Road Distance", `${trip.distanceKm.toFixed(1)} km`]);
   if (trip.vehicleClassName) {
     rows.push([
       "Vehicle",
@@ -195,7 +195,7 @@ function SnapshotTripCard({ trip }: { trip: SnapshotTrip }) {
   }
   if (trip.passengers !== null)
     rows.push(["Passengers", String(trip.passengers)]);
-  if (trip.guideLanguage) rows.push(["Tour guide", trip.guideLanguage]);
+  if (trip.guideLanguage) rows.push(["Tour Guide", trip.guideLanguage]);
   const price: [string, ReactNode][] = [["Quoted", formatMyr(trip.quotedSen)]];
   if (trip.chargedSen !== trip.quotedSen) {
     price.push([

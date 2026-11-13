@@ -34,7 +34,7 @@ export function VoidControl({
       title={`Void ${label}?`}
       description="Its number stays listed as void. Its bookings are billed again by the replacement, or listed as not invoiced yet."
       done={`${label} voided.`}
-      submit={reissue || mustReissue ? "Void and reissue" : "Void"}
+      submit={reissue || mustReissue ? "Void and Reissue" : "Void"}
       hidden={{
         invoiceId,
         ...(reissue || mustReissue ? { reissue: "true" } : {}),
@@ -102,18 +102,18 @@ export function IssueMonthEndControl({
   if (!ready) {
     return (
       <Button variant="secondary" disabled>
-        Issue after {period}
+        Issue After {period}
       </Button>
     );
   }
   return (
     <ActionDialog
       action={issueMonthEndAction}
-      label="Issue invoice"
+      label="Issue Invoice"
       title={`Issue ${label} for ${total}?`}
       description="Each booking on it is billed what it has not been billed yet, as it stands now. It never changes after: a later change to a booking goes on the agent's next month-end invoice, or a credit note."
       done="Invoice issued."
-      submit="Issue invoice"
+      submit="Issue Invoice"
       hidden={{ invoiceId }}
       variant="primary"
     >
@@ -123,7 +123,7 @@ export function IssueMonthEndControl({
 }
 
 /**
- * "Bill on its own" on a booking of an agent's open month-end invoice:
+ * "Bill on Its Own" on a booking of an agent's open month-end invoice:
  * it leaves for an invoice of its own, still billed to the agent, and
  * stays on its own after.
  */
@@ -138,7 +138,7 @@ export function BillAloneControl({
   return (
     <ActionDialog
       action={billAloneAction}
-      label="Bill on its own"
+      label="Bill on Its Own"
       title={`Bill ${label} on its own?`}
       description="It leaves this invoice for an invoice of its own, still billed to the agent and due by the agent's days to pay. It stays on its own after: later changes are billed on it, not on a month-end invoice."
       done="Booking moved to its own invoice."

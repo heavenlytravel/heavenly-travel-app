@@ -20,7 +20,7 @@ const mainPage: MediaPage = {
   scope: "location",
   location: langkawi,
   ref: { page: "landing", slug: "" },
-  title: "Main page",
+  title: "Main Page",
 };
 const onPage: MediaUse = {
   kind: "page",
@@ -172,7 +172,7 @@ describe("mediaDeleteImpact", () => {
   it("names the past versions and the uploads it reaches, in one order whatever the choice's", () => {
     const aboutUs: MediaUse = {
       kind: "earlier",
-      on: { scope: "site", page: "about-us", title: "About us" },
+      on: { scope: "site", page: "about-us", title: "About Us" },
       entryId: "e2",
     };
     const chosen = [
@@ -184,8 +184,8 @@ describe("mediaDeleteImpact", () => {
     const impact = mediaDeleteImpact(chosen);
     assert.deepEqual(impact.lines, [
       "4 images, 4.0 MB, are removed from storage for good.",
-      "Langkawi · Main page: its History shows a past version without them.",
-      "Site · About us: its History shows a past version without it.",
+      "Langkawi · Main Page: its History shows a past version without them.",
+      "Site · About Us: its History shows a past version without it.",
       "e.jpg was uploaded in the last day: a form not saved yet may still use it.",
     ]);
     assert.equal(impact.confirmWith, "delete");

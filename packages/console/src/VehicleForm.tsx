@@ -163,7 +163,7 @@ export function VehicleForm({
     name: vehicle?.plate ?? "",
     wasActive: vehicle?.isActive ?? false,
     held,
-    action: "Take out of service",
+    action: "Take Out of Service",
   });
   const { pending, error, formProps, markDirty, leaveDialog } = useActionForm(
     action,
@@ -391,7 +391,7 @@ export function VehicleForm({
                 : pending
                   ? "Saving…"
                   : isNew
-                    ? "Add vehicle"
+                    ? "Add Vehicle"
                     : "Save"}
             </Button>
           }

@@ -4,6 +4,7 @@ import {
   formatLocalDateTime,
   formatMyr,
   PART_ROLE_LABELS,
+  sentenceCase,
   type PartRole,
 } from "@repo/db";
 import type { OfferRole, VendorOfferView } from "@repo/db/server";
@@ -54,8 +55,8 @@ export function VendorOfferCard({
       head={
         <>
           <span className="flex items-center gap-2">
-            <Pill tone="amber">New offer</Pill>
-            {offer.ownDriving ? <Pill tone="brand">You drive</Pill> : null}
+            <Pill tone="amber">New Offer</Pill>
+            {offer.ownDriving ? <Pill tone="brand">You Drive</Pill> : null}
           </span>
           <span
             className="flex items-center gap-1 text-xs font-semibold text-warning"
@@ -69,7 +70,7 @@ export function VendorOfferCard({
     >
       <div className="flex items-end justify-between gap-3">
         <div className="grid gap-1">
-          <span className="text-caps font-semibold text-muted">We pay you</span>
+          <span className="text-caps font-semibold text-muted">We Pay You</span>
           <span className="font-serif text-4xl leading-none text-ink tabular-nums">
             {formatMyr(total)}
           </span>
@@ -154,7 +155,7 @@ function RoleRow({ offerId, role }: { offerId: string; role: OfferRole }) {
             </span>
           )
         ) : (
-          <Pill tone="amber">Yours to choose</Pill>
+          <Pill tone="amber">Yours to Choose</Pill>
         )}
       </div>
       {role.named ? null : <NameRecord offerId={offerId} role={role} />}
@@ -166,7 +167,7 @@ function RoleRow({ offerId, role }: { offerId: string; role: OfferRole }) {
 function NameRecord({ offerId, role }: { offerId: string; role: OfferRole }) {
   const [chosen, setChosen] = useState("");
   const { pending, error, formProps } = useActionForm(nameRecordAction, {
-    done: `${PART_ROLE_LABELS[role.role]} chosen.`,
+    done: `${sentenceCase(roleWord(role.role))} chosen.`,
   });
   if (role.choices.length === 0) {
     return (

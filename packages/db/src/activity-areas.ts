@@ -29,9 +29,9 @@ export const isActivityArea = guardFor(ACTIVITY_AREAS);
 
 export const ACTIVITY_AREA_LABELS: Record<ActivityArea, string> = {
   bookings: "Bookings",
-  billing: "Invoices and payments",
+  billing: "Invoices and Payments",
   fleet: "Fleet",
-  coverage: "Coverage and rates",
+  coverage: "Coverage and Rates",
   pages: "Pages",
   website: "Website",
   details: "Details",

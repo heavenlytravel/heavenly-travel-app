@@ -183,7 +183,7 @@ function WeekdayPicker({
   const box = useRef<HTMLDivElement>(null);
   return (
     <FieldGroup className="grid gap-1.5">
-      <span className="text-sm font-medium text-body">Weekend days</span>
+      <span className="text-sm font-medium text-body">Weekend Days</span>
       <div
         ref={box}
         className="flex flex-wrap gap-1.5 rounded-md aria-invalid:ring-2 aria-invalid:ring-danger"
@@ -325,12 +325,12 @@ export function TripRulesForm({
       <input type="hidden" name="locationId" value={locationId} />
       <div className="divide-y divide-hairline">
         <Rule
-          title="Extra road"
+          title="Extra Road"
           description="An address outside every zone is priced from its nearest zone by road, plus its road past the zone's edge."
         >
           <ExtraRoadBar free={freeKm} max={maxKm} />
           <div className="flex flex-wrap gap-4">
-            <Field label="Free up to, km">
+            <Field label="Free Up To, km">
               <NumberField
                 name={TRIP_REACH_FIELDS.freeExtraKm}
                 min={0}
@@ -341,7 +341,7 @@ export function TripRulesForm({
                 className="w-36"
               />
             </Field>
-            <Field label="Served up to, km">
+            <Field label="Served Up To, km">
               <NumberField
                 name={TRIP_REACH_FIELDS.maxExtraKm}
                 min={min}
@@ -374,12 +374,12 @@ export function TripRulesForm({
         />
 
         <Rule
-          title="Odd hours"
+          title="Odd Hours"
           description="Added to a trip whose pickup time is in the window, on its price from the grid or by the hour."
           toggle={
             <PostedSwitch
               name={ODD_HOURS_ON}
-              label="Odd-hours surcharge"
+              label="Odd-hours Surcharge"
               checked={v.oddOn}
               onChange={(oddOn) =>
                 set(
@@ -414,7 +414,7 @@ export function TripRulesForm({
                 <ChargeInput
                   name="amount"
                   kindName="kind"
-                  label="Odd-hours surcharge"
+                  label="Odd-hours Surcharge"
                   kind={v.oddKind}
                   amount={v.oddAmount}
                   onKindChange={(oddKind) => set({ oddKind })}
@@ -431,12 +431,12 @@ export function TripRulesForm({
         </Rule>
 
         <Rule
-          title="Weekends and holidays"
+          title="Weekends and Holidays"
           description="Added to a trip whose pickup day is a weekend day or a holiday, by the location's local date."
           toggle={
             <PostedSwitch
               name={WEEKEND_FIELDS.on}
-              label="Weekend and holiday surcharge"
+              label="Weekend and Holiday Surcharge"
               checked={v.weekendOn}
               onChange={(weekendOn) =>
                 set(
@@ -460,7 +460,7 @@ export function TripRulesForm({
                 <ChargeInput
                   name={WEEKEND_FIELDS.amount}
                   kindName={WEEKEND_FIELDS.kind}
-                  label="Weekend and holiday surcharge"
+                  label="Weekend and Holiday Surcharge"
                   kind={v.weekendKind}
                   amount={v.weekendAmount}
                   onKindChange={(weekendKind) => set({ weekendKind })}
@@ -482,7 +482,7 @@ export function TripRulesForm({
 
       <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-hairline pt-5">
         <Button type="submit" disabled={unchanged} pending={pending}>
-          {pending ? "Saving…" : "Save rules"}
+          {pending ? "Saving…" : "Save Rules"}
         </Button>
         <FormError error={error} />
       </div>

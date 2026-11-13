@@ -38,7 +38,7 @@ export default async function GuidePage({
       band={
         <BandHeading
           eyebrow={member.vendor.name}
-          title={guide ? guide.name : "Add tour guide"}
+          title={guide ? guide.name : "Add Tour Guide"}
         >
           We offer you trips with a tour guide where they are based.
         </BandHeading>
@@ -58,10 +58,10 @@ export default async function GuidePage({
         {guide ? (
           <Card className="mt-5">
             <CardTitle description="For a tour guide entered by mistake. One who has been on a trip is made inactive instead.">
-              Delete tour guide
+              Delete Tour Guide
             </CardTitle>
             <DeleteButton
-              label="Delete tour guide"
+              label="Delete Tour Guide"
               title={`Delete ${guide.name}?`}
               impact={GUIDE_DELETE_IMPACT}
               action={deleteGuideAction.bind(null, guide.id)}

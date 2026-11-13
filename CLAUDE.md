@@ -36,6 +36,14 @@ Package manager is pnpm (Node >= 24).
 - Focus on performance and reliability first
 - Correctness is preferred over short-term solution, if there is a tradeoff
 
+## Text Case
+
+Every visible string follows `docs/261113-text-case.md`. A label is in Title Case: page
+titles, headings, menu rows, buttons, column headers, field labels, options, status words,
+service and page names. A sentence is in sentence case: questions, messages, hints, a lone
+tick box, placeholders, email subjects. Capitals come from CSS only. A title built from data
+goes through `titleCase` from `@repo/db`. Text saved with a booking is never re-cased.
+
 ## Maintainability
 
 Long term maintainability is a core priority. If you add new functionality, first check if there is shared logic that can be extracted to a separate module. Duplicate logic across multiple files is a code smell and should be avoided. Don't be afraid to change existing code. Don't take shortcuts by just adding local logic to solve a problem.

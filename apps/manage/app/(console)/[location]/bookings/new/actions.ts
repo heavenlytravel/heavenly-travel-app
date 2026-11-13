@@ -25,7 +25,7 @@ import { prepareFormItems, savedBookingHref } from "../_lib/trip-server";
 
 /**
  * Creates the booking from the posted form: confirmed at once with every
- * trip, numbered HTB, when "Create and confirm" sent it, else received,
+ * trip, numbered HTB, when "Create and Confirm" sent it, else received,
  * numbered HTQ, for confirming later. Pay later, ticked, is kept with
  * the day it is to be paid by. Every trip is resolved and priced again on the
  * server, the customer is linked to an account when the email belongs to

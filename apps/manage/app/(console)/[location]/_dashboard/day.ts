@@ -33,7 +33,7 @@ export const AWAITING_DRIVER: Count = (overview) => overview.awaitingDriver;
 export const VEHICLES_DUE: Count = (overview) => overview.vehiclesDue;
 /** Active drivers with a licence due or expired. */
 export const DRIVERS_DUE: Count = (overview) => overview.driversDue;
-/** Both, the band's "Documents due". */
+/** Both, the band's "Documents Due". */
 export const DOCUMENTS: Count = (overview) =>
   VEHICLES_DUE(overview) + DRIVERS_DUE(overview);
 

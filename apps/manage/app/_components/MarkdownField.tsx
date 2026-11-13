@@ -514,7 +514,7 @@ function AddImageDialog({
         if (!uploading) onOpenChange(next);
         if (!next) setAlt("");
       }}
-      title="Add an image"
+      title="Add an Image"
       description="It goes in where the cursor was, on a line of its own."
     >
       <div className="grid gap-4">
@@ -523,7 +523,7 @@ function AddImageDialog({
             htmlFor={altId}
             className="mb-1.5 block text-sm font-medium text-body"
           >
-            Alt text
+            Alt Text
           </label>
           <Input
             id={altId}
@@ -557,10 +557,10 @@ function AddImageDialog({
             }}
           />
           <Button pending={uploading} onClick={() => input.current?.click()}>
-            {uploading ? "Uploading…" : "Choose image"}
+            {uploading ? "Uploading…" : "Choose Image"}
           </Button>
           <MediaPicker
-            label="Image in the text"
+            label="Image in the Text"
             most={1}
             disabled={uploading}
             onPick={([picked]) => {
@@ -594,7 +594,7 @@ function TextImages({
   return (
     <section aria-label="Images in the text" className="grid gap-2">
       <h3 className="text-sm font-semibold text-ink">
-        Images in the text
+        Images in the Text
         {away > 0 ? (
           <span className="ml-2 text-xs font-normal text-warning">
             {away === 1
@@ -654,7 +654,7 @@ function TextImage({
       )}
       <div className="grid min-w-0 flex-1 gap-1.5">
         <label htmlFor={altId} className="sr-only">
-          Alt text of image {image.index + 1}
+          Alt Text of Image {image.index + 1}
         </label>
         <Input
           id={altId}

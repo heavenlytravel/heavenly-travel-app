@@ -23,7 +23,7 @@ export default async function StaffPage() {
       aside={
         <Panel className="grid gap-4 p-5">
           <h2 className="text-lg font-bold tracking-title text-ink">
-            Add someone
+            Add Someone
           </h2>
           <AddStaffForm />
         </Panel>

@@ -68,7 +68,7 @@ export function useFoldOnScroll(open: boolean, fold: () => void) {
 
 /**
  * The booking's trips in one line: how many and the days they span, or
- * "Plan a trip" before there is one, then `summary` (on a line of its own
+ * "Plan a Trip" before there is one, then `summary` (on a line of its own
  * on a phone) and Show or Hide. `alert` writes the count in red, for a
  * trip marked in red while the line is folded.
  */
@@ -98,7 +98,7 @@ function TripsLine({
       <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-0.5">
         <b className={`shrink-0 ${alert ? "text-danger" : "text-ink"}`}>
           {trips.length === 0
-            ? "Plan a trip"
+            ? "Plan a Trip"
             : trips.length === 1
               ? "1 trip"
               : `${trips.length} trips`}
@@ -204,7 +204,7 @@ export function TripsFold({
   trips,
   summary,
   attention = false,
-  label = "Your trips",
+  label = "Your Trips",
   watch,
   className,
   children,

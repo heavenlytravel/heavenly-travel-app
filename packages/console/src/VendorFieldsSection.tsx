@@ -54,7 +54,7 @@ export function VendorFieldsSection({
   return (
     <>
       <Card>
-        <CardTitle>{applicant ? "Your business" : "Details"}</CardTitle>
+        <CardTitle>{applicant ? "Your Business" : "Details"}</CardTitle>
         <VendorDetailsFields fields={fields} applicant={applicant} />
       </Card>
 
@@ -150,7 +150,7 @@ export function VendorDetailsFields({
       </fieldset>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
-          label={individual ? "Full name" : VENDOR_FIELD_LABELS.name}
+          label={individual ? "Full Name" : VENDOR_FIELD_LABELS.name}
           hint={individual ? "As on the IC." : "The company's registered name."}
         >
           <Input
@@ -162,7 +162,7 @@ export function VendorDetailsFields({
           />
         </Field>
         <Field
-          label={individual ? "IC number (optional)" : "SSM number"}
+          label={individual ? "IC Number (optional)" : "SSM Number"}
           hint={
             individual
               ? "Helps the team check who you are."

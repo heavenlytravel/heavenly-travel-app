@@ -175,11 +175,11 @@ export function ConfirmForm({
         <p className="text-copy text-muted">
           Have an account?{" "}
           <Link href={signInHref} className="text-link">
-            Sign in
+            Sign In
           </Link>
         </p>
       )}
-      <Field label="Customer name" line={nameLine.line}>
+      <Field label="Customer Name" line={nameLine.line}>
         <input
           name={CONFIRM_FIELDS.name}
           required
@@ -191,7 +191,7 @@ export function ConfirmForm({
           className={`${control} ${inView}`}
         />
       </Field>
-      <Field label="Phone number" line={phoneLine.line}>
+      <Field label="Phone Number" line={phoneLine.line}>
         <input
           name={CONFIRM_FIELDS.phone}
           type="tel"
@@ -218,7 +218,7 @@ export function ConfirmForm({
         />
       </Field>
       {arriving !== null ? (
-        <Field label="Arriving flight" optional line={arrivingLine.line}>
+        <Field label="Arriving Flight" optional line={arrivingLine.line}>
           <input
             name={CONFIRM_FIELDS.arrivingFlight}
             value={forDriver.arrivingFlight}
@@ -234,7 +234,7 @@ export function ConfirmForm({
         </Field>
       ) : null}
       {departing !== null ? (
-        <Field label="Departing flight" optional line={departingLine.line}>
+        <Field label="Departing Flight" optional line={departingLine.line}>
           <input
             name={CONFIRM_FIELDS.departingFlight}
             value={forDriver.departingFlight}
@@ -249,7 +249,7 @@ export function ConfirmForm({
           />
         </Field>
       ) : null}
-      <Field label="Notes for the driver" optional line={notesLine.line}>
+      <Field label="Notes for the Driver" optional line={notesLine.line}>
         <textarea
           name={CONFIRM_FIELDS.notes}
           value={forDriver.notes}
@@ -312,7 +312,7 @@ export function ConfirmForm({
           disabled={blocked !== null}
           className="w-full"
         >
-          {pending ? "Booking…" : <>Book now&nbsp;· {formatMyr(totalSen)}</>}
+          {pending ? "Booking…" : <>Book Now&nbsp;· {formatMyr(totalSen)}</>}
         </Button>
       </div>
       <div className="grid gap-1 text-caption">

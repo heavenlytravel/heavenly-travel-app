@@ -71,9 +71,9 @@ export function DeleteButton({
   disabled = false,
   onDeleted,
 }: {
-  /** The button: "Delete vehicle", "Remove". */
+  /** The button: "Delete Vehicle", "Remove". */
   label: string;
-  /** The dialog's action, when it says more than the button: "Remove zone". */
+  /** The dialog's action, when it says more than the button: "Remove Zone". */
   confirmLabel?: string;
   /** The button while the delete runs. */
   pendingLabel?: string;

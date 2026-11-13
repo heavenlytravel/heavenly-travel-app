@@ -16,7 +16,7 @@ import {
  * it checks, pure and browser-safe: the form displays the messages, the
  * writers in ./offerings apply the same checks before they write. The
  * class's own fields are ./vehicle-class-input. See
- * docs/261015-locations-as-operation-areas.md, "Vehicle classes", and
+ * docs/261015-locations-as-operation-areas.md, "Vehicle Classes", and
  * docs/261018-location-work-and-class-catalogue.md for the rules.
  */
 
@@ -66,12 +66,12 @@ export type OfferingField = keyof OfferingFields;
 
 /** How the screen and the activity log name each field. */
 export const OFFERING_FIELD_LABELS: Record<OfferingField, string> = {
-  perKmSen: "Rate per extra km",
-  minLeadHours: "Notice needed",
-  cancellationCutoffHours: "Cancel up to",
-  modelChoicePercent: "Charge to choose a model",
-  modelChoiceFlatSen: "Charge to choose a model",
-  isActive: "On sale",
+  perKmSen: "Rate per Extra km",
+  minLeadHours: "Notice Needed",
+  cancellationCutoffHours: "Cancel Up To",
+  modelChoicePercent: "Charge to Choose a Model",
+  modelChoiceFlatSen: "Charge to Choose a Model",
+  isActive: "On Sale",
 };
 
 /** The form names of the charge to choose a model: a percentage or a flat amount, and the amount. */

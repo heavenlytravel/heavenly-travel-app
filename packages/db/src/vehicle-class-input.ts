@@ -11,7 +11,7 @@ import { squashName } from "./vehicle-model-input";
  * it checks, pure and browser-safe: the form displays the messages, the
  * writers in ./vehicle-classes apply the same checks before they write.
  * The rates and rules a location sells a class under are ./offering-input.
- * See docs/261015-locations-as-operation-areas.md, "Vehicle classes",
+ * See docs/261015-locations-as-operation-areas.md, "Vehicle Classes",
  * docs/261018-location-work-and-class-catalogue.md and
  * docs/261111-catalogue-booking-flow-and-ops.md, part A.
  */
@@ -43,8 +43,8 @@ export const VEHICLE_CLASS_FIELD_LABELS: Record<VehicleClassField, string> = {
   tier: "Tier",
   description: "Description",
   category: "Category",
-  minPassengers: "Seats from",
-  maxPassengers: "Seats to",
+  minPassengers: "Seats From",
+  maxPassengers: "Seats To",
   luggage: "Luggage",
   imageUrls: "Pictures",
   isActive: "Active",

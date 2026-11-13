@@ -46,12 +46,12 @@ export function longDayLabel(instant: Date) {
   return longDay.format(instant);
 }
 
-/** "Good morning" by the hour in Malaysia. */
+/** "Good Morning" by the hour in Malaysia. */
 export function greetingAt(now: Date) {
   const hour = Number(hourFormat.format(now));
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
+  if (hour < 12) return "Good Morning";
+  if (hour < 18) return "Good Afternoon";
+  return "Good Evening";
 }
 
 /** "in 1 h 20 min", "in 3 days", "now", "40 min ago". */

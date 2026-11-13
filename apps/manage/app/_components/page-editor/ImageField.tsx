@@ -18,7 +18,7 @@ export function ImageField({
   onChange,
   size,
 }: {
-  /** What the image is, as a screen reader hears the controls: "Hero image". */
+  /** What the image is, as a screen reader hears the controls: "Hero Image". */
   label: string;
   /** The size the place wants it at, one of IMAGE_SIZES. */
   size: ImageSize;
@@ -46,7 +46,7 @@ export function ImageField({
             htmlFor={altId}
             className="mb-1.5 flex items-baseline justify-between gap-3 text-sm font-medium text-body"
           >
-            Alt text
+            Alt Text
             <Count
               value={image.alt.trim().length}
               limit={PAGE_LIMITS.imageAlt}

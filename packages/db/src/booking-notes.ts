@@ -17,7 +17,7 @@ export type BookingNoteEntry = {
   id: string;
   body: string;
   createdAt: Date;
-  /** "Nurul Aina", the email when there is no name, or "Former staff". */
+  /** "Nurul Aina", the email when there is no name, or "Former Staff". */
   authorName: string;
 };
 
@@ -36,7 +36,7 @@ export async function listBookingNotes(
     id: row.id,
     body: row.body,
     createdAt: row.createdAt,
-    authorName: author ? fullName(author) || author.email : "Former staff",
+    authorName: author ? fullName(author) || author.email : "Former Staff",
   }));
 }
 

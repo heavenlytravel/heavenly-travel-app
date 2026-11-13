@@ -166,7 +166,7 @@ export function passwordConfirmed(data: FormData, field: string): boolean {
 
 export function ConfirmPasswordField({ error }: { error?: ReactNode }) {
   return (
-    <AuthField label="Confirm password" error={error}>
+    <AuthField label="Confirm Password" error={error}>
       {(control) => (
         <PasswordInput
           {...control}
@@ -269,7 +269,7 @@ export function CodeInput({
   );
 }
 
-/** A button that reads as a link: "Email me a code instead", "Use another email". */
+/** A button that reads as a link: "Email Me a Code Instead", "Use Another Email". */
 export function TextButton({
   className,
   ...props
@@ -320,7 +320,7 @@ export function AuthAlert({ children }: { children: ReactNode }) {
 }
 
 /**
- * "Send a new code", which waits half a minute between sends, counting
+ * "Send a New Code", which waits half a minute between sends, counting
  * down, so a tap that seems to do nothing is not pressed again and again.
  */
 export function ResendCode({
@@ -356,7 +356,7 @@ export function ResendCode({
             }
           }}
         >
-          Send a new code
+          Send a New Code
         </TextButton>
       )}
     </p>

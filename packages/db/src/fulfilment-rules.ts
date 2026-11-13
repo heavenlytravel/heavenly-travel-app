@@ -24,7 +24,7 @@ export const isPartRole = guardFor(PART_ROLES);
 export const PART_ROLE_LABELS: Record<PartRole, string> = {
   vehicle: "Vehicle",
   driver: "Driver",
-  guide: "Tour guide",
+  guide: "Tour Guide",
 };
 
 /** Whether a trip goes with a tour guide: one whose language was paid for. */
@@ -50,10 +50,10 @@ export const OFFER_STATUSES = [
 export type OfferStatus = (typeof OFFER_STATUSES)[number];
 export const isOfferStatus = guardFor(OFFER_STATUSES);
 export const OFFER_STATUS_LABELS: Record<OfferStatus, string> = {
-  offered: "Waiting for an answer",
+  offered: "Waiting for an Answer",
   accepted: "Accepted",
   declined: "Declined",
-  expired: "No answer in time",
+  expired: "No Answer in Time",
   withdrawn: "Withdrawn",
   released: "Released",
 };
@@ -63,8 +63,8 @@ export const DECLINE_REASONS = ["not-available", "too-far", "other"] as const;
 export type DeclineReason = (typeof DECLINE_REASONS)[number];
 export const isDeclineReason = guardFor(DECLINE_REASONS);
 export const DECLINE_REASON_LABELS: Record<DeclineReason, string> = {
-  "not-available": "Not available",
-  "too-far": "Too far",
+  "not-available": "Not Available",
+  "too-far": "Too Far",
   other: "Other",
 };
 export const DECLINE_NOTE_MAX_LENGTH = 200;
@@ -305,17 +305,17 @@ export function partWaitingOf(
   return null;
 }
 
-/** "Waiting for Ali Transport", "Waiting for us to accept", "Not named yet", "Waiting for the driver". */
+/** "Waiting for Ali Transport", "Waiting for Us to Accept", "Not Named Yet", "Waiting for the Driver". */
 export function partWaitingLabel(waiting: PartWaiting, vendorName: string) {
   switch (waiting) {
     case "vendor":
       return `Waiting for ${vendorName}`;
     case "ours":
-      return "Waiting for us to accept";
+      return "Waiting for Us to Accept";
     case "name":
-      return "Not named yet";
+      return "Not Named Yet";
     case "driver":
-      return "Waiting for the driver";
+      return "Waiting for the Driver";
   }
 }
 
@@ -365,10 +365,10 @@ export const ASSIGN_STATES = [
 ] as const;
 export type AssignState = (typeof ASSIGN_STATES)[number];
 export const ASSIGN_STATE_LABELS: Record<AssignState, string> = {
-  "to-assign": "To assign",
-  waiting: "Waiting to accept",
+  "to-assign": "To Assign",
+  waiting: "Waiting to Accept",
   assigned: "Assigned",
-  "on-the-road": "On the road",
+  "on-the-road": "On the Road",
   done: "Done",
 };
 
@@ -383,7 +383,7 @@ export function assignStateOf(trip: {
   status: string;
   parts: readonly PartAcceptance[];
   withGuide: boolean;
-  /** Its driver has tapped "On the way" or later: `isOnTheRoad`. */
+  /** Its driver has tapped "On the Way" or later: `isOnTheRoad`. */
   reported: boolean;
 }): AssignState {
   if (trip.status === "completed") return "done";

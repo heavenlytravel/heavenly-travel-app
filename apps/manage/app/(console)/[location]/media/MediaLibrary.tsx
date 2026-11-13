@@ -9,6 +9,7 @@ import {
   mediaDeleteImpact,
   mediaPageName,
   plural,
+  titleCase,
   type MediaStatus,
   type MediaPage,
   type MediaUse,
@@ -156,7 +157,7 @@ export function MediaLibrary({
             </Button>
             <DeleteButton
               look="bar"
-              label={`Delete ${plural(picked.length, "image")}`}
+              label={titleCase(`Delete ${plural(picked.length, "image")}`)}
               title={`Delete ${plural(picked.length, "image")}?`}
               impact={mediaDeleteImpact(picked)}
               note="This cannot be undone."
@@ -296,7 +297,7 @@ function MediaTable({
         <Th align="right">Size</Th>
         <Th>Uploaded</Th>
         <Th>Status</Th>
-        <Th>Used in</Th>
+        <Th>Used In</Th>
       </THead>
       <TBody>
         {rows.map((row) => {

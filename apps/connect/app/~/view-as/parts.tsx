@@ -7,7 +7,7 @@ export function CannotView({ text }: { text: string }) {
     <Screen
       nav={false}
       width="narrow"
-      band={<BandHeading eyebrow="View as" title="Can't view" />}
+      band={<BandHeading eyebrow="View As" title="Can't view" />}
     >
       <Panel className="connect-rise p-6">
         <p className="text-base text-pretty text-body">{text}</p>

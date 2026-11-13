@@ -52,7 +52,7 @@ describe("a site page's title without a meta title", () => {
     );
     assert.equal(
       sitePageFallbackTitle("about-us"),
-      "About us | Heavenly Travel",
+      "About Us | Heavenly Travel",
     );
   });
 });

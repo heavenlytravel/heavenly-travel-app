@@ -457,7 +457,7 @@ describe("the class given: booked, or another with a reason", () => {
       name: "VLE1234 · Toyota Innova",
       trips: {
         a: { reasons: [] },
-        b: { reasons: ["Road tax expired"] },
+        b: { reasons: ["Road Tax expired"] },
       },
     };
     assert.deepEqual(candidateOption(candidate, ["a"]), {
@@ -467,7 +467,7 @@ describe("the class given: booked, or another with a reason", () => {
     });
     assert.deepEqual(candidateOption(candidate, ["a", "b"]), {
       value: "v1",
-      label: "VLE1234 · Toyota Innova · Road tax expired",
+      label: "VLE1234 · Toyota Innova · Road Tax expired",
       disabled: true,
     });
   });

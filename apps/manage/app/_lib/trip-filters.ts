@@ -64,7 +64,7 @@ export function tripFilterGroups({
     },
     {
       param: "class",
-      label: "Vehicle class",
+      label: "Vehicle Class",
       value: classId ?? "",
       options: classes
         .filter((c) => !service || c.category === service)
@@ -72,7 +72,7 @@ export function tripFilterGroups({
     },
     {
       param: "trip",
-      label: "Trip type",
+      label: "Trip Type",
       value: trip ?? "",
       options: TRIP_MODES.map((value) => ({
         value,

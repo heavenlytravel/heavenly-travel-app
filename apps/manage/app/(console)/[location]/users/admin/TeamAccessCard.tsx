@@ -37,7 +37,7 @@ const COLUMNS: readonly {
     label: ADMIN_TEAM_LABELS[team],
     holder: { level: "REGULAR", teams: [team] },
   })),
-  { key: "SUPER", label: "Super admin", holder: { level: "SUPER", teams: [] } },
+  { key: "SUPER", label: "Super Admin", holder: { level: "SUPER", teams: [] } },
 ];
 
 /** A box ticked or unticked away from the default, in amber. */
@@ -71,7 +71,7 @@ function TeamBox({
 }
 
 /**
- * "What each team can do": every permission in plain words, grouped by the
+ * "What Each Team Can Do": every permission in plain words, grouped by the
  * part of Manage it opens (`PERMISSION_GROUPS`, so the list is always the
  * whole of them), the view-only ones marked, each team and SUPER across
  * the top. A team rule's boxes are SUPER's to tick, amber where they
@@ -127,7 +127,7 @@ export function TeamAccessCard({
                   variant="ghost"
                   disabled={pending}
                 >
-                  Reset to defaults
+                  Reset to Defaults
                 </Button>
               ) : null}
               <Button type="submit" size="sm" pending={pending}>
@@ -136,7 +136,7 @@ export function TeamAccessCard({
             </div>
           }
         >
-          What each team can do
+          What Each Team Can Do
         </CardTitle>
         {TEAM_PERMISSIONS.map((permission) => (
           <input
@@ -168,7 +168,7 @@ export function TeamAccessCard({
                 <th
                   scope="colgroup"
                   colSpan={COLUMNS.length + 1}
-                  className="bg-hairline px-3.5 py-2 text-left text-caption font-semibold tracking-title text-muted uppercase"
+                  className="bg-hairline px-3.5 py-2 text-left text-caps font-semibold text-muted"
                 >
                   {group.label}
                 </th>
@@ -182,7 +182,7 @@ export function TeamAccessCard({
                       {words}
                       {VIEW_ONLY_PERMISSIONS.includes(permission) ? (
                         <span className="ml-2 text-caption font-normal text-muted">
-                          View only
+                          View Only
                         </span>
                       ) : null}
                     </Td>

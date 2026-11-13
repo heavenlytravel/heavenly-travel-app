@@ -25,13 +25,13 @@ export function ByLocation({
 }) {
   return (
     <Card flush className="overflow-hidden">
-      <CardTitle inset>By location</CardTitle>
+      <CardTitle inset>By Location</CardTitle>
       {overviews.length === 0 ? (
         <EmptyState>
           No locations yet.{" "}
           {mayAdd ? (
             <Link href={NEW_LOCATION_PATH} className={CARD_LINK}>
-              Add the first one
+              Add the First One
             </Link>
           ) : null}
         </EmptyState>

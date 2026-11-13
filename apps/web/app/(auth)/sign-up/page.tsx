@@ -3,7 +3,7 @@ import Link from "next/link";
 import { SignUpFlow } from "@repo/auth/SignUpFlow";
 
 export const metadata: Metadata = {
-  title: "Create an account | Heavenly Travel",
+  title: "Create an Account | Heavenly Travel",
 };
 
 /**
@@ -24,7 +24,7 @@ export default function SignUpPage() {
             href="/sign-in"
             className="font-semibold text-brand underline-offset-4 hover:underline"
           >
-            Sign in
+            Sign In
           </Link>
         </>
       }

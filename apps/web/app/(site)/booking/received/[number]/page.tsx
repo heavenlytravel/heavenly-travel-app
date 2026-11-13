@@ -12,7 +12,7 @@ import { eyebrow, PageTitle, Panel } from "../../../_components/Page";
 import { accountBookingHref, signUpHref } from "../../../../_lib/routes";
 
 export const metadata: Metadata = {
-  title: "Request received | Heavenly Travel",
+  title: "Request Received | Heavenly Travel",
   robots: { index: false },
 };
 
@@ -40,7 +40,7 @@ export default async function ReceivedPage({
 
   return (
     <>
-      <PageTitle eyebrow="Booking" title="Request received.">
+      <PageTitle eyebrow="Booking" title="Request Received">
         {EMAILS_ON
           ? "We will check your booking and confirm it by email shortly."
           : "We will check your booking and contact you to confirm it shortly."}
@@ -67,7 +67,7 @@ export default async function ReceivedPage({
             href={signUpHref(null, accountBookingHref(reference))}
             className="text-link"
           >
-            Create an account
+            Create an Account
           </Link>
         </p>
         <Button asChild size="lg" className="mt-6 w-full">

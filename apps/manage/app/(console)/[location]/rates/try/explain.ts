@@ -177,7 +177,7 @@ export function explainSteps(answer: Answered): ExplainedStep[] {
       }
       case "candidates":
         steps.push({
-          title: `The zones near ${END_NAMES[step.end]}`,
+          title: `The Zones Near ${END_NAMES[step.end]}`,
           asked: null,
           answered: null,
           workedOut:
@@ -245,7 +245,7 @@ export function explainSteps(answer: Answered): ExplainedStep[] {
             : (winners.get(step.end)?.layers ?? []);
         kept.push(...layers);
         steps.push({
-          title: `The nearest zone of ${END_NAMES[step.end]}`,
+          title: `The Nearest Zone of ${END_NAMES[step.end]}`,
           asked: null,
           answered: null,
           workedOut: step.zone
@@ -257,7 +257,7 @@ export function explainSteps(answer: Answered): ExplainedStep[] {
       }
       case "trip":
         steps.push({
-          title: "The trip",
+          title: "The Trip",
           asked: "the pickup to the drop-off, with its line",
           answered: step.route
             ? `${km(step.route.distanceKm)} pin to pin (kept on the receipt)`
@@ -275,7 +275,7 @@ export function explainSteps(answer: Answered): ExplainedStep[] {
         break;
       case "grid-trip":
         steps.push({
-          title: "The grid trip",
+          title: "The Grid Trip",
           asked:
             "between the two stand-ins: an address in a zone, or the entry spot of one outside",
           answered: step.route
@@ -295,7 +295,7 @@ export function explainSteps(answer: Answered): ExplainedStep[] {
     }
   }
   steps.push({
-    title: "The price",
+    title: "The Price",
     asked: null,
     answered: null,
     workedOut: priceLine(answer),
@@ -417,7 +417,7 @@ function closingLines(answer: Answered): CalcLine[] {
   const price = answer.quote?.price;
   if (price?.surcharge) {
     lines.push({
-      label: "Odd hours",
+      label: "Odd Hours",
       detail: `${price.surcharge.percent !== null ? `+${price.surcharge.percent}% of ${formatMyr(price.subtotalSen)}` : "a flat amount"} = ${formatMyr(price.surcharge.amountSen)}`,
     });
   }
@@ -444,7 +444,7 @@ function hourlyCalculation(answer: Answered, pickupLine: string): CalcLine[] {
   ];
   if (answer.refused) {
     lines.push({
-      label: "Not priced",
+      label: "Not Priced",
       detail: `${answer.refused.message}${answer.refused.reason ? ` Why: ${answer.refused.reason}.` : ""}`,
     });
     return lines;
@@ -461,12 +461,12 @@ function hourlyCalculation(answer: Answered, pickupLine: string): CalcLine[] {
   });
   if (charge && charge.extraHours > 0) {
     lines.push({
-      label: "Extra hours",
+      label: "Extra Hours",
       detail: `${charge.extraHours} × ${formatMyr(charge.extraHourSen)} = ${formatMyr(charge.extraSen)}`,
     });
   }
   lines.push({
-    label: "Extra road",
+    label: "Extra Road",
     detail: hourlyRoadDetail(answer),
     focus: ["extra-pickup"],
   });
@@ -523,7 +523,7 @@ export function explainCalculation(answer: Answered): CalcLine[] {
   });
   if (answer.refused) {
     lines.push({
-      label: "Not priced",
+      label: "Not Priced",
       detail: `${answer.refused.message}${answer.refused.reason ? ` Why: ${answer.refused.reason}.` : ""}`,
     });
     return lines;
@@ -534,7 +534,7 @@ export function explainCalculation(answer: Answered): CalcLine[] {
       ? `within ${quote.pickup.zone}`
       : `${quote.pickup.zone} to ${quote.dropoff.zone}`;
   lines.push({
-    label: "Base price",
+    label: "Base Price",
     detail: quote.price?.route
       ? `grid ${cell} = ${formatMyr(quote.price.route.rateSen)}`
       : `grid ${cell}: not on the grid yet for this class`,
@@ -548,7 +548,7 @@ export function explainCalculation(answer: Answered): CalcLine[] {
     });
   } else {
     lines.push({
-      label: "Grid trip",
+      label: "Grid Trip",
       detail: `${km(trip.gridTripKm)}, from ${trip.pickup.nearest ? "the pickup's entry spot" : `${trip.pickup.zone}'s edge`} to ${trip.dropoff.nearest ? "the drop-off's entry spot" : `${trip.dropoff.zone}'s edge`}`,
       focus: ["grid"],
     });
@@ -558,7 +558,7 @@ export function explainCalculation(answer: Answered): CalcLine[] {
       focus: ["trip"],
     });
     lines.push({
-      label: "Extra road",
+      label: "Extra Road",
       detail: extraRoadDetail(answer),
       focus: ["extra-pickup", "extra-dropoff"],
     });

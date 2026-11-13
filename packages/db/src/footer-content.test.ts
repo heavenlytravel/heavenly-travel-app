@@ -258,7 +258,7 @@ describe("footer parts", () => {
   it("names what a publish changes", () => {
     const a = defaultFooterContent(DESTINATIONS);
     const b = { ...a, tagline: "New", paymentLogos: [logo("fpx", "FPX")] };
-    assert.deepEqual(changedFooterParts(a, b), ["Tagline", "Payment logos"]);
+    assert.deepEqual(changedFooterParts(a, b), ["Tagline", "Payment Logos"]);
   });
 
   it("finds the uploaded images, once each", () => {

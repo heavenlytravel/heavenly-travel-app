@@ -62,7 +62,7 @@ export type VehicleSeed = { search: TripSearch; passengers: number | null };
 
 /**
  * The vehicle step: every class of the category priced for all the trips
- * at once. "Your trips" sits at the top with the group's size, each trip
+ * at once. "Your Trips" sits at the top with the group's size, each trip
  * priced in the vehicle chosen before, if any, and changed or added in
  * place as on the search card, priced again with a toast; removing one
  * offers Undo. On a phone they are folded into one line, so the vehicles
@@ -153,7 +153,7 @@ export function VehicleStep({
           level={1}
           title="Start with a search"
           message="Tell us where and when you need a driver, and we will show you prices."
-          linkLabel="Search for a trip"
+          linkLabel="Search for a Trip"
         />
         {newBooking.dialog}
       </>
@@ -263,8 +263,8 @@ export function VehicleStep({
           className="mx-1 mb-4 font-serif text-figure leading-tight text-ink"
         >
           {several
-            ? "Choose one vehicle for every trip"
-            : "Choose your vehicle"}
+            ? "Choose One Vehicle for Every Trip"
+            : "Choose Your Vehicle"}
         </h2>
 
         {error ? (
@@ -272,7 +272,7 @@ export function VehicleStep({
             <Notice tone="danger" className={alertBox}>
               {error}{" "}
               <button type="button" onClick={retry} className={noteLink}>
-                Try again
+                Try Again
               </button>
             </Notice>
           </div>
@@ -326,7 +326,7 @@ export function VehicleStep({
                         onClick={toCoaches}
                         className={noteLink}
                       >
-                        see coach charter
+                        see Coach Charter
                       </button>
                       . Or make a booking for each car.
                     </>
@@ -381,7 +381,7 @@ export function VehicleStep({
                       badge={
                         isChosen ? (
                           <span className="mt-1 shrink-0 rounded-full bg-brand-tint px-2 py-0.5 text-xs font-semibold text-brand">
-                            Your choice
+                            Your Choice
                           </span>
                         ) : null
                       }
@@ -408,10 +408,10 @@ export function VehicleStep({
                           onClick={() => choose(card.id)}
                           pending={opening}
                           aria-disabled={continuing || undefined}
-                          aria-label={`Book now, ${card.name}, ${formatMyr(total)}`}
+                          aria-label={`Book Now, ${card.name}, ${formatMyr(total)}`}
                           className="w-full aria-disabled:cursor-wait"
                         >
-                          Book now
+                          Book Now
                         </Button>
                       </div>
                     </ClassCard>

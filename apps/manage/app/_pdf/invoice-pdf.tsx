@@ -37,7 +37,7 @@ export function invoicePdf(
   const page = (
     <PdfPage
       company={company}
-      title={credit ? "Credit note" : "Invoice"}
+      title={credit ? "Credit Note" : "Invoice"}
       number={doc.label}
       under={[
         ...(doc.issuedAt ? [`Issued ${formatLocalDate(doc.issuedAt)}`] : []),
@@ -46,7 +46,7 @@ export function invoicePdf(
       ]}
       stamp={stamp}
     >
-      <PdfSection heading="Billed to">
+      <PdfSection heading="Billed To">
         <PdfRows
           rows={[
             ["Name", doc.billTo.name],
@@ -78,7 +78,7 @@ export function invoicePdf(
             ...(money && !credit
               ? ([
                   ...(money.netSen !== doc.totalSen
-                    ? [["After credit notes", formatMyr(money.netSen)]]
+                    ? [["After Credit Notes", formatMyr(money.netSen)]]
                     : []),
                   ["Paid", formatMyr(money.paidSen)],
                   ["Balance", formatMyr(Math.max(0, money.balanceSen))],
@@ -106,7 +106,7 @@ export function invoicePdf(
     </PdfPage>
   );
   return pdfResponse(page, {
-    title: `${credit ? "Credit note" : "Invoice"} ${doc.label}`,
+    title: `${credit ? "Credit Note" : "Invoice"} ${doc.label}`,
     fileName: doc.label,
   });
 }

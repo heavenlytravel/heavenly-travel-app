@@ -11,6 +11,7 @@ import {
   PART_ROLE_LABELS,
   partWaitingLabel,
   partWaitingOf,
+  sentenceCase,
   type PartRole,
 } from "@repo/db";
 import type { Candidate, PayLine, TripPartView } from "@repo/db/server";
@@ -94,9 +95,7 @@ export function PartCard({
   const added = payLines.reduce((sum, line) => sum + line.amountSen, 0);
   if (!vendor.isOurs || payLines.length > 0) {
     const pay =
-      role === "vehicle"
-        ? "Pay vendor"
-        : `Pay ${PART_ROLE_LABELS[role].toLowerCase()}`;
+      role === "vehicle" ? "Pay Vendor" : `Pay ${PART_ROLE_LABELS[role]}`;
     if (payLines.length === 0) {
       rows.push([pay, formatMyr(part.costSen)]);
     } else {
@@ -116,11 +115,11 @@ export function PartCard({
       ]);
     }
   }
-  if (part.tipSen > 0) rows.push(["Driver tip", formatMyr(part.tipSen)]);
+  if (part.tipSen > 0) rows.push(["Driver Tip", formatMyr(part.tipSen)]);
   if (vendorWaits) {
-    rows.push(["Answer by", formatLocalDateTime(part.offer.respondBy)]);
+    rows.push(["Answer By", formatLocalDateTime(part.offer.respondBy)]);
   }
-  if (others) rows.push(["Same ask on", others]);
+  if (others) rows.push(["Same Ask On", others]);
 
   return (
     <Card>
@@ -151,7 +150,7 @@ export function PartCard({
             partIds={partIds}
             as="vendor"
             recorded={!vendor.isOurs}
-            label={vendor.isOurs ? "Accept" : "Record acceptance"}
+            label={vendor.isOurs ? "Accept" : "Record Acceptance"}
             done={
               vendor.isOurs
                 ? "Accepted for us."
@@ -165,7 +164,7 @@ export function PartCard({
             partIds={partIds}
             as="driver"
             recorded
-            label="Record driver's acceptance"
+            label="Record Driver's Acceptance"
             done="Recorded the driver's acceptance."
           />
         ) : null}
@@ -244,7 +243,7 @@ function DeclineControl({
         variant="secondary"
         onClick={() => setOpen(true)}
       >
-        Record decline
+        Record Decline
       </Button>
     );
   }
@@ -270,13 +269,13 @@ function DeclineControl({
         />
       </Field>
       {reason === "other" ? (
-        <Field label="In a few words">
+        <Field label="In a Few Words">
           <Input name="note" required maxLength={DECLINE_NOTE_MAX_LENGTH} />
         </Field>
       ) : null}
       <div className="flex items-center gap-2">
         <Button type="submit" size="sm" variant="caution" pending={pending}>
-          Record decline
+          Record Decline
         </Button>
         <Button
           type="button"
@@ -314,7 +313,7 @@ function NameControl({
   const [chosen, setChosen] = useState("");
   const noun = PART_ROLE_LABELS[role].toLowerCase();
   const { pending, error, formProps } = useActionForm(namePartsAction, {
-    done: `${PART_ROLE_LABELS[role]} named.`,
+    done: `${sentenceCase(noun)} named.`,
     onDone: () => setOpen(false),
   });
   if (!open) {

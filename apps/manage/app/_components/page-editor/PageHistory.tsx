@@ -42,7 +42,7 @@ export function CompareDialog({
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title="The published copy and this draft"
+      title="The Published Copy and This Draft"
       description="What the public sees now beside what you are editing. The parts that differ are marked Changed."
       width="lg"
     >
@@ -85,7 +85,7 @@ export function SideBySide({
         {left}
       </section>
       <section className="min-w-0 md:border-l md:border-hairline md:pl-6">
-        <h3 className="mb-3 text-sm font-semibold text-ink">This draft</h3>
+        <h3 className="mb-3 text-sm font-semibold text-ink">This Draft</h3>
         {right}
       </section>
     </div>
@@ -93,7 +93,7 @@ export function SideBySide({
 }
 
 /**
- * "Publish history" in an editor's header: the page's publishes, newest
+ * "Publish History" in an editor's header: the page's publishes, newest
  * first, each opening the page as it was before and after it, and the way
  * to every change of its kind: the location's pages, or the site's.
  */
@@ -112,12 +112,12 @@ export function PublishHistoryButton({
     <>
       <Button variant="secondary" onClick={() => setOpen(true)}>
         <HistoryIcon />
-        Publish history
+        Publish History
       </Button>
       <Dialog
         open={open}
         onOpenChange={setOpen}
-        title="Publish history"
+        title="Publish History"
         description="Every publish of this page, newest first. Open one to read the page before and after it; to roll back, copy the old text into the editor and publish again."
       >
         <div className="grid gap-4">
@@ -141,7 +141,7 @@ export function PublishHistoryButton({
                   </span>
                 </span>
                 <Link href={publish.href} className={`shrink-0 ${CARD_LINK}`}>
-                  Before and after
+                  Before and After
                 </Link>
               </li>
             ))}

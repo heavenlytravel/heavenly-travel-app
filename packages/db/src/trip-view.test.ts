@@ -14,8 +14,8 @@ const item = (vehicleClassCategory: string, vehicleClassName = "Minibus") => ({
 
 describe("itemHeading", () => {
   it("names the category the booking snapshot carries", () => {
-    assert.equal(itemHeading(item("car-with-driver")), "Car with driver");
-    assert.equal(itemHeading(item("coach-charter")), "Coach charter");
+    assert.equal(itemHeading(item("car-with-driver")), "Car with Driver");
+    assert.equal(itemHeading(item("coach-charter")), "Coach Charter");
   });
 
   it("falls back to the product for an unknown or missing category", () => {
@@ -28,9 +28,9 @@ describe("itemSummary", () => {
   it("puts the class after the heading", () => {
     assert.equal(
       itemSummary(item("car-with-driver", "Executive sedan")),
-      "Car with driver, Executive sedan",
+      "Car with Driver, Executive sedan",
     );
-    assert.equal(itemSummary(item("coach-charter")), "Coach charter, Minibus");
+    assert.equal(itemSummary(item("coach-charter")), "Coach Charter, Minibus");
   });
 
   it("is the heading alone when the item has no trip details", () => {
@@ -75,8 +75,8 @@ describe("tripDetailRows", () => {
         guideRequest: "Korean",
       }).slice(-2),
       [
-        ["Tour guide", "English"],
-        ["Guide asked for", "Korean, on request"],
+        ["Tour Guide", "English"],
+        ["Guide Asked For", "Korean, on request"],
       ],
     );
   });
@@ -111,7 +111,7 @@ describe("priceRows", () => {
     });
     assert.deepEqual(priceRows(price), [
       ["Airport to Pantai Kok", "RM 50.00"],
-      ["Extra road, 1 km × RM 2.50", "RM 2.50"],
+      ["Extra Road, 1 km × RM 2.50", "RM 2.50"],
     ]);
   });
 
@@ -137,7 +137,7 @@ describe("priceRows", () => {
       multiplier: 1,
     })!;
     assert.deepEqual(priceRows(old)[1], [
-      "Extra road, 0.78 km × RM 2.50",
+      "Extra Road, 0.78 km × RM 2.50",
       "RM 1.94",
     ]);
   });
@@ -158,7 +158,7 @@ describe("priceRows", () => {
       weekend: { charge: { percent: 20, flatSen: null }, reason: "holiday" },
     });
     assert.deepEqual(priceRows(price).at(-1), [
-      "Public holiday, +20%",
+      "Public Holiday, +20%",
       "RM 40.00",
     ]);
   });
@@ -190,9 +190,9 @@ describe("priceRows", () => {
         totalSen: 6000,
       }),
       [
-        ["Base fare", "RM 30.00"],
+        ["Base Fare", "RM 30.00"],
         ["RM 2.00 per km × 10.0 km", "RM 20.00"],
-        ["Minimum fare applies", "RM 60.00"],
+        ["Minimum Fare Applies", "RM 60.00"],
       ],
     );
   });
@@ -237,7 +237,7 @@ describe("priceRows", () => {
     });
     assert.deepEqual(priceRows(longer), [
       ["4 hours from Port cruise, covers 5 hours", "RM 230.00"],
-      ["Extra hours, 2 × RM 35.00", "RM 70.00"],
+      ["Extra Hours, 2 × RM 35.00", "RM 70.00"],
     ]);
   });
 
@@ -258,7 +258,7 @@ describe("priceRows", () => {
     });
     assert.deepEqual(priceRows(price), [
       ["4 hours from Kuah Town", "RM 200.00"],
-      ["Extra road, 5 km × RM 2.50", "RM 12.50"],
+      ["Extra Road, 5 km × RM 2.50", "RM 12.50"],
     ]);
   });
 

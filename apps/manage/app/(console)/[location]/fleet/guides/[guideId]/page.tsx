@@ -89,7 +89,7 @@ async function guideScreen(scope: ConsoleScope, guideId: string) {
             <HistoryLink href={recordHistoryHref(href)} />
             <DeleteButton
               look="header"
-              label="Delete tour guide"
+              label="Delete Tour Guide"
               title={`Delete ${guide.name}?`}
               impact={GUIDE_DELETE_IMPACT}
               note="For a tour guide entered by mistake: one who has been on a trip is made inactive instead. Their history stays in the log. This cannot be undone."

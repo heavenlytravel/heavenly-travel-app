@@ -55,7 +55,7 @@ export function VendorForm({
             Connect Owner
           </CardTitle>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Owner's email">
+            <Field label="Owner's Email">
               <Input
                 name="email"
                 type="email"
@@ -71,7 +71,7 @@ export function VendorForm({
       <FormFoot
         submit={
           <Button type="submit" pending={pending}>
-            {pending ? "Saving…" : isNew ? "Add vendor" : "Save"}
+            {pending ? "Saving…" : isNew ? "Add Vendor" : "Save"}
           </Button>
         }
         cancelHref={cancelHref}

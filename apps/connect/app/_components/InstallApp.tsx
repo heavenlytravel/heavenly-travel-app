@@ -20,7 +20,7 @@ declare global {
 }
 
 const DISMISSED_KEY = "connect:install-dismissed";
-/** "Not now" holds this long before the card asks again. */
+/** "Not Now" holds this long before the card asks again. */
 const QUIET_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** Opened from the home screen already, Android's or the iPhone's. */
@@ -83,11 +83,11 @@ function subscribe(onChange: () => void) {
  * the browser's install where it offers one (Android, desktop Chrome and
  * Edge), the iPhone's two steps where it does not. Not shown once opened
  * from the home screen, in a browser that installs nothing, or for a
- * month after "Not now".
+ * month after "Not Now".
  */
 export function InstallApp() {
   const shown = useSyncExternalStore(subscribe, installOffer, () => null);
-  // "Not now" or a prompt used: hidden until the next visit, or longer.
+  // "Not Now" or a prompt used: hidden until the next visit, or longer.
   const [closed, setClosed] = useState(false);
   if (!shown || closed) return null;
 
@@ -134,7 +134,7 @@ export function InstallApp() {
               Install
             </Button>
             <Button type="button" size="sm" variant="ghost" onClick={dismiss}>
-              Not now
+              Not Now
             </Button>
           </div>
         ) : null}

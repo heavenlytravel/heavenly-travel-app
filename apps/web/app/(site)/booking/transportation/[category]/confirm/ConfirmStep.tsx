@@ -100,13 +100,13 @@ function tripsNote(on: readonly number[], count: number): string | null {
  * page. On a phone the trips and the vehicle fold into one line above the
  * details, which come first; it pins under the header as the page
  * scrolls, and unfolds by itself when a trip turns red. The trips are
- * shown, priced with today's rates, not changed: "Edit trips", or on a
- * phone the fold's one "Edit trips or vehicle", goes back to the vehicle
+ * shown, priced with today's rates, not changed: "Edit Trips", or on a
+ * phone the fold's one "Edit Trips or Vehicle", goes back to the vehicle
  * page, where they are changed or added and the vehicle chosen again. A
  * trip that cannot be booked as it is says so under it: it starts with
  * another or during a hire, the vehicle needs more notice or hours for
  * it, or it cannot be priced; so does a price changed since the trip was
- * added. "Your vehicle" has the class for all the trips, pictured as
+ * added. "Your Vehicle" has the class for all the trips, pictured as
  * on the vehicle page (any of its models is sent, whichever is free on
  * the day: choosing a model is not offered for now), the group, and
  * under it the add-ons chosen at the step before, the tour guide priced
@@ -197,7 +197,7 @@ export function ConfirmStep({
         level={1}
         title="Nothing to confirm yet"
         message="Search for a trip. Add as many as your stay needs: one vehicle does them all, and you book them together."
-        linkLabel="Search for a trip"
+        linkLabel="Search for a Trip"
       />
     );
   }
@@ -217,7 +217,7 @@ export function ConfirmStep({
         title="Choose a vehicle first"
         message="One vehicle does every trip. Choose it, and your trips show here, priced."
         href={vehiclePage}
-        linkLabel="Choose a vehicle"
+        linkLabel="Choose a Vehicle"
       />
     );
   }
@@ -228,7 +228,7 @@ export function ConfirmStep({
         title="Choose a larger vehicle"
         message={`The ${chosen.card.name} seats up to ${chosen.card.maxPassengers}, and your group is ${passengers}.`}
         href={vehiclePage}
-        linkLabel="Choose a vehicle"
+        linkLabel="Choose a Vehicle"
       />
     );
   }
@@ -395,7 +395,7 @@ export function ConfirmStep({
           href={vehiclePage}
           className="hidden text-copy text-link lg:inline"
         >
-          Edit trips
+          Edit Trips
         </Link>
       }
       priceOf={(trip) => {
@@ -417,7 +417,7 @@ export function ConfirmStep({
         <div className="mx-1 mt-3 flex flex-wrap items-baseline gap-x-1 text-copy">
           <FormError size="copy" error={error} />
           <button type="button" onClick={retry} className="text-link">
-            Try again
+            Try Again
           </button>
         </div>
       ) : pricing && complete ? (
@@ -434,7 +434,7 @@ export function ConfirmStep({
   const vehiclePanel = card ? (
     <section className={`${panelFromLarge} grid gap-5`}>
       <div className="flex items-baseline justify-between gap-4">
-        <h2 className="font-serif text-2xl leading-tight">Your vehicle</h2>
+        <h2 className="font-serif text-2xl leading-tight">Your Vehicle</h2>
         <Link
           href={vehiclePage}
           className="hidden text-copy text-link lg:inline"
@@ -493,12 +493,12 @@ export function ConfirmStep({
                 ? [
                     card.name,
                     plural(passengers, "passenger"),
-                    ...(guide.language ? ["Tour guide"] : []),
+                    ...(guide.language ? ["Tour Guide"] : []),
                   ].join(" · ")
                 : null
             }
             attention={red.length > 0 || error !== null}
-            label="Your trips and vehicle"
+            label="Your Trips and Vehicle"
             className={`${surface} lg:rounded-none lg:bg-transparent lg:shadow-none`}
           >
             <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:gap-7">
@@ -510,7 +510,7 @@ export function ConfirmStep({
                 size="lg"
                 className="w-full lg:hidden"
               >
-                <Link href={vehiclePage}>Edit trips or vehicle</Link>
+                <Link href={vehiclePage}>Edit Trips or Vehicle</Link>
               </Button>
             </div>
           </TripsFold>
@@ -577,7 +577,7 @@ function StepTitle({
     <BookingStepTitle
       category={category}
       count={count}
-      title="Confirm your booking."
+      title="Confirm Your Booking"
     >
       {count > 1 ? "Every trip is priced" : "Your trip is priced"} with
       today&apos;s rates. Nothing is booked until you confirm, and you pay

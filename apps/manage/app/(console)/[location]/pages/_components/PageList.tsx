@@ -86,7 +86,7 @@ export type PageRow = {
   previewHref: string;
 };
 
-/** A location's page as a row; `label` when the list names it otherwise: "Main page". */
+/** A location's page as a row; `label` when the list names it otherwise: "Main Page". */
 function locationPageRow(
   locationSlug: string,
   page: PageSummary,
@@ -153,7 +153,7 @@ type PageTreeFilters = {
   searchHref: string;
   q: string | undefined;
   /**
-   * "All sections", then each section, each with the list's address
+   * "All Sections", then each section, each with the list's address
    * narrowed to it, and the section in force, "" for every section. None
    * for a list without sections: the website's, Connect's.
    */
@@ -281,7 +281,7 @@ function PageStatusCell({ row }: { row: PageRow }) {
   return (
     <span className="flex flex-wrap items-center gap-1.5 whitespace-nowrap">
       <PageStatusBadge status={row.status} />
-      {row.paused ? <Badge dot>Paused: class off</Badge> : null}
+      {row.paused ? <Badge dot>Paused: Class Off</Badge> : null}
     </span>
   );
 }
@@ -588,7 +588,7 @@ export function PageTree({
             <Th key={label}>{label}</Th>
           ))}
           <Th>Status</Th>
-          <Th>Search engines</Th>
+          <Th>Search Engines</Th>
           <Th>Changed</Th>
           <Th />
         </THead>

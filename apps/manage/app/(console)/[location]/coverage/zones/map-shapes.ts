@@ -29,7 +29,7 @@ export type DistrictChoice = {
 export type MukimChoice = {
   code: string;
   name: string;
-  /** "Mukim", "Bandar", "Pekan", "Land district", "Town district". */
+  /** "Mukim", "Bandar", "Pekan", "Land District", "Town District". */
   kind: string;
   polygons: MultiPolygon;
 };

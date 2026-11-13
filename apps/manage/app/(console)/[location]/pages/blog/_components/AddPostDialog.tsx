@@ -18,7 +18,7 @@ import { EntrySlugField } from "../../../settings/SlugField";
 import { createBlogPostAction } from "../actions";
 
 /**
- * "Add post" on Blog: the post's title, and its slug made from the title
+ * "Add Post" on Blog: the post's title, and its slug made from the title
  * until Marketing edits it. The post starts as a draft and its editor
  * opens. A refusal about the title or the slug shows under that field.
  */
@@ -35,12 +35,12 @@ export function AddPostDialog() {
     <>
       <Button onClick={() => setOpen(true)}>
         <PlusIcon />
-        Add post
+        Add Post
       </Button>
       <Dialog
         open={open}
         onOpenChange={setOpen}
-        title="Add post"
+        title="Add Post"
         description="It starts as a draft: nothing is public until you publish it."
       >
         <form {...formProps} className="grid gap-4">
@@ -80,7 +80,7 @@ export function AddPostDialog() {
               Cancel
             </Button>
             <Button type="submit" pending={pending}>
-              {pending ? "Adding…" : "Add post"}
+              {pending ? "Adding…" : "Add Post"}
             </Button>
           </DialogActions>
         </form>

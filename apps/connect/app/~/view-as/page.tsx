@@ -12,7 +12,7 @@ import { memberOf, shellMember } from "../../_lib/access";
 import { CannotView, NOT_SUPER, ViewAsRules } from "./parts";
 import { ViewAsList } from "./ViewAsList";
 
-export const metadata: Metadata = { title: "View as | Connect" };
+export const metadata: Metadata = { title: "View As | Connect" };
 
 /**
  * Route: /~/view-as. For SUPER: everyone with a Connect account, by vendor,
@@ -44,7 +44,7 @@ export default async function ViewAsPage() {
         access.status === "ok" ? shellMember(memberOf(access)) : undefined
       }
       band={
-        <BandHeading eyebrow="Super admin" title="View as">
+        <BandHeading eyebrow="Super Admin" title="View As">
           See Connect as a vendor or a driver sees it.
         </BandHeading>
       }

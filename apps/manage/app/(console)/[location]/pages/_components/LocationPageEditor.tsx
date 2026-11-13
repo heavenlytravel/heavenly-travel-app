@@ -154,7 +154,7 @@ function RenameDialog({
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title={type ? "Change the type or slug" : "Change the slug"}
+      title={type ? "Change the Type or Slug" : "Change the Slug"}
       description="The editor opens again at the page's new address."
     >
       <form onSubmit={submit} className="grid gap-4">
@@ -189,7 +189,7 @@ function RenameDialog({
             disabled={slug === entry.slug && page === entry.page}
             pending={pending}
           >
-            {pending ? "Changing…" : type ? "Change" : "Change slug"}
+            {pending ? "Changing…" : type ? "Change" : "Change Slug"}
           </Button>
         </DialogActions>
       </form>

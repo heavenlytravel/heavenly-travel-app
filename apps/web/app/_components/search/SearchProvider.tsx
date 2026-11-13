@@ -21,7 +21,7 @@ import { usePlanner, type Planner } from "../trips/usePlanner";
 
 /**
  * Holds the search card's state above the card, so something else on the
- * page can fill a place into it: a place's "Take me here" fills the
+ * page can fill a place into it: a place's "Take Me Here" fills the
  * drop-off of the trip being typed. Filling brings the card into view.
  * The card's trips, the one being typed and the group's size live here:
  * on a location's pages the provider sits in the layout, so what was

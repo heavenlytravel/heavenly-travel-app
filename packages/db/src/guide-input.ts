@@ -60,7 +60,7 @@ export const GUIDE_DOCUMENTS = ["motacExpiresOn"] as const;
 export type GuideDocument = (typeof GUIDE_DOCUMENTS)[number];
 
 export const GUIDE_DOCUMENT_LABELS: Record<GuideDocument, string> = {
-  motacExpiresOn: "MOTAC licence",
+  motacExpiresOn: "MOTAC Licence",
 };
 
 /** The form's boxes that carry the languages, one value each. */
@@ -90,8 +90,8 @@ export const GUIDE_FIELD_LABELS: Record<GuideField, string> = {
   vendorId: "Vendor",
   name: "Name",
   phone: "Phone",
-  email: "Connect email",
-  locationId: "Based at",
+  email: "Connect Email",
+  locationId: "Based At",
   languages: "Languages",
   isActive: "Active",
   notes: "Notes",

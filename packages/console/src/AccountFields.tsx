@@ -31,7 +31,7 @@ export function AccountFields({
       <SignInFields placeholder={emailPlaceholder} />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field
-          label="First name"
+          label="First Name"
           hint={
             firstNameRequired ? undefined : "For an email with no account yet."
           }
@@ -43,7 +43,7 @@ export function AccountFields({
             maxLength={USER_LIMITS.name}
           />
         </Field>
-        <Field label="Last name">
+        <Field label="Last Name">
           <Input
             name="lastName"
             autoComplete="off"

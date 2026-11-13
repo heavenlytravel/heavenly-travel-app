@@ -48,7 +48,7 @@ type SecondFactor = "email_code" | "phone_code" | "totp";
  * Our own sign-in, on Clerk's custom flow (`useSignIn`), for the three
  * apps. The email first; then the password when the account has one, with
  * "Forgot password?" (a code to reset it, or a code to sign in now) and
- * "Email me a code instead"; an account with no password, one staff made,
+ * "Email Me a Code Instead"; an account with no password, one staff made,
  * gets a code at once and, signed in, is offered a password on its
  * account page (`accountPath`). A password found in a leak is reset before
  * it is let in. A new browser's check (Clerk's Device Trust) and a second
@@ -277,7 +277,7 @@ export function SignInFlow({
     return (
       <AuthCard
         portal={portal}
-        title={`Sign in to ${portal}`}
+        title={`Sign In to ${portal}`}
         description="Enter your email to continue."
         footer={footer}
       >
@@ -306,7 +306,7 @@ export function SignInFlow({
 
   if (step === "password") {
     return (
-      <AuthCard portal={portal} title="Enter your password">
+      <AuthCard portal={portal} title="Enter Your Password">
         {chip}
         <form onSubmit={submitPassword} className="grid gap-4">
           {/* For a password manager, which saves the pair. */}
@@ -344,12 +344,12 @@ export function SignInFlow({
                 if (await sendResetCode()) moveTo("reset-code");
               }}
             >
-              Set a new password
+              Set a New Password
             </Button>
           ) : null}
           {formError}
           <Button type="submit" size="lg" pending={busy} className="w-full">
-            Sign in
+            Sign In
           </Button>
           <TextButton
             disabled={busy}
@@ -359,7 +359,7 @@ export function SignInFlow({
               if (await sendSignInCode()) moveTo("code");
             }}
           >
-            Email me a code instead
+            Email Me a Code Instead
           </TextButton>
         </form>
       </AuthCard>
@@ -376,7 +376,7 @@ export function SignInFlow({
         {chip}
         <div className="grid gap-3">
           <ChoiceButton
-            title="Reset my password"
+            title="Reset My Password"
             detail="We email you a code, then you choose a new password."
             disabled={busy}
             onClick={async () => {
@@ -385,7 +385,7 @@ export function SignInFlow({
             }}
           />
           <ChoiceButton
-            title="Email me a code to sign in"
+            title="Email Me a Code to Sign In"
             detail="Sign in now with a code. Your password stays as it is."
             disabled={busy}
             onClick={async () => {
@@ -398,7 +398,7 @@ export function SignInFlow({
             className="justify-self-center"
             onClick={() => moveTo("password")}
           >
-            Back to my password
+            Back to My Password
           </TextButton>
         </div>
       </AuthCard>
@@ -409,7 +409,7 @@ export function SignInFlow({
     return (
       <AuthCard
         portal={portal}
-        title="Choose a new password"
+        title="Choose a New Password"
         description={
           leaked
             ? "Your old password turned up in a data leak elsewhere. Choose one you don't use on any other site."
@@ -427,7 +427,7 @@ export function SignInFlow({
             hidden
           />
           <AuthField
-            label="New password"
+            label="New Password"
             hint="At least 8 characters."
             error={errorAt("password")}
           >
@@ -449,7 +449,7 @@ export function SignInFlow({
           </label>
           {formError}
           <Button type="submit" size="lg" pending={busy} className="w-full">
-            Save and sign in
+            Save and Sign In
           </Button>
         </form>
       </AuthCard>
@@ -462,7 +462,7 @@ export function SignInFlow({
     { title: string; description: ReactNode }
   > = {
     code: {
-      title: "Check your email",
+      title: "Check Your Email",
       description: (
         <>
           We sent a 6-digit code to{" "}
@@ -471,7 +471,7 @@ export function SignInFlow({
       ),
     },
     "reset-code": {
-      title: "Reset your password",
+      title: "Reset Your Password",
       description: (
         <>
           Enter the code we sent to{" "}
@@ -481,7 +481,7 @@ export function SignInFlow({
       ),
     },
     trust: {
-      title: "Confirm it's you",
+      title: "Confirm It's You",
       description: (
         <>
           You&rsquo;re signing in on a browser we haven&rsquo;t seen before. We
@@ -491,7 +491,7 @@ export function SignInFlow({
       ),
     },
     "second-factor": {
-      title: "One more step",
+      title: "One More Step",
       description:
         secondFactor === "totp"
           ? "Enter the 6-digit code from your authenticator app."
@@ -538,11 +538,11 @@ export function SignInFlow({
         )}
         {step === "code" && hasPassword ? (
           <TextButton onClick={() => moveTo("password")}>
-            Use my password instead
+            Use My Password Instead
           </TextButton>
         ) : null}
         <TextButton onClick={() => void startOver()}>
-          Use another email
+          Use Another Email
         </TextButton>
       </div>
     </AuthCard>

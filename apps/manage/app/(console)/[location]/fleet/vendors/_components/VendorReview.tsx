@@ -199,13 +199,13 @@ function OursSwitch({
             title: `Make ${name} ours?`,
             description:
               "Its vehicles and drivers cost nothing, Operation accepts its jobs, and its vehicles' models join our classes' on the website.",
-            action: "Make ours",
+            action: "Make Ours",
           }
         : {
             title: `Make ${name} not ours?`,
             description:
               "Its vehicles' models leave our classes' on the website, and its jobs are offered and paid like any other vendor's.",
-            action: "Make not ours",
+            action: "Make Not Ours",
             danger: true,
           },
     );

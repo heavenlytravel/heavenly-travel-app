@@ -13,7 +13,7 @@ export type TripState = { label: string; tone: Tone; live: boolean };
 
 /**
  * Where a trip stands, read from its status and the driver's last tap:
- * "Driver to accept", "Booked", "Arrived at pickup", "Done".
+ * "Driver to Accept", "Booked", "Arrived at Pickup", "Done".
  */
 export function tripStateOf(trip: {
   status: string;
@@ -30,9 +30,9 @@ export function tripStateOf(trip: {
     return { label: "Done", tone: "green", live: false };
   }
   if (kind === "problem") {
-    return { label: "Problem reported", tone: "red", live: true };
+    return { label: "Problem Reported", tone: "red", live: true };
   }
   if (kind) return { label: TRIP_EVENT_LABELS[kind], tone: "navy", live: true };
-  if (!trip.accepted) return { label: "To accept", tone: "amber", live: false };
+  if (!trip.accepted) return { label: "To Accept", tone: "amber", live: false };
   return { label: "Booked", tone: "brand", live: false };
 }

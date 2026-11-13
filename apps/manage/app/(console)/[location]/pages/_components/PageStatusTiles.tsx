@@ -8,7 +8,7 @@ import { FigureTiles, type Figure } from "@repo/console/FigureTiles";
 import { PAGE_TONES } from "@repo/console/StatusBadges";
 import type { PageRow } from "./PageList";
 
-/** The tiles after "All pages", in the order the public meets them. */
+/** The tiles after "All Pages", in the order the public meets them. */
 const TILES: readonly PageFilter[] = [
   "published",
   "changed",
@@ -56,7 +56,7 @@ export function PageStatusTiles({
   const figures: Figure[] = [
     {
       key: "all",
-      label: "All pages",
+      label: "All Pages",
       value: count(),
       href: hrefOf(undefined),
       current: status === undefined,

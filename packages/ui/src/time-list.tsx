@@ -76,7 +76,7 @@ export function nextQuarter(minute: number) {
  * opens on the chosen time, or on `start` when there is none, near the
  * top. Times before `earliest` are grey and cannot be picked: the ones
  * already past today; so are those after `latest`, on a last day that ends
- * early. Times in `marked` carry `markLabel` beside them, "Odd hours". A
+ * early. Times in `marked` carry `markLabel` beside them, "Odd Hours". A
  * chosen time off the quarters, such as 10:05 on an older booking, keeps a
  * row of its own. Arrows move, Enter picks, and digits jump to their hour:
  * "1" then "8" within a moment is 18:00.
@@ -89,7 +89,7 @@ export function TimeList({
   latest = null,
   autoFocus = false,
   marked,
-  markLabel = "Odd hours",
+  markLabel = "Odd Hours",
   className,
   "aria-label": ariaLabel = "Time",
 }: {

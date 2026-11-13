@@ -34,10 +34,10 @@ import {
   type Day,
 } from "./day";
 
-/** "Good morning, Fikri" by the Malaysian clock; without a first name, the greeting alone. */
+/** "Good Morning, Fikri" by the Malaysian clock; without a first name, the greeting alone. */
 export function greetingOf(admin: AdminUser, now: Date) {
   const hour = Number(localDateTimeInputs(now).time.slice(0, 2));
-  const part = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
+  const part = hour < 12 ? "Morning" : hour < 18 ? "Afternoon" : "Evening";
   const name = admin.firstName?.trim();
   return name ? `Good ${part}, ${name}` : `Good ${part}`;
 }
@@ -121,7 +121,7 @@ export async function bandFigures({ scope, permissions, now }: Day) {
   const figures: BandFigure[] = [
     {
       key: "pickups",
-      label: "Pick-ups today",
+      label: "Pick-ups Today",
       icon: <CalendarIcon />,
       value: sumOf(overviews, PICKUPS),
       line: splitOf(overviews, PICKUPS),
@@ -142,7 +142,7 @@ export async function bandFigures({ scope, permissions, now }: Day) {
     },
     {
       key: "driver",
-      label: "Awaiting a driver",
+      label: "Awaiting a Driver",
       icon: <IdCardIcon />,
       value: sumOf(overviews, AWAITING_DRIVER),
       line: splitOf(overviews, AWAITING_DRIVER),
@@ -153,7 +153,7 @@ export async function bandFigures({ scope, permissions, now }: Day) {
     },
     {
       key: "documents",
-      label: "Documents due",
+      label: "Documents Due",
       icon: <TriangleAlertIcon />,
       value: vehicles + drivers,
       line: splitOf(overviews, DOCUMENTS) ?? documentsLine(vehicles, drivers),

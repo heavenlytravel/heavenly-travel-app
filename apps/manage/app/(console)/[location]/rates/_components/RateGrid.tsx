@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { plural, ringgitInputValue } from "@repo/db";
+import { plural, ringgitInputValue, titleCase } from "@repo/db";
 import { answerOf } from "@repo/ui/action-answer";
 import { Badge } from "@repo/ui/badge";
 import { Button } from "@repo/ui/button";
@@ -117,13 +117,13 @@ function valuesOf(saved: Saved): Record<string, string> {
  * ones tinted until saved and empty ones hatched; the save bar at the
  * grid's foot counts the changes, turning navy while there are any, saves
  * them all at once or discards them, and leaving the page with any
- * unsaved asks first. "Add route" opens a dialog that offers only the
+ * unsaved asks first. "Add Route" opens a dialog that offers only the
  * pairs of zones not on the grid yet, so a route has one row whichever
  * way it is read, and saves the route with its prices at once. A zone
  * paired with itself is its within-zone price, "Within Kuah Town", first
  * in that zone's rows. A route out of the location ends at another
  * location's zone, named with its location and marked one way (→), since
- * a trip back starts there and is priced there; "Add route" offers those
+ * a trip back starts there and is priced there; "Add Route" offers those
  * zones too, by location, while cross-location is on, and while it is off
  * such a route is kept, marked not sold. An empty cell
  * is a class not offered on the route.
@@ -131,7 +131,7 @@ function valuesOf(saved: Saved): Record<string, string> {
  * A route's zones are two columns, From and To, their names cut short and
  * whole in a tooltip on hover or click; the heading stays in view while
  * the routes scroll, in the zones' order. The console's Filters button,
- * at the right of the grid's title with "Add route" and "Delete",
+ * at the right of the grid's title with "Add Route" and "Delete",
  * narrows the columns to one category, and the rows to the routes of one
  * zone, that zone then read as From, or to those with a class shown
  * unpriced as saved, a chip under the title for each in force; the
@@ -170,7 +170,7 @@ export function RateGrid({
   /** The grid's name, in its title bar, and a note beside it. */
   title: ReactNode;
   meta?: ReactNode;
-  /** The category the columns start narrowed to, by name, as the address asked: "Coach charter"; none for every class on sale. */
+  /** The category the columns start narrowed to, by name, as the address asked: "Coach Charter"; none for every class on sale. */
   category?: string;
   /** For the teams that read the rates: the prices as text, nothing to change. */
   readOnly?: boolean;
@@ -178,7 +178,7 @@ export function RateGrid({
   const [saved, setSaved] = useState<Saved>(() => savedOf(cells, zones));
   const [routes, setRoutes] = useState<Route[]>(saved.routes);
   const [values, setValues] = useState(() => valuesOf(saved));
-  /** Whether "Add route" is open. */
+  /** Whether "Add Route" is open. */
   const [adding, setAdding] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   /** The zone whose routes alone are shown, or "" for every route. */
@@ -323,7 +323,7 @@ export function RateGrid({
       .map((zone) => ({ value: zone.id, label: nameOf(zone.id) })),
   ];
 
-  // The pairs not on the grid yet, for "Add route": between this
+  // The pairs not on the grid yet, for "Add Route": between this
   // location's zones, each with itself, and out to other locations' while
   // cross-location is on.
   const paired = new Set(
@@ -751,8 +751,8 @@ export function RateGrid({
     },
     {
       param: "gaps",
-      label: "Empty cells",
-      options: [{ value: "1", label: `With an empty cell (${gaps})` }],
+      label: "Empty Cells",
+      options: [{ value: "1", label: `With an Empty Cell (${gaps})` }],
       value: gapsOnly ? "1" : "",
     },
   ];
@@ -785,7 +785,7 @@ export function RateGrid({
                     onClick={() => setAdding(true)}
                   >
                     <PlusIcon />
-                    Add route
+                    Add Route
                   </Button>
                 </Tooltip>
                 <Tooltip
@@ -803,7 +803,9 @@ export function RateGrid({
                     onClick={deleteTicked}
                   >
                     <TrashIcon />
-                    {ticks > 0 ? `Delete ${plural(ticks, "route")}` : "Delete"}
+                    {ticks > 0
+                      ? titleCase(`Delete ${plural(ticks, "route")}`)
+                      : "Delete"}
                   </Button>
                 </Tooltip>
               </>
@@ -871,7 +873,7 @@ export function RateGrid({
                         onClick={() => narrowTo("", false)}
                         className="text-link"
                       >
-                        Show every route
+                        Show Every Route
                       </button>
                     </>
                   ) : (
@@ -976,7 +978,7 @@ export function RateGrid({
             canSave={invalid.size === 0}
             onDiscard={discard}
             onSave={save}
-            label="Save rates"
+            label="Save Rates"
           />
           {leaveDialog}
           <AddRouteDialog
@@ -1146,7 +1148,7 @@ const RouteRow = memo(function RouteRow({
             <span
               className={cx("text-muted italic", isDoomed && "line-through")}
             >
-              Within the zone
+              Within the Zone
             </span>
           ) : (
             <>

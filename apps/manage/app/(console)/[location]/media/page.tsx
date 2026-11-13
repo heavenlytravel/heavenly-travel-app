@@ -151,7 +151,7 @@ async function mediaList({
   const figures: Figure[] = [
     {
       key: "all",
-      label: "All images",
+      label: "All Images",
       value: filesValue(rows.map((row) => row.file)),
       tone: "brand",
       href: mediaHref(),

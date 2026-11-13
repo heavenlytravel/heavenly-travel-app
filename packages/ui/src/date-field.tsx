@@ -279,7 +279,7 @@ export function TimeField({
 type Moment = { date: string; time: string };
 
 /**
- * Night hours to tag in a time list, "Odd hours", in minutes of the day
+ * Night hours to tag in a time list, "Odd Hours", in minutes of the day
  * (1380 to 420 is 23:00 to 07:00, past midnight), and the line under the
  * list that says what they mean.
  */
@@ -315,7 +315,7 @@ export function DateTimeField({
   className,
   timeZone,
   placeholder = "Pick a date and time",
-  title = "Date and time",
+  title = "Date and Time",
   "aria-label": ariaLabel,
   "aria-invalid": invalid,
   "aria-describedby": describedBy,
@@ -330,7 +330,7 @@ export function DateTimeField({
   /** The last time that can be picked on the `max` day, "17:45": for a moment that must come before another. */
   maxTime?: string;
   allowPast?: boolean;
-  /** Times to tag "Odd hours" in the list, and the line under it saying why. */
+  /** Times to tag "Odd Hours" in the list, and the line under it saying why. */
   oddHours?: OddHoursMark;
   placeholder?: string;
   /** The sheet's heading on a phone. */

@@ -1,6 +1,6 @@
 "use client";
 
-import { ENTRY_LIMITS, PAGE_LIMITS, slugify } from "@repo/db";
+import { ENTRY_LIMITS, PAGE_LIMITS, slugify, titleCase } from "@repo/db";
 import { Button } from "@repo/ui/button";
 import { Dialog, DialogActions } from "@repo/ui/dialog";
 import { Field, Input } from "@repo/ui/field";
@@ -69,7 +69,7 @@ export function AddEntryDialog({
       <Dialog
         open={open}
         onOpenChange={setOpen}
-        title={`Add ${one}`}
+        title={titleCase(`Add ${one}`)}
         description="It starts as a draft: nothing is public until you publish it."
       >
         <form {...formProps} className="grid gap-4">
@@ -103,7 +103,7 @@ export function AddEntryDialog({
           />
           {places ? (
             <Field
-              label="Saved address"
+              label="Saved Address"
               hint="Optional. With one, the page and its card show “Take me here”. Add one with the plus if it is not saved yet."
             >
               <SavedAddressPicker
@@ -126,7 +126,7 @@ export function AddEntryDialog({
               Cancel
             </Button>
             <Button type="submit" pending={pending}>
-              {pending ? "Adding…" : `Add ${one}`}
+              {pending ? "Adding…" : titleCase(`Add ${one}`)}
             </Button>
           </DialogActions>
         </form>

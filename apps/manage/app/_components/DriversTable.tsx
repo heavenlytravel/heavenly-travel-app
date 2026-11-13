@@ -27,7 +27,7 @@ export function DriversTable({
       heading="Driver"
       lead={[
         {
-          heading: "May drive",
+          heading: "May Drive",
           cell: (driver) => driver.vehicleClasses.map((c) => c.name).join(", "),
           className: "min-w-40",
         },
@@ -42,7 +42,7 @@ export function DriversTable({
                 anyEntered={DRIVER_DOCUMENTS.some((key) => driver[key])}
               />
             ) : (
-              <span className="text-muted">Not checked</span>
+              <span className="text-muted">Not Checked</span>
             ),
           className: "min-w-56",
         },

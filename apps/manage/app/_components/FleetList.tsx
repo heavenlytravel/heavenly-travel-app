@@ -285,7 +285,7 @@ export async function FleetList({
             param: "due",
             label: names.due,
             value: due ? DUE_PARAM : "",
-            options: [{ value: DUE_PARAM, label: "Due soon or expired" }],
+            options: [{ value: DUE_PARAM, label: "Due Soon or Expired" }],
           },
         ]
       : []),

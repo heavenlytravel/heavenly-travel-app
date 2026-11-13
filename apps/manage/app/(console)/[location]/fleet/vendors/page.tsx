@@ -99,7 +99,7 @@ export default async function VendorsPage({
           <Button asChild>
             <Link href={newVendorHref(scope.slug)}>
               <PlusIcon />
-              Add vendor
+              Add Vendor
             </Link>
           </Button>
         }
@@ -151,7 +151,7 @@ async function vendorRows(
       <THead>
         <Th>Vendor</Th>
         {showLocations ? <Th>Serves</Th> : null}
-        <Th>In service</Th>
+        <Th>In Service</Th>
         <AddedTh
           sort={{
             order: filter.order,

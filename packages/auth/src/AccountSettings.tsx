@@ -47,7 +47,7 @@ import { Avatar } from "./AccountMenu";
  * putting it in its own page. A change Clerk counts as sensitive asks the
  * person to confirm it is them first, in our dialog (`IdentityCheck`).
  * `offerPassword` puts the password first, for an account without one that
- * has just signed in by code; "Not now" goes on to `next`.
+ * has just signed in by code; "Not Now" goes on to `next`.
  */
 export function AccountSettings({
   offerPassword,
@@ -175,7 +175,7 @@ function NameSection() {
 
   return (
     <Section
-      title="Your profile"
+      title="Your Profile"
       description="Your photo, how we greet you, and the name on your bookings."
     >
       <form onSubmit={save} className="grid gap-4">
@@ -206,7 +206,7 @@ function NameSection() {
               pending={photoBusy}
               onClick={() => photoInput.current?.click()}
             >
-              {user.hasImage ? "Change photo" : "Upload photo"}
+              {user.hasImage ? "Change Photo" : "Upload Photo"}
             </Button>
             {user.hasImage ? (
               <Button
@@ -221,7 +221,7 @@ function NameSection() {
         </div>
         <div className="flex items-center gap-4">
           <div className="grid flex-1 gap-4 sm:grid-cols-2">
-            <AuthField label="First name">
+            <AuthField label="First Name">
               {(control) => (
                 <AuthInput
                   {...control}
@@ -232,7 +232,7 @@ function NameSection() {
                 />
               )}
             </AuthField>
-            <AuthField label="Last name">
+            <AuthField label="Last Name">
               {(control) => (
                 <AuthInput
                   {...control}
@@ -247,7 +247,7 @@ function NameSection() {
         <AuthAlert>{error}</AuthAlert>
         <div>
           <Button type="submit" pending={saving}>
-            Save name
+            Save Name
           </Button>
         </div>
       </form>
@@ -346,7 +346,7 @@ function PasswordSection({ offer }: { offer?: { next: string } }) {
 
   return (
     <Section
-      title={has ? "Password" : "Add a password"}
+      title={has ? "Password" : "Add a Password"}
       highlight={Boolean(offer)}
       description={
         has
@@ -368,7 +368,7 @@ function PasswordSection({ offer }: { offer?: { next: string } }) {
           />
           {has ? (
             <AuthField
-              label="Current password"
+              label="Current Password"
               error={error?.at === "current" ? error.text : null}
             >
               {(control) => (
@@ -382,7 +382,7 @@ function PasswordSection({ offer }: { offer?: { next: string } }) {
             </AuthField>
           ) : null}
           <AuthField
-            label={has ? "New password" : "Password"}
+            label={has ? "New Password" : "Password"}
             hint="At least 8 characters, one you don't use on any other site."
             error={error?.at === "new" ? error.text : null}
           >
@@ -407,11 +407,11 @@ function PasswordSection({ offer }: { offer?: { next: string } }) {
           <AuthAlert>{error?.at === "form" ? error.text : null}</AuthAlert>
           <div className="flex flex-wrap items-center gap-2">
             <Button type="submit" pending={saving}>
-              {has ? "Change password" : "Add password"}
+              {has ? "Change Password" : "Add Password"}
             </Button>
             {offer ? (
               <Button asChild variant="ghost">
-                <Link href={offer.next}>Not now</Link>
+                <Link href={offer.next}>Not Now</Link>
               </Button>
             ) : (
               <Button variant="ghost" onClick={() => setOpen(false)}>
@@ -422,7 +422,7 @@ function PasswordSection({ offer }: { offer?: { next: string } }) {
         </form>
       ) : (
         <Button variant="secondary" onClick={() => setOpen(true)}>
-          {has ? "Change password" : "Add a password"}
+          {has ? "Change Password" : "Add a Password"}
         </Button>
       )}
     </Section>
@@ -510,7 +510,7 @@ function DevicesSection() {
                 <div className="min-w-0">
                   <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-body">
                     {device.label}
-                    {current ? <Badge tone="green">This device</Badge> : null}
+                    {current ? <Badge tone="green">This Device</Badge> : null}
                   </p>
                   <p className="text-xs text-muted">
                     {[
@@ -541,7 +541,7 @@ function DevicesSection() {
                       }
                     }}
                   >
-                    Sign out
+                    Sign Out
                   </Button>
                 )}
               </li>
@@ -579,7 +579,7 @@ function SignOutSection({ afterSignOutUrl }: { afterSignOutUrl: string }) {
           void signOut({ redirectUrl: afterSignOutUrl });
         }}
       >
-        Sign out
+        Sign Out
       </Button>
     </div>
   );
@@ -687,7 +687,7 @@ function IdentityDialog({
       onOpenChange={(open) => {
         if (!open) close(false);
       }}
-      title="Confirm it's you"
+      title="Confirm It's You"
       description={
         usePassword
           ? "Enter your password to make this change."
@@ -728,7 +728,7 @@ function IdentityDialog({
             className="justify-self-start"
             onClick={() => setByCode(true)}
           >
-            Email me a code instead
+            Email Me a Code Instead
           </TextButton>
           <DialogActions>
             <Button variant="secondary" onClick={() => close(false)}>
@@ -796,7 +796,7 @@ function IdentityDialog({
                 })
               }
             >
-              Send me a code
+              Send Me a Code
             </Button>
           </DialogActions>
         </div>

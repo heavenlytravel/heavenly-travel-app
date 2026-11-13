@@ -93,14 +93,14 @@ const URGENCY_TONES: Record<TripUrgency, BadgeTone> = {
 export function NotAssignedBadge({ urgency }: { urgency: TripUrgency | null }) {
   return (
     <Badge dot tone={urgency ? URGENCY_TONES[urgency] : "neutral"}>
-      Not assigned
+      Not Assigned
     </Badge>
   );
 }
 
 /** The guide's place on a trip booked without one: nothing to do, so grey. */
 export function NoGuideBadge() {
-  return <Badge>Not booked</Badge>;
+  return <Badge>Not Booked</Badge>;
 }
 
 /** A booking's summary status, as stored on the booking. */
@@ -217,8 +217,8 @@ export function PageStatusBadge({ status }: { status: PageStatus }) {
 /** A vehicle in service or out of it, a driver active or not: green or grey. */
 export function ServiceBadge({
   active,
-  on = "In service",
-  off = "Out of service",
+  on = "In Service",
+  off = "Out of Service",
 }: {
   active: boolean;
   on?: string;

@@ -6,13 +6,13 @@ import { ServiceTabsSearch } from "../_components/search/ServiceTabsSearch";
 const TRUST = [
   {
     icon: "✓",
-    title: "Trusted local team",
+    title: "Trusted Local Team",
     text: "Quality you can rely on",
   },
-  { icon: "◇", title: "Clear, fair pricing", text: "No surprise charges" },
+  { icon: "◇", title: "Clear, Fair Pricing", text: "No surprise charges" },
   {
     icon: "◉",
-    title: "Support when needed",
+    title: "Support When Needed",
     text: "Real people, ready to help",
   },
 ];

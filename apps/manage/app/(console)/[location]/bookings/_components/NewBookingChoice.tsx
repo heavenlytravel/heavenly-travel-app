@@ -59,7 +59,7 @@ export function NewBookingChoice({
   const options = [
     {
       value: true,
-      label: "Confirm now",
+      label: "Confirm Now",
       hint: `Every trip is ready to assign and its invoice opens. ${
         totalSen === null
           ? "What it bills shows once the trips are priced."
@@ -68,13 +68,13 @@ export function NewBookingChoice({
     },
     {
       value: false,
-      label: "Save for later",
+      label: "Save for Later",
       hint: "Saved as received: confirm it on its page later. Nothing is billed until then.",
     },
   ];
   return (
     <fieldset className="grid gap-2">
-      <legend className="sr-only">How to make it</legend>
+      <legend className="sr-only">How to Make It</legend>
       <input type="hidden" name="confirm" value={confirm ? "1" : ""} />
       {options.map((option) => (
         <label

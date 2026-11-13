@@ -106,7 +106,7 @@ export function VehiclesTable({
                       anyEntered={VEHICLE_DOCUMENTS.some((key) => vehicle[key])}
                     />
                   ) : (
-                    <span className="text-muted">Not checked</span>
+                    <span className="text-muted">Not Checked</span>
                   )}
                 </Td>
                 {sort ? <AddedTd at={vehicle.createdAt} /> : null}

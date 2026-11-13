@@ -62,7 +62,7 @@ export default async function GuidesPage() {
             <Button asChild>
               <Link href="/~/guides/new">
                 <PlusIcon />
-                Add a tour guide
+                Add a Tour Guide
               </Link>
             </Button>
           ) : null,

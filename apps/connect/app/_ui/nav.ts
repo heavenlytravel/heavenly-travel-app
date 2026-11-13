@@ -70,7 +70,7 @@ export function navItems(
       ? [
           {
             href: VIEW_AS_PATH,
-            label: "View as",
+            label: "View As",
             icon: Eye,
             match: [VIEW_AS_PATH],
           },

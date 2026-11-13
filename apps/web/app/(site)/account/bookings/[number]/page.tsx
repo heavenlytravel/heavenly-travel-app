@@ -48,10 +48,10 @@ export default async function AccountBookingPage({
     <>
       <p className="mb-6 text-copy">
         <Link href={ACCOUNT_BOOKINGS_PATH} className="text-link">
-          All bookings
+          All Bookings
         </Link>
       </p>
-      <PageTitle eyebrow="My bookings" title={label}>
+      <PageTitle eyebrow="My Bookings" title={label}>
         {BOOKING_STATUS_LINES[booking.status]}
       </PageTitle>
       <BookingDetail

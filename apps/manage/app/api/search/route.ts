@@ -143,7 +143,7 @@ const FINDERS: Record<
       (await findVehicleClassMatches(search, SEARCH_LIMIT)).map(
         (vehicleClass) => ({
           title: vehicleClass.name,
-          detail: vehicleClass.isActive ? undefined : "Turned off",
+          detail: vehicleClass.isActive ? undefined : "Turned Off",
           href: permissions.includes("coverage.manage")
             ? classHref(null, vehicleClass.id)
             : classesHref(null),

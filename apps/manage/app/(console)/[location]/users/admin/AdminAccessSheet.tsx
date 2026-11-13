@@ -40,10 +40,10 @@ export function AdminAccessSheet({
     <Sheet
       open={open}
       onOpenChange={onOpenChange}
-      title={`Level and teams for ${email}`}
+      title={`Level and Teams for ${email}`}
     >
       <form {...formProps} className="grid gap-5 p-6 text-left">
-        <SheetHeader title="Level and teams" description={email} />
+        <SheetHeader title="Level and Teams" description={email} />
         <input type="hidden" name="email" value={email} />
         <AdminFields level={level} teams={teams} />
         <div className="flex items-center gap-2">

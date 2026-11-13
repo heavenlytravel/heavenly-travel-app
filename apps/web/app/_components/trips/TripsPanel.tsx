@@ -21,7 +21,7 @@ import type { Planner } from "./usePlanner";
 /**
  * The booking's trips, on the search card and at the top of the vehicle
  * page: the list, then the form while a trip is open, then one row with
- * the form's buttons, or "Add another trip" while it is closed, on the
+ * the form's buttons, or "Add Another Trip" while it is closed, on the
  * left, and `passengers` and `action` (the search card's send button) on
  * the right; on a phone they stack, a line between the trip and the
  * booking. With no trips yet, as on a fresh search card, it is the form
@@ -29,12 +29,12 @@ import type { Planner } from "./usePlanner";
  * vehicle page, which pins under the site header as the page scrolls;
  * `attention` unfolds it when a trip turns red. Otherwise, once the list
  * scrolls away, a thin bar slides in under the site header with the trips
- * in a few words and `summary`, or "Plan a trip" before there is one;
+ * in a few words and `summary`, or "Plan a Trip" before there is one;
  * choosing it opens them in a sheet below it, which folds again once the
  * page scrolls. From `lg` the sheet holds the form too, so a trip is
  * changed or added without scrolling back up, only the list scrolling
  * inside it and the place suggestions hanging below; on a phone it holds
- * the list and the foot, and choosing a trip or "Add another trip", or
+ * the list and the foot, and choosing a trip or "Add Another Trip", or
  * the bar itself before there is a trip, goes back up to the form in the
  * page. `className` draws the frame.
  */

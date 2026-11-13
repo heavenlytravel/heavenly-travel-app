@@ -12,7 +12,7 @@ import { FormFrame } from "../../../../_ui/FormFrame";
 import { BandHeading, Screen } from "../../../../_ui/Screen";
 import { DriverSelfForm } from "../DriverSelfForm";
 
-export const metadata: Metadata = { title: "Edit your profile | Connect" };
+export const metadata: Metadata = { title: "Edit Your Profile | Connect" };
 
 /** Route: /account/driver/edit. The driver's own form: their name, phone, licences and bank. */
 export default async function EditDriverProfilePage() {
@@ -24,9 +24,9 @@ export default async function EditDriverProfilePage() {
     <Screen
       member={shellMember(memberOf(access))}
       width="narrow"
-      back={{ href: "/~/account/driver", label: "Your driver profile" }}
+      back={{ href: "/~/account/driver", label: "Your Driver Profile" }}
       band={
-        <BandHeading eyebrow={driver.vendor.name} title="Edit your profile">
+        <BandHeading eyebrow={driver.vendor.name} title="Edit Your Profile">
           Where we reach you, your licences, and where we pay you.
         </BandHeading>
       }

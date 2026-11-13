@@ -41,7 +41,7 @@ function isClearable(def: FieldDef, values: SearchValues) {
   return fieldKeys(def).some((key) => values[key] !== "");
 }
 
-/** "Add another trip": opens a new trip in the form. */
+/** "Add Another Trip": opens a new trip in the form. */
 export function AddAnotherTrip({ onClick }: { onClick: () => void }) {
   return (
     <button
@@ -50,7 +50,7 @@ export function AddAnotherTrip({ onClick }: { onClick: () => void }) {
       className="mx-1 inline-flex min-h-11 items-center gap-1.5 text-copy font-semibold text-brand hover:underline focus-ring"
     >
       <PlusIcon className="size-4" />
-      Add another trip
+      Add Another Trip
     </button>
   );
 }
@@ -60,8 +60,8 @@ export function AddAnotherTrip({ onClick }: { onClick: () => void }) {
  * trip as two radios side by side, the places, the hours of a hire and
  * when, each in a box with its label over the top, joined up in one row
  * when there is room, as the home page card asks a trip. A new trip is
- * kept with "Save trip", a trip of the list saved or removed; with no
- * trips yet the form is the first trip, and "Add another trip" keeps it
+ * kept with "Save Trip", a trip of the list saved or removed; with no
+ * trips yet the form is the first trip, and "Add Another Trip" keeps it
  * and opens the next. What is wrong shows at the field and under the
  * row: a field to fill, or a trip that starts during another, naming it
  * and what to do. `children` follow the form's buttons, such as the
@@ -113,7 +113,7 @@ export function TripForm({
           />
           <p className="font-bold text-ink">
             {editing
-              ? `Change trip ${numberOf(editing)}`
+              ? `Change Trip ${numberOf(editing)}`
               : `Trip ${planner.trips.length + 1}`}
           </p>
         </div>
@@ -252,7 +252,7 @@ export function TripForm({
               onClick={planner.commit}
               className={save}
             >
-              Save changes
+              Save Changes
             </Button>
             <button
               type="button"
@@ -267,7 +267,7 @@ export function TripForm({
               className={`${textButton} text-danger`}
             >
               <TrashIcon className="size-4" />
-              Remove trip
+              Remove Trip
             </button>
           </>
         ) : planner.trips.length > 0 ? (
@@ -278,7 +278,7 @@ export function TripForm({
               onClick={planner.commit}
               className={save}
             >
-              Save trip
+              Save Trip
             </Button>
             <button
               type="button"

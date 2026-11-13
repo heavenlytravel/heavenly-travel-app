@@ -108,7 +108,7 @@ async function driverScreen(
             <HistoryLink href={recordHistoryHref(href)} />
             <DeleteButton
               look="header"
-              label="Delete driver"
+              label="Delete Driver"
               title={`Delete ${driver.name}?`}
               impact={DRIVER_DELETE_IMPACT}
               note="For a driver entered by mistake: one who has driven for us is made inactive instead. Their history stays in the log. This cannot be undone."

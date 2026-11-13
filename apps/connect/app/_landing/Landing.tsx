@@ -45,7 +45,7 @@ export function Landing({
   ribbon?: ReactNode;
   /** The footer as shown, and the customer site's address its links are on. */
   footer: { content: FooterContent; siteUrl: string };
-  /** A session is open: "Open Connect" in place of "Sign in". */
+  /** A session is open: "Open Connect" in place of "Sign In". */
   signedIn?: boolean;
 }) {
   return (
@@ -102,12 +102,12 @@ function Hero({
         <ul className="hidden items-center gap-6 text-sm text-white/80 md:flex">
           <li>
             <a href="#how" className="hover:text-white focus-ring">
-              How a job runs
+              How a Job Runs
             </a>
           </li>
           <li>
             <a href="#who" className="hover:text-white focus-ring">
-              Who it&rsquo;s for
+              Who It&rsquo;s For
             </a>
           </li>
           <li>
@@ -130,7 +130,7 @@ function Hero({
                 href="/sign-in"
                 className="rounded-control px-3 py-2 text-sm font-semibold text-white hover:bg-white/10 focus-ring"
               >
-                Sign in
+                Sign In
               </Link>
               <Button asChild variant="secondary" size="sm">
                 <Link href="/register">Register</Link>
@@ -161,7 +161,7 @@ function Hero({
           <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
             <Button asChild variant="secondary" size="lg">
               <Link href="/register">
-                Register your business
+                Register Your Business
                 <ArrowRight aria-hidden className="size-4" />
               </Link>
             </Button>
@@ -189,7 +189,7 @@ function OpenNow({ openings }: { openings: VendorOpening[] }) {
     >
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-end">
         <div>
-          <p className={KICKER}>Open now</p>
+          <p className={KICKER}>Open Now</p>
           <h2 id="open-now" className={cx(TITLE, "mt-3")}>
             Where we&rsquo;re taking vendors
           </h2>
@@ -240,7 +240,7 @@ function OpenNow({ openings }: { openings: VendorOpening[] }) {
                         aria-hidden
                         className="size-1.5 rounded-full bg-success-dot"
                       />
-                      Taking vendors
+                      Taking Vendors
                     </span>
                   </td>
                 </tr>
@@ -291,7 +291,7 @@ const STEPS: { title: string; text: string; shows: ReactNode }[] = [
     shows: (
       <div className="grid gap-1.5 text-center">
         <span className="rounded-control bg-brand py-2 text-xs font-semibold text-white">
-          I&rsquo;ve arrived
+          I&rsquo;ve Arrived
         </span>
         <span className="text-[0.7rem] text-muted">
           Slide to confirm, on the phone
@@ -308,7 +308,7 @@ const STEPS: { title: string; text: string; shows: ReactNode }[] = [
           <span aria-hidden className="size-1.5 rounded-full bg-success-dot" />
           Done
         </span>
-        <span className="text-[0.7rem] text-muted">Dropped off 11:05</span>
+        <span className="text-[0.7rem] text-muted">Dropped Off 11:05</span>
       </div>
     ),
   },
@@ -322,7 +322,7 @@ function HowAJobRuns() {
       className="scroll-mt-6 bg-white py-16 sm:py-20"
     >
       <div className={COLUMN}>
-        <p className={KICKER}>How a job runs</p>
+        <p className={KICKER}>How a Job Runs</p>
         <h2 id="how-title" className={cx(TITLE, "mt-3")}>
           One job, from the offer to the drop-off
         </h2>
@@ -394,7 +394,7 @@ function WhoItsFor({ intro }: { intro: string }) {
       aria-labelledby="who-title"
       className={cx(COLUMN, "scroll-mt-6 py-16 sm:py-20")}
     >
-      <p className={KICKER}>Who it&rsquo;s for</p>
+      <p className={KICKER}>Who It&rsquo;s For</p>
       <h2 id="who-title" className={cx(TITLE, "mt-3")}>
         A fleet of forty, or one good car
       </h2>
@@ -560,7 +560,7 @@ function Closing() {
         </div>
         <div className="flex flex-wrap gap-3">
           <Button asChild variant="secondary" size="lg">
-            <Link href="/register">Register your business</Link>
+            <Link href="/register">Register Your Business</Link>
           </Button>
           <a
             href={CONTACT.whatsappHref}

@@ -33,7 +33,7 @@ export function SearchResultPreview({
   return (
     <figure className="grid gap-1.5">
       <figcaption className="text-xs font-semibold text-muted">
-        In search results
+        In Search Results
       </figcaption>
       <div className="rounded-lg border border-card-edge bg-white px-4 py-3 font-[arial,sans-serif]">
         <div className="flex items-center gap-2.5">
@@ -86,7 +86,7 @@ export function SharedLinkPreview({
   return (
     <figure className="grid max-w-md gap-1.5">
       <figcaption className="text-xs font-semibold text-muted">
-        As a shared link
+        As a Shared Link
       </figcaption>
       <div className="overflow-hidden rounded-lg border border-card-edge bg-white">
         {image ? (
@@ -105,7 +105,7 @@ export function SharedLinkPreview({
           </div>
         )}
         <div className="grid gap-0.5 border-t border-card-edge bg-shade px-3 py-2.5">
-          <span className="text-2xs tracking-wide text-muted uppercase">
+          <span className="text-caps text-muted">
             {new URL(url).host.replace(/^www\./, "")}
           </span>
           <span className="truncate text-sm font-semibold text-ink">

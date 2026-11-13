@@ -79,7 +79,7 @@ export default async function AgentPage({
     await requireAdmin("agents.manage");
     return (
       <>
-        <PageHeader title="Add agent" />
+        <PageHeader title="Add Agent" />
         <AddAgentForm />
       </>
     );
@@ -136,7 +136,7 @@ async function agentScreen(id: string) {
       </a>,
     ],
     [
-      "Billing email",
+      "Billing Email",
       <a
         key="e"
         href={`mailto:${agent.contactEmail}`}
@@ -146,7 +146,7 @@ async function agentScreen(id: string) {
       </a>,
     ],
   ];
-  if (agent.registrationNo) details.push(["SSM number", agent.registrationNo]);
+  if (agent.registrationNo) details.push(["SSM Number", agent.registrationNo]);
   if (agent.address) details.push(["Address", agent.address]);
 
   return (
@@ -192,7 +192,7 @@ async function agentScreen(id: string) {
                   </Link>
                 }
               >
-                Latest bookings
+                Latest Bookings
               </CardTitle>
               <Table bare>
                 <THead>
@@ -258,12 +258,12 @@ async function agentScreen(id: string) {
                   ) : null
                 }
               >
-                Payment terms
+                Payment Terms
               </CardTitle>
               <Rows
                 rows={[
                   ["Terms", PAYMENT_TERMS_LABELS[terms]],
-                  ["Days to pay", `${agent.daysToPay} days`],
+                  ["Days to Pay", `${agent.daysToPay} days`],
                 ]}
                 className="text-sm"
               />

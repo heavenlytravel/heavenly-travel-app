@@ -316,7 +316,7 @@ export function Faqs({
   const filled = faqs.filter((faq) => faq.question && faq.answer);
   if (filled.length === 0 && !empty) return null;
   return (
-    <Section id="faqs" eyebrow="Good to know" title={title}>
+    <Section id="faqs" eyebrow="Good to Know" title={title}>
       {filled.length > 0 ? (
         <div className="max-w-[820px] border-t border-card-edge">
           {filled.map((faq, i) => (
@@ -384,9 +384,9 @@ export type PageCardData = {
   image: PageImage | null;
   /** A small mark over the picture: "Soon". */
   badge?: string;
-  /** Under the text, what the card leads to: "See vehicles and prices". */
+  /** Under the text, what the card leads to: "See Vehicles and Prices". */
   cta?: string;
-  /** Something to press besides the card itself, such as "Take me here". */
+  /** Something to press besides the card itself, such as "Take Me Here". */
   extra?: ReactNode;
 };
 

@@ -120,7 +120,7 @@ async function userScreen(id: string) {
                         href={bookingsHref(null, { q: user.email })}
                         className="font-medium text-brand underline-offset-4 hover:underline"
                       >
-                        See bookings
+                        See Bookings
                       </Link>
                     ) : null}
                   </dd>

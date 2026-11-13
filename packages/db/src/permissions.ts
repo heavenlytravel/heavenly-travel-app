@@ -213,7 +213,7 @@ export const PERMISSION_GROUPS: readonly {
   { label: "Billing", permissions: ["agents.manage", "invoices.manage"] },
   { label: "Fleet", permissions: ["fleet.manage", "vendors.review"] },
   {
-    label: "Coverage and rates",
+    label: "Coverage and Rates",
     permissions: ["coverage.view", "coverage.manage"],
   },
   {

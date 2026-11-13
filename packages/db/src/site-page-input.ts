@@ -12,7 +12,7 @@ import type { PageKind } from "./page-content";
  * same content (./page-content); they differ in kind. A new site page is a
  * code change: a key here, and its route and its preview's route on the
  * customer site; its address joins the reserved slugs. See
- * docs/261025-marketing-pages.md, "Site pages".
+ * docs/261025-marketing-pages.md, "Site Pages".
  */
 
 export const HOME_PAGE = "home";
@@ -58,15 +58,15 @@ export type WebsitePageKey = (typeof WEBSITE_PAGES)[number];
 export const isWebsitePageKey = guardFor(WEBSITE_PAGES);
 
 export const SITE_PAGE_LABELS: Record<SitePageKey, string> = {
-  home: "Home page",
-  "car-with-driver": "Car with driver",
-  "coach-charter": "Coach charter",
-  "about-us": "About us",
-  "contact-us": "Contact us",
-  terms: "Terms and conditions",
-  "privacy-policy": "Privacy policy",
-  "refund-policy": "Cancellation and refunds",
-  connect: "Connect's landing page",
+  home: "Home Page",
+  "car-with-driver": "Car with Driver",
+  "coach-charter": "Coach Charter",
+  "about-us": "About Us",
+  "contact-us": "Contact Us",
+  terms: "Terms and Conditions",
+  "privacy-policy": "Privacy Policy",
+  "refund-policy": "Cancellation and Refunds",
+  connect: "Connect's Landing Page",
 };
 
 /** The site's name, after a page's own title in a browser tab and a search result. */

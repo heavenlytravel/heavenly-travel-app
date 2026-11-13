@@ -46,7 +46,7 @@ export default async function VehiclePage({
       band={
         <BandHeading
           eyebrow={member.vendor.name}
-          title={vehicle ? vehicle.plate : "Add vehicle"}
+          title={vehicle ? vehicle.plate : "Add Vehicle"}
         >
           Its class is what we sell: we offer you jobs of that class where it is
           based.

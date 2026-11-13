@@ -62,7 +62,7 @@ export function Notes({
         </FieldGroup>
         <div className="flex flex-wrap items-center gap-3">
           <Button type="submit" size="sm" pending={pending}>
-            {pending ? "Adding…" : "Add note"}
+            {pending ? "Adding…" : "Add Note"}
           </Button>
           <FormError error={error} size="xs" />
         </div>

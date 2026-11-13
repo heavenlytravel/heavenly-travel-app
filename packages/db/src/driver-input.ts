@@ -28,8 +28,8 @@ export const DRIVER_DOCUMENTS = ["licenceExpiresOn", "psvExpiresOn"] as const;
 export type DriverDocument = (typeof DRIVER_DOCUMENTS)[number];
 
 export const DRIVER_DOCUMENT_LABELS: Record<DriverDocument, string> = {
-  licenceExpiresOn: "Driving licence",
-  psvExpiresOn: "PSV licence",
+  licenceExpiresOn: "Driving Licence",
+  psvExpiresOn: "PSV Licence",
 };
 
 /** The form's field that carries each class the driver may drive; one value per class. */
@@ -60,8 +60,8 @@ export const DRIVER_FIELD_LABELS: Record<DriverField, string> = {
   name: "Name",
   phone: "Phone",
   email: "Email",
-  locationId: "Based at",
-  vehicleClassIds: "May drive",
+  locationId: "Based At",
+  vehicleClassIds: "May Drive",
   isActive: "Active",
   notes: "Notes",
   ...DRIVER_DOCUMENT_LABELS,

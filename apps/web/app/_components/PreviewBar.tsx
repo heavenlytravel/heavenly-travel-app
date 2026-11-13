@@ -64,7 +64,7 @@ export function PreviewBar({
   searchLabel,
   groups,
 }: {
-  /** The page shown: "Sedan", "Terms and conditions". */
+  /** The page shown: "Sedan", "Terms and Conditions". */
   name: string;
   standing: PreviewStanding;
   /** Its editor in the console. */

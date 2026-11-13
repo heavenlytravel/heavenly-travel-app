@@ -49,13 +49,13 @@ export async function RegistrationStatus({
       nav={false}
       width="narrow"
       band={
-        <BandHeading eyebrow={vendorName} title="Waiting for approval">
+        <BandHeading eyebrow={vendorName} title="Waiting for Approval">
           {email}
         </BandHeading>
       }
     >
       <Panel className="connect-rise p-6">
-        <h2 className="text-base font-semibold text-ink">Where it stands</h2>
+        <h2 className="text-base font-semibold text-ink">Where It Stands</h2>
         <ol className="mt-5 grid gap-0">
           {steps.map((step, index) => (
             <li key={step.title} className="relative flex gap-4 pb-6 last:pb-0">
@@ -100,7 +100,7 @@ export async function RegistrationStatus({
 
       {vendor ? (
         <Panel className="p-6">
-          <h2 className="text-base font-semibold text-ink">What you sent</h2>
+          <h2 className="text-base font-semibold text-ink">What You Sent</h2>
           <VendorDetails vendor={vendor} className="mt-4" />
           <p className="mt-4 text-xs text-muted">
             Something to change? Tell the team; they update it as they check.
@@ -109,7 +109,7 @@ export async function RegistrationStatus({
       ) : null}
 
       <Panel className="grid gap-3 p-6">
-        <h2 className="text-base font-semibold text-ink">Talk to the team</h2>
+        <h2 className="text-base font-semibold text-ink">Talk to the Team</h2>
         <div className="grid grid-cols-2 gap-2">
           <Button asChild variant="secondary">
             <a href={CONTACT.whatsappHref} target="_blank" rel="noreferrer">

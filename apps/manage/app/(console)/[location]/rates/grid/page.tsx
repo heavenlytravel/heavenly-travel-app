@@ -98,8 +98,8 @@ function ruleFigures(rules: TripRules, href: string): Figure[] {
       key: "reach",
       label:
         reach.freeExtraKm > 0
-          ? `Extra road served, first ${reach.freeExtraKm} km free`
-          : "Extra road served",
+          ? `Extra Road Served, first ${reach.freeExtraKm} km free`
+          : "Extra Road Served",
       value: `${reach.maxExtraKm} km`,
       href,
     },
@@ -112,14 +112,14 @@ function ruleFigures(rules: TripRules, href: string): Figure[] {
     {
       key: "odd",
       label: oddHours
-        ? `Odd hours, ${formatClock(oddHours.fromMinute)} to ${formatClock(oddHours.toMinute)}`
-        : "Odd hours",
+        ? `Odd Hours, ${formatClock(oddHours.fromMinute)} to ${formatClock(oddHours.toMinute)}`
+        : "Odd Hours",
       value: oddHours ? surchargeLabel(oddHours) : "Off",
       href,
     },
     {
       key: "weekend",
-      label: "Weekends and holidays",
+      label: "Weekends and Holidays",
       value: weekend ? surchargeLabel(weekend) : "Off",
       href,
     },

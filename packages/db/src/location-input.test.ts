@@ -96,7 +96,7 @@ describe("stateMoveBlockers", () => {
 
   it("names each state's move for its button", () => {
     assert.deepEqual(LOCATION_MOVE_LABELS, {
-      draft: "Go live",
+      draft: "Go Live",
       live: "Pause",
       paused: "Resume",
     });
@@ -130,7 +130,7 @@ describe("stateMoveBlockers", () => {
       ),
       [
         "Publish the changes on the main page",
-        "Publish the changes on the Coach charter page",
+        "Publish the changes on the Coach Charter page",
       ],
     );
   });

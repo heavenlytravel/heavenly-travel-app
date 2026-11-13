@@ -132,10 +132,10 @@ export function CancelBooking({
       hint={hint}
       blocked={blocked}
       words={{
-        open: "Cancel booking",
+        open: "Cancel Booking",
         question: `Cancel booking ${reference}? This cannot be undone.`,
-        confirm: "Yes, cancel this booking",
-        keep: "Keep the booking",
+        confirm: "Yes, Cancel This Booking",
+        keep: "Keep the Booking",
         done: "Booking cancelled",
       }}
     />
@@ -164,10 +164,10 @@ export function CancelTrip({
       hint={hint}
       blocked={blocked}
       words={{
-        open: `Cancel trip ${position}`,
+        open: `Cancel Trip ${position}`,
         question: `Cancel trip ${position}? The rest of the booking goes ahead. This cannot be undone.`,
-        confirm: "Yes, cancel this trip",
-        keep: "Keep the trip",
+        confirm: "Yes, Cancel This Trip",
+        keep: "Keep the Trip",
         done: "Trip cancelled",
       }}
     />

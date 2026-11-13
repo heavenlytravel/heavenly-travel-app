@@ -45,7 +45,7 @@ export function vendorRegisteredEmails(
             ["Email", vendor.contactEmail],
           ],
         },
-        { type: "button", label: "Review in the console", href },
+        { type: "button", label: "Review in the Console", href },
       ],
     }),
   ];
@@ -113,7 +113,7 @@ export function driverAddedEmails(
           },
           {
             type: "button",
-            label: "Sign in to Connect",
+            label: "Sign In to Connect",
             href: `${settings.connectUrl}/sign-in`,
           },
           { type: "contact" },

@@ -173,7 +173,7 @@ export function SignUpFlow({
     return (
       <AuthCard
         portal={portal}
-        title="Check your email"
+        title="Check Your Email"
         description="Enter the 6-digit code we sent to confirm your email. It makes your account."
       >
         <EmailChip email={details.email} onChange={() => setStep("details")} />
@@ -183,7 +183,7 @@ export function SignUpFlow({
           </AuthField>
           <AuthAlert>{errorAt("form")}</AuthAlert>
           <Button type="submit" size="lg" pending={busy} className="w-full">
-            Create my account
+            Create My Account
           </Button>
         </form>
         <div className="mt-5 grid justify-items-center gap-2">
@@ -197,7 +197,7 @@ export function SignUpFlow({
             }}
           />
           <TextButton onClick={() => setStep("details")}>
-            Change my details
+            Change My Details
           </TextButton>
         </div>
       </AuthCard>
@@ -207,13 +207,13 @@ export function SignUpFlow({
   return (
     <AuthCard
       portal={portal}
-      title="Create your account"
+      title="Create Your Account"
       description="Book faster, and find every booking in one place."
       footer={footer}
     >
       <form onSubmit={submitDetails} className="grid gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
-          <AuthField label="First name" error={errorAt("firstName")}>
+          <AuthField label="First Name" error={errorAt("firstName")}>
             {(control) => (
               <AuthInput
                 {...control}
@@ -225,7 +225,7 @@ export function SignUpFlow({
               />
             )}
           </AuthField>
-          <AuthField label="Last name" error={errorAt("lastName")}>
+          <AuthField label="Last Name" error={errorAt("lastName")}>
             {(control) => (
               <AuthInput
                 {...control}

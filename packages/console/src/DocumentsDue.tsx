@@ -5,7 +5,7 @@ import { Badge } from "@repo/ui/badge";
  * A vehicle's or a driver's documents as a list reads them: a chip each
  * for the ones due within the warning (amber) or expired (red, a real
  * problem), soonest first, saying how far off it is, its date on hover;
- * "In date" when none is, or "No dates yet" when none was entered.
+ * "In Date" when none is, or "No dates yet" when none was entered.
  */
 export function DocumentsDue({
   due,
@@ -18,7 +18,7 @@ export function DocumentsDue({
   if (due.length === 0) {
     return (
       <span className="text-muted">
-        {anyEntered ? "In date" : "No dates yet"}
+        {anyEntered ? "In Date" : "No dates yet"}
       </span>
     );
   }

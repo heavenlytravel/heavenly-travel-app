@@ -56,13 +56,13 @@ export function ClassRates({
             </span>
           </ThGroup>
           <ThGroup />
-          <ThGroup span={2}>Every booking</ThGroup>
+          <ThGroup span={2}>Every Booking</ThGroup>
           {editHref ? <ThGroup /> : null}
         </tr>
         <tr>
           <Th>Class</Th>
           <Th align="right">{OFFERING_FIELD_LABELS.perKmSen}</Th>
-          <Th align="right">To choose a model</Th>
+          <Th align="right">To Choose a Model</Th>
           <Th align="right">{OFFERING_FIELD_LABELS.minLeadHours}</Th>
           <Th align="right">{OFFERING_FIELD_LABELS.cancellationCutoffHours}</Th>
           {editHref ? (
@@ -98,7 +98,7 @@ export function ClassRates({
                     )}
                   >
                     {vehicleClass.name}
-                    {selling ? null : <Badge>Off sale</Badge>}
+                    {selling ? null : <Badge>Off Sale</Badge>}
                   </span>
                   <span className="block text-caption text-muted">
                     {isTripCategory(vehicleClass.category)
@@ -111,7 +111,7 @@ export function ClassRates({
                   {modelChoice ? (
                     surchargeLabel(modelChoice)
                   ) : (
-                    <span className="text-muted">Not offered</span>
+                    <span className="text-muted">Not Offered</span>
                   )}
                 </Td>
                 <Td className="text-right whitespace-nowrap tabular-nums">

@@ -53,7 +53,7 @@ export const ACTOR_KIND_LABELS: Record<ActorKind, string> = {
   admin: "Staff",
   customer: "Customers",
   guest: "Guests",
-  connect: "Vendors and drivers",
+  connect: "Vendors and Drivers",
   system: "System",
 };
 
@@ -72,11 +72,11 @@ export const SYSTEM_ACTOR: SystemActor = { kind: "system" };
 
 /** The log's "who" for an entry whose actor has no account, or none any more. */
 export const ANONYMOUS_ACTOR_NAMES: Record<ActorKind, string> = {
-  admin: "Former staff",
-  customer: "Former customer",
+  admin: "Former Staff",
+  customer: "Former Customer",
   guest: "Guest",
   system: "System",
-  connect: "Former Connect user",
+  connect: "Former Connect User",
 };
 
 export const ACTIVITY_ENTITY_TYPES = [
@@ -540,9 +540,9 @@ export const AMENDED_FIELD_LABELS: Record<keyof AmendedFields, string> = {
 /** The payment statuses set by hand before payments were recorded, for their old entries. */
 const OLD_PAYMENT_STATUS_LABELS: Record<string, string> = {
   pending: "Pending",
-  partial: "Partially paid",
-  paid: "Fully paid",
-  "pay-later": "Pay later",
+  partial: "Partially Paid",
+  paid: "Fully Paid",
+  "pay-later": "Pay Later",
 };
 
 /** What `describeActivity` reads of an entry. `before` and `after` are JSON. */
@@ -559,8 +559,8 @@ export type DescribableActivity = {
  */
 const OFFERING_ENTRY_LABELS: Record<string, string> = {
   ...OFFERING_FIELD_LABELS,
-  baseFareSen: "Base fare",
-  minimumFareSen: "Minimum fare",
+  baseFareSen: "Base Fare",
+  minimumFareSen: "Minimum Fare",
 };
 
 /** The drop-off rules as their entries named them, before nearest-zone pricing replaced the rule. */
@@ -715,8 +715,8 @@ function recordChanges(
 function vendorChanges(after: unknown) {
   const labels: Record<string, string> = {
     ...VENDOR_FIELD_LABELS,
-    services: "What it offers",
-    locations: "Locations served",
+    services: "What It Offers",
+    locations: "Locations Served",
   };
   const changed = keysOf(after)
     .filter((key) => key in labels && key !== "locationIds")
@@ -1001,7 +1001,7 @@ function blogHighlight(before: unknown, after: unknown) {
     : `Highlighted the post, at place ${now}`;
 }
 
-/** "About us", or "a site page" when the entry names none we know. */
+/** "About Us", or "a site page" when the entry names none we know. */
 function sitePageName(json: unknown) {
   const page = field(json, "page");
   return isSitePageKey(page) ? SITE_PAGE_LABELS[page] : "a site page";

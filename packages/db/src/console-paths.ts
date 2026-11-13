@@ -1,6 +1,6 @@
 /**
  * The console's addresses that other apps link to: the staff email's
- * "Open in console", the customer site's "Edit" on a preview. Every
+ * "Open in Console", the customer site's "Edit" on a preview. Every
  * console address starts with the location, `~` for every location the
  * person may see; these open under `~`, which holds every record. See
  * docs/261029-manage-signature-overhaul.md. Browser-safe.

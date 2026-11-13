@@ -14,7 +14,7 @@ import type { PageContent } from "./page-content";
  * Browser-safe.
  */
 export const CONNECT_PAGE_COPY: PageContent = {
-  metaTitle: "Connect: trips for transport vendors | Heavenly Travel",
+  metaTitle: "Connect: Trips for Transport Vendors | Heavenly Travel",
   metaDescription:
     "Register your car-with-driver or coach company on Heavenly Travel Connect. See the pay on every offer, name your driver, and run each trip from a phone.",
   shareImage: null,

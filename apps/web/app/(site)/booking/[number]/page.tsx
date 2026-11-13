@@ -12,7 +12,7 @@ import {
 import { requireOwnBooking } from "../_lib/own-booking";
 
 export const metadata: Metadata = {
-  title: "Your booking | Heavenly Travel",
+  title: "Your Booking | Heavenly Travel",
 };
 
 /**
@@ -53,7 +53,7 @@ export default async function BookingPage({
             </Button>
             <p className="mt-4 text-center text-copy">
               <Link href={ACCOUNT_BOOKINGS_PATH} className="text-link">
-                See all your bookings
+                See All Your Bookings
               </Link>
             </p>
           </>

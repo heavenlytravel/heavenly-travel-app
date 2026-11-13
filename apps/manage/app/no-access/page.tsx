@@ -14,10 +14,10 @@ export default async function NoAccessPage() {
   return (
     <AuthShell
       tone="dark"
-      eyebrow="Admin portal"
+      eyebrow="Admin Portal"
       brand={<Logo tone="white" loading="eager" className="h-9" />}
     >
-      <PortalCard title="No Admin Access">
+      <PortalCard title="No admin access">
         <p className="mt-3 text-muted">
           {/* A long address breaks where it must, not past the card. */}
           <span className="[overflow-wrap:anywhere]">
@@ -28,7 +28,7 @@ export default async function NoAccessPage() {
         </p>
         <SignOutButton>
           <Button variant="secondary" className="mt-8">
-            Sign out
+            Sign Out
           </Button>
         </SignOutButton>
       </PortalCard>

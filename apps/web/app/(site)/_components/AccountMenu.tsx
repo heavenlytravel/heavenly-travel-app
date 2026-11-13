@@ -5,7 +5,7 @@ import { ListIcon } from "@repo/ui/icons";
 import { ACCOUNT_BOOKINGS_PATH, ACCOUNT_PATH } from "../../_lib/routes";
 
 const LINKS = [
-  { label: "My bookings", href: ACCOUNT_BOOKINGS_PATH, icon: <ListIcon /> },
+  { label: "My Bookings", href: ACCOUNT_BOOKINGS_PATH, icon: <ListIcon /> },
 ];
 
 /** The signed-in customer's menu (@repo/auth): their bookings, their account, signing out. */

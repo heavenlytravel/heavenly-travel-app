@@ -25,7 +25,7 @@ import {
  * What the customer site reads of the site's own pages, cached under one
  * tag: the home page's content, the documents and the footer. The admin
  * names the tag after a publish or an unpublish. The preview reads the
- * drafts directly. See docs/261025-marketing-pages.md, "Site pages", and
+ * drafts directly. See docs/261025-marketing-pages.md, "Site Pages", and
  * docs/261026-site-footer.md.
  */
 

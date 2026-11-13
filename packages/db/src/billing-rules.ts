@@ -35,9 +35,9 @@ export const PAYMENT_TERMS = ["none", "month", "half-month"] as const;
 export type PaymentTerms = (typeof PAYMENT_TERMS)[number];
 export const isPaymentTerms = guardFor(PAYMENT_TERMS);
 export const PAYMENT_TERMS_LABELS: Record<PaymentTerms, string> = {
-  none: "No credit",
+  none: "No Credit",
   month: "Monthly",
-  "half-month": "Twice a month",
+  "half-month": "Twice a Month",
 };
 export const PAYMENT_TERMS_HINTS: Record<PaymentTerms, string> = {
   none: "Each booking is billed to the agent on its own invoice, issued when the trip is done or by Finance.",
@@ -159,7 +159,7 @@ export type InvoiceType = (typeof INVOICE_TYPES)[number];
 export const isInvoiceType = guardFor(INVOICE_TYPES);
 export const INVOICE_TYPE_LABELS: Record<InvoiceType, string> = {
   invoice: "Invoice",
-  credit: "Credit note",
+  credit: "Credit Note",
 };
 
 export const INVOICE_STATUSES = ["open", "issued", "void"] as const;
@@ -177,8 +177,8 @@ export type InvoiceBilled = (typeof INVOICE_BILLED)[number];
 export const isInvoiceBilled = guardFor(INVOICE_BILLED);
 export const INVOICE_BILLED_LABELS: Record<InvoiceBilled, string> = {
   customer: "Customer",
-  agent: "Agent, per booking",
-  "month-end": "Agent, month-end",
+  agent: "Agent, per Booking",
+  "month-end": "Agent, Month-end",
 };
 
 export const INVOICE_ISSUED_WHEN = [
@@ -189,9 +189,9 @@ export const INVOICE_ISSUED_WHEN = [
 export type InvoiceIssuedWhen = (typeof INVOICE_ISSUED_WHEN)[number];
 export const isInvoiceIssuedWhen = guardFor(INVOICE_ISSUED_WHEN);
 export const INVOICE_ISSUED_LABELS: Record<InvoiceIssuedWhen, string> = {
-  "this-month": "This month",
-  "last-month": "Last month",
-  "this-year": "This year",
+  "this-month": "This Month",
+  "last-month": "Last Month",
+  "this-year": "This Year",
 };
 
 /** The longest reason a void, a reversal or a terms change may give. */
@@ -241,9 +241,9 @@ export const PAYMENT_METHODS = [
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 export const isPaymentMethod = guardFor(PAYMENT_METHODS);
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
-  transfer: "Bank transfer",
+  transfer: "Bank Transfer",
   cash: "Cash",
-  "cash-to-driver": "Cash to driver",
+  "cash-to-driver": "Cash to Driver",
   card: "Card",
   cheque: "Cheque",
   other: "Other",
@@ -267,12 +267,12 @@ export type PaymentState = (typeof PAYMENT_STATES)[number];
 export const isPaymentState = guardFor(PAYMENT_STATES);
 export const PAYMENT_STATE_LABELS: Record<PaymentState, string> = {
   unpaid: "Pending",
-  "pay-later": "Pay later",
+  "pay-later": "Pay Later",
   overdue: "Overdue",
-  "partially-paid": "Partially paid",
+  "partially-paid": "Partially Paid",
   paid: "Paid",
-  "nothing-due": "Nothing due",
-  "refund-due": "Refund due",
+  "nothing-due": "Nothing Due",
+  "refund-due": "Refund Due",
 };
 
 /** An invoice's money: what it nets after its credit notes, what came in net of refunds, what is left. */

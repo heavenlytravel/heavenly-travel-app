@@ -14,6 +14,7 @@ import {
   pageNameInView,
   pageOfView,
   servicePagesOf,
+  titleCase,
   type LocationPageRef,
   type LocationSection,
   type LocationView,
@@ -74,7 +75,7 @@ import { crumbsOf, structuredDataOf } from "./seo";
  * missing (`emptyPartsOf`). See docs/261025-marketing-pages.md.
  */
 
-/** How many posts the main page shows before "All posts". */
+/** How many posts the main page shows before "All Posts". */
 const LANDING_POSTS = 3;
 /** How many others a place offers at its foot. */
 const MORE_OF_THE_SAME = 3;
@@ -194,17 +195,17 @@ async function PageBody({
           section="popular-places"
           entries={places}
           pathOf={pathOf}
-          title={`Popular places in ${location.name}`}
+          title={`Popular Places in ${location.name}`}
           all
           empty={noCardsYet("popular-places", preview)}
         />
         <BlogCards
           id="blog-cards"
           eyebrow={SECTIONS.blog.label}
-          title="From the blog"
+          title="From the Blog"
           posts={posts.slice(0, LANDING_POSTS)}
           action={
-            blogPage && <MoreLink href={pathOf(blogPage)}>All posts</MoreLink>
+            blogPage && <MoreLink href={pathOf(blogPage)}>All Posts</MoreLink>
           }
           empty={preview ? NO_POSTS : undefined}
           preview={preview}
@@ -262,7 +263,7 @@ async function PageBody({
             section={section}
             entries={others}
             pathOf={pathOf}
-            title={`More ${children.many} in ${location.name}`}
+            title={titleCase(`More ${children.many} in ${location.name}`)}
             all
           />
         )}
@@ -277,7 +278,7 @@ async function PageBody({
         <BlogCards
           id="blog-cards"
           eyebrow={def.label}
-          title="Latest posts"
+          title="Latest Posts"
           posts={await blogPostsAt(location.slug)}
           lead={content.intro}
           emptyLead={empty.intro}
@@ -299,7 +300,7 @@ async function PageBody({
         <VehicleClasses
           location={location}
           category={children.category}
-          title="Choose the vehicle that fits"
+          title="Choose the Vehicle That Fits"
           pathOf={pathOf}
           empty={preview ? NO_CLASSES : undefined}
         />
@@ -360,12 +361,7 @@ function eyebrowOf(location: LocationView, page: LocationViewPage) {
   if (page.slug === "" || children?.type !== "entries") {
     return `${def.label} · ${location.name}`;
   }
-  return `${capitalised(children.one)} · ${location.name}`;
-}
-
-/** A name as a heading starts it: "popular places" as "Popular places". */
-function capitalised(text: string) {
-  return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
+  return `${titleCase(children.one)} · ${location.name}`;
 }
 
 /** The top of every page but the blog's: the photo, the breadcrumb, the headline, and the search card on its floor. */
@@ -503,7 +499,7 @@ function ComingSoon({ label, name }: { label: string; name: string }) {
           rel="noopener noreferrer"
           className="inline-flex min-h-12 shrink-0 items-center rounded-full bg-brand px-6 text-base font-bold text-white hover:bg-brand-strong focus-ring"
         >
-          WhatsApp us{" "}
+          WhatsApp Us{" "}
           <span aria-hidden className="ml-2.5">
             ↗
           </span>
@@ -530,7 +526,7 @@ function Services({
     <Section
       id="services"
       eyebrow={`Travel in ${location.name}`}
-      title="Plan your trip"
+      title="Plan Your Trip"
     >
       {services.length > 0 ? (
         <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -574,7 +570,7 @@ function Services({
                       <span className="mt-1 block text-muted">{def.note}</span>
                       <CardCta>
                         {childrenOf(entry.page)?.type === "classes"
-                          ? "See vehicles and prices"
+                          ? "See Vehicles and Prices"
                           : "Explore"}
                       </CardCta>
                     </span>
@@ -591,7 +587,7 @@ function Services({
   );
 }
 
-/** The cards of a section's pages Marketing added: places, with "Take me here". */
+/** The cards of a section's pages Marketing added: places, with "Take Me Here". */
 function EntryCards({
   location,
   section,
@@ -643,7 +639,9 @@ function EntryCards({
       title={title}
       action={
         all && pageOfView(location, own) && children?.type === "entries" ? (
-          <MoreLink href={pathOf(own)}>All {children.many}</MoreLink>
+          <MoreLink href={pathOf(own)}>
+            {titleCase(`All ${children.many}`)}
+          </MoreLink>
         ) : undefined
       }
     >

@@ -35,7 +35,7 @@ export function BlogCards({
   eyebrow?: string;
   title: string;
   posts: readonly BlogPostView[];
-  /** A link beside the heading: "View all". */
+  /** A link beside the heading: "View All". */
   action?: ReactNode;
   /** Plain paragraphs under the heading: a location's blog intro. */
   lead?: string;

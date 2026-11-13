@@ -52,7 +52,7 @@ export function bookingPdf(
   const page = (
     <PdfPage
       company={company}
-      title="Booking confirmation"
+      title="Booking Confirmation"
       number={label}
       under={[
         ...(booking.number !== null && booking.quoteNumber !== null
@@ -96,7 +96,7 @@ export function bookingPdf(
                     )
                   : [
                       [
-                        "Pick-up time",
+                        "Pick-up Time",
                         formatLocalDateTime(item.startsAt),
                       ] as const,
                     ]),

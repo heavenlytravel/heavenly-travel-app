@@ -89,7 +89,7 @@ export default async function AgentsPage({
             <Button asChild>
               <Link href={NEW_AGENT_HREF}>
                 <PlusIcon />
-                Add agent
+                Add Agent
               </Link>
             </Button>
           ) : null
@@ -132,7 +132,7 @@ async function agentRows(filter: {
     <Table bare>
       <THead>
         <Th>Agent</Th>
-        <Th>Payment terms</Th>
+        <Th>Payment Terms</Th>
         <AddedTh
           sort={{
             order: filter.order,

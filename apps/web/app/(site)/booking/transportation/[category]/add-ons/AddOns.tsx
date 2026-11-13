@@ -58,7 +58,7 @@ export function AddOns({
           }
         />
         <span className="grid gap-0.5">
-          <span className="text-ink">Tour guide</span>
+          <span className="text-ink">Tour Guide</span>
           <span className="text-copy text-body">
             {required
               ? `Every coach comes with a licensed tour guide, ${forWhich}. Choose the language they speak, from ${formatMyr(cheapest)}.`
@@ -69,7 +69,7 @@ export function AddOns({
       {guide.language !== null ? (
         <fieldset className="grid gap-2 sm:ml-7">
           <legend className="mb-2 text-copy text-ink">
-            The language your guide speaks
+            The Language Your Guide Speaks
           </legend>
           <div className="grid gap-2 sm:grid-cols-2">
             {offers.map((offer) => (
@@ -116,7 +116,7 @@ export function AddOns({
           </label>
           {guide.request !== null ? (
             <fieldset className="grid gap-2 sm:ml-7">
-              <legend className="sr-only">The language you ask for</legend>
+              <legend className="sr-only">The Language You Ask For</legend>
               <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
                 {others.map((language) => (
                   <label

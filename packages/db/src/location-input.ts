@@ -57,7 +57,7 @@ export const LOCATION_STATE_MOVE: Record<LocationState, LocationState> = {
 
 /** What the button of each state's move says. */
 export const LOCATION_MOVE_LABELS: Record<LocationState, string> = {
-  draft: "Go live",
+  draft: "Go Live",
   live: "Pause",
   paused: "Resume",
 };
@@ -99,7 +99,7 @@ export type SetupStepKey = (typeof SETUP_STEPS)[number];
 
 export const SETUP_STEP_LABELS: Record<SetupStepKey, string> = {
   details: "Details",
-  "vehicle-classes": "Vehicle classes",
+  "vehicle-classes": "Vehicle Classes",
   coverage: "Coverage",
   pages: "Pages",
 };

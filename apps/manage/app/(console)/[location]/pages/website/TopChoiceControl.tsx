@@ -159,7 +159,7 @@ export function TopChoiceControl({
                       pending={pending}
                       onClick={() => change(toAdd, "add")}
                     >
-                      Add to the home page
+                      Add to the Home Page
                     </Button>
                   </div>
                 ) : null}

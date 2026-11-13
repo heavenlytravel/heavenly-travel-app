@@ -55,8 +55,8 @@ export type BankField = keyof BankFields;
 
 export const BANK_FIELD_LABELS: Record<BankField, string> = {
   bankName: "Bank",
-  bankAccountNumber: "Account number",
-  bankAccountName: "Name on the account",
+  bankAccountNumber: "Account Number",
+  bankAccountName: "Name on the Account",
 };
 
 export const NO_BANK: BankFields = {
@@ -94,12 +94,12 @@ export type PayeeFields = BankFields & { paidToVendor: boolean };
 export const PAID_TO_FIELD = "paidToVendor";
 
 export const PAID_TO_LABELS = {
-  own: "Their own account",
-  vendor: "The vendor's account",
+  own: "Their Own Account",
+  vendor: "The Vendor's Account",
 } as const;
 
 export const PAYEE_FIELD_LABELS: Record<keyof PayeeFields, string> = {
-  paidToVendor: "Paid to the vendor",
+  paidToVendor: "Paid to the Vendor",
   ...BANK_FIELD_LABELS,
 };
 

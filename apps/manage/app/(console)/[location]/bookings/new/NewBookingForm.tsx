@@ -69,7 +69,7 @@ const EMPTY_CONTACT: Contact = { name: "", phone: "", email: "" };
 /**
  * The manual booking, in numbered steps on one page: the customer, then
  * each trip, a step with everything it takes: the trip, its vehicle and
- * group, its flight, child seats, note and tour guide. "Add another trip"
+ * group, its flight, child seats, note and tour guide. "Add Another Trip"
  * adds one, starting from the choices of the one before it; the trips are
  * numbered and booked by start, at most `maxTripsPerBooking`. With several
  * trips, "Same vehicle for every trip" (on to start with) has one vehicle
@@ -219,7 +219,7 @@ export function NewBookingForm({
     return confirm({
       title: "Use trip 1's vehicle for every trip?",
       description: `${own.length === 1 ? "Trip" : "Trips"} ${andList(own)} lose their own vehicle and group and take trip 1's: ${[TRIP_CATEGORY_LABELS[first.trip.trip.category], vehicle].filter(Boolean).join(", ")}. A trip in another category is priced again, and trips at the same time must then be moved.`,
-      action: "Use trip 1's vehicle",
+      action: "Use Trip 1's Vehicle",
       danger: true,
     });
   }
@@ -236,7 +236,7 @@ export function NewBookingForm({
     const yes = await confirm({
       title: `Remove ${label}?`,
       description: "Its places, day and time, vehicle and details are lost.",
-      action: "Remove trip",
+      action: "Remove Trip",
       danger: true,
     });
     if (!yes) return;
@@ -349,7 +349,7 @@ export function NewBookingForm({
             />
             <CustomerFields contact={contact} onChange={setContact} />
             <Field
-              label="Old invoice number"
+              label="Old Invoice Number"
               hint={
                 legacyNumber.ok ? (
                   "Optional. The old system's number, such as HT1223, as a note for the team. It bills nothing."
@@ -381,7 +381,7 @@ export function NewBookingForm({
                   }
                 />
                 <span className="grid gap-0.5">
-                  <span className="font-medium text-ink">Pay later</span>
+                  <span className="font-medium text-ink">Pay Later</span>
                   <span className="text-caption text-muted">
                     {onCredit
                       ? `${agent.name} is on ${agentTermsLabel(agent).toLowerCase()}: the booking goes on its invoice for the period, so it is always Pay later.`
@@ -390,7 +390,7 @@ export function NewBookingForm({
                 </span>
               </label>
               {payLaterOn !== null && !onCredit ? (
-                <Field label="To be paid by">
+                <Field label="To Be Paid By">
                   <Input
                     type="date"
                     required
@@ -474,7 +474,7 @@ export function NewBookingForm({
                       size="sm"
                       onClick={() => removeTrip(id, `trip ${index + 1}`)}
                     >
-                      Remove trip
+                      Remove Trip
                     </Button>
                   ) : null
                 }
@@ -488,7 +488,7 @@ export function NewBookingForm({
               className="flex h-12 items-center justify-center gap-2 rounded-card border border-dashed border-slot text-sm font-semibold text-brand transition-colors hover:bg-white focus-ring"
             >
               <PlusIcon className="size-4" />
-              Add another trip
+              Add Another Trip
             </button>
           ) : (
             <p className="px-1 text-sm text-muted">
@@ -563,8 +563,8 @@ export function NewBookingForm({
                   {create.pending
                     ? "Creating…"
                     : confirmNow
-                      ? "Create and confirm"
-                      : "Save for later"}
+                      ? "Create and Confirm"
+                      : "Save for Later"}
                 </Button>
               </>
             }
@@ -589,7 +589,7 @@ function CustomerFields({
 }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <Field label="Customer name" className="sm:col-span-2">
+      <Field label="Customer Name" className="sm:col-span-2">
         <Input
           maxLength={CONTACT_NAME_MAX_LENGTH}
           autoComplete="off"

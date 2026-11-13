@@ -20,7 +20,7 @@ export function PageNotFound() {
       title="We can't find that page"
       message="The link may be old, or the address mistyped."
       href="/"
-      linkLabel="Go to the home page"
+      linkLabel="Go to the Home Page"
     />
   );
 }

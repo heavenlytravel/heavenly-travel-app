@@ -68,7 +68,7 @@ export default async function CoveragePage({
             <Button asChild>
               <Link href={newZoneHref(location.slug)}>
                 <PlusIcon />
-                Add zone
+                Add Zone
               </Link>
             </Button>
           ) : null

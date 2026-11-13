@@ -90,12 +90,12 @@ type Step = { shape: ZoneShape; boundary: Boundary | null };
 const SOURCES: { key: Source; label: string; hint: string }[] = [
   {
     key: "district",
-    label: "A district or mukim",
+    label: "A District or Mukim",
     hint: "A whole district such as Langkawi or Timur Laut, or some of its mukims, by the official boundaries, islands included.",
   },
   {
     key: "address",
-    label: "An address",
+    label: "An Address",
     hint: "A circle around an airport, a jetty or a hotel, to reshape from there. The address stays as a reference.",
   },
   {
@@ -172,7 +172,7 @@ function centerOf(shape: ZoneShape): { lat: number; lng: number } | null {
  * other, this location's or another's: a moment after every change the
  * server says what is in its way, by the check the save makes, and a bar
  * over the map's tools names it, so one side gives up the shared ground.
- * "Trim this zone" takes their ground off this one; "Trim <zone>" shows the
+ * "Trim This Zone" takes their ground off this one; "Trim <zone>" shows the
  * zones in the way trimmed of this one's ground, and the save trims them,
  * so a small zone drawn inside a big one keeps its shape. Either is
  * checked on the map before anything is saved, and a choice to trim them
@@ -283,7 +283,7 @@ export function ZoneEditor({
   // back for Redo, which a new change forgets.
   const [shape, setShape] = useState<ZoneShape | null>(zone?.shape ?? null);
   // The circle last drawn around the address: while the shape is still it,
-  // a new radius redraws it; once reshaped, only "Redraw the circle" does.
+  // a new radius redraws it; once reshaped, only "Redraw the Circle" does.
   const [circle, setCircle] = useState<ZoneShape | null>(null);
   const [history, setHistory] = useState<Step[]>([]);
   const [future, setFuture] = useState<Step[]>([]);
@@ -652,10 +652,10 @@ export function ZoneEditor({
         {pending
           ? "Saving…"
           : trimming
-            ? `Save and trim ${trimLabels}`
+            ? `Save and Trim ${trimLabels}`
             : zone
-              ? "Save zone"
-              : "Add zone"}
+              ? "Save Zone"
+              : "Add Zone"}
       </Button>
       <Link
         href={coverageHref(locationSlug)}
@@ -712,7 +712,7 @@ export function ZoneEditor({
 
           <fieldset className="grid gap-3">
             <legend className="mb-2 text-sm font-medium text-body">
-              Start from
+              Start From
             </legend>
             <div className="grid gap-2 @xl:grid-cols-3">
               {SOURCES.map((option) => {
@@ -798,7 +798,7 @@ export function ZoneEditor({
                     />
                     <span className="grid gap-0.5">
                       <span className="font-medium text-ink">
-                        The whole district
+                        The Whole District
                       </span>
                       <span className="text-xs text-muted">
                         {district.label} by its official boundary, islands
@@ -815,7 +815,7 @@ export function ZoneEditor({
                     />
                     <span className="grid gap-0.5">
                       <span className="font-medium text-ink">
-                        Some of its mukims
+                        Some of Its Mukims
                       </span>
                       <span className="text-xs text-muted">
                         Tick one or more; together they make one zone.
@@ -898,7 +898,7 @@ export function ZoneEditor({
                       onClick={() => drawCircle(center, radiusM)}
                       className="rounded-sm text-link"
                     >
-                      Redraw the circle
+                      Redraw the Circle
                     </button>
                   ) : undefined
                 }
@@ -1033,7 +1033,7 @@ function OverlapBar({
                   onClick={onTrimThisZone}
                   disabled={!ready || thisZoneWhy !== null}
                 >
-                  Trim this zone
+                  Trim This Zone
                 </Button>
               </Tooltip>
               <Tooltip

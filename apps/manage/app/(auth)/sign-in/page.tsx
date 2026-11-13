@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SignInFlow } from "@repo/auth/SignInFlow";
 import { ACCOUNT_HREF } from "../../_lib/routes";
 
-export const metadata: Metadata = { title: "Sign in | Manage" };
+export const metadata: Metadata = { title: "Sign In | Manage" };
 
 // Staff access is invite-only: a SUPER admin makes the account or promotes
 // an existing one. Nothing here offers a way to sign up.

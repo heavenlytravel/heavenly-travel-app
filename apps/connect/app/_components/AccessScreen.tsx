@@ -74,13 +74,13 @@ export function AccessScreen({ access }: { access: Shut }) {
               ))}
             </ul>
             <Button asChild size="lg" className="w-full">
-              <Link href="/register">Register your business</Link>
+              <Link href="/register">Register Your Business</Link>
             </Button>
           </>
         ) : null}
       </Panel>
       <Panel className="grid gap-3 p-5">
-        <p className="text-sm font-semibold text-ink">Talk to the team</p>
+        <p className="text-sm font-semibold text-ink">Talk to the Team</p>
         <div className="grid grid-cols-2 gap-2">
           <Button asChild variant="secondary">
             <a href={CONTACT.whatsappHref} target="_blank" rel="noreferrer">

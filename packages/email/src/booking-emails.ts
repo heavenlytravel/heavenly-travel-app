@@ -43,9 +43,9 @@ export type BookingEmailEvent = "received" | BookingEvent;
 
 /** What differs per environment: link targets, the ops inbox, the subject prefix. */
 export type EmailSettings = {
-  /** The customer site, for "View booking" and "Manage booking online". */
+  /** The customer site, for "View Booking" and "Manage Booking Online". */
   siteUrl: string;
-  /** The admin console, for "Open in console". */
+  /** The admin console, for "Open in Console". */
   adminUrl: string;
   /** Connect, for vendors and drivers. */
   connectUrl: string;
@@ -69,7 +69,7 @@ function itemRows(item: BookingItemWithDetails): DetailRow[] {
 }
 
 /**
- * One rows block per item, titled with what the item is: "Coach charter".
+ * One rows block per item, titled with what the item is: "Coach Charter".
  * Once there are several, the position and the status join it: "Item 2:
  * Coach charter (Cancelled)".
  */
@@ -92,7 +92,7 @@ function totalBlock(booking: BookingWithItems): Block {
     type: "rows",
     title: null,
     rows: [
-      ["Booking number", bookingLabelOf(booking)],
+      ["Booking Number", bookingLabelOf(booking)],
       ["Total", formatMyr(booking.priceTotalSen)],
     ],
   };
@@ -130,7 +130,7 @@ function bookingButton(
       { type: "paragraph", text: ACCOUNT_OFFER },
       {
         type: "button",
-        label: "Manage booking online",
+        label: "Manage Booking Online",
         href: `${settings.siteUrl}${signUpPath(email, accountBookingPath(bookingLabelOf(booking)))}`,
       },
     ];
@@ -138,7 +138,7 @@ function bookingButton(
   return [
     {
       type: "button",
-      label: "View booking",
+      label: "View Booking",
       href: `${settings.siteUrl}${bookingPath(bookingLabelOf(booking))}`,
     },
   ];
@@ -156,7 +156,7 @@ function consoleButton(
 ): Block {
   return {
     type: "button",
-    label: "Open in console",
+    label: "Open in Console",
     href: `${settings.adminUrl}${consoleBookingPath(booking.id)}`,
   };
 }
@@ -479,13 +479,13 @@ export function driverEmails(
           : formatLocalDateTime(crew.startsAt),
         rows: [
           ["Driver", crew.driverName],
-          ["Driver's phone", crew.driverPhone],
+          ["Driver's Phone", crew.driverPhone],
           ["Vehicle", `${crew.model}, ${crew.colour}`],
           ["Plate", crew.plate],
           ...(crew.guideName
             ? ([
-                ["Tour guide", crew.guideName],
-                ["Guide's phone", crew.guidePhone ?? ""],
+                ["Tour Guide", crew.guideName],
+                ["Guide's Phone", crew.guidePhone ?? ""],
               ] as [string, string][])
             : []),
         ],

@@ -96,7 +96,7 @@ export default async function DashboardPage({
             <Button asChild variant="secondary">
               <Link href={newBookingHref(scope.slug)}>
                 <PlusIcon />
-                New booking
+                New Booking
               </Link>
             </Button>
           ) : null

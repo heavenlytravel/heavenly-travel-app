@@ -68,7 +68,7 @@ function WholeNumberInput({
  * The fields of a catalogue class, as three sections of a form: what it
  * is, its picture, its seats and luggage. The rates and the rules are each
  * location's, on its offering. The catalogue's class editor and a
- * location's "Add class" both post these under the same names; the
+ * location's "Add Class" both post these under the same names; the
  * picture goes as the address the upload answered.
  */
 export function VehicleClassFieldset({
@@ -81,7 +81,7 @@ export function VehicleClassFieldset({
   vehicleClass?: ClassWithKinds;
   /** The types and tiers there are, suggested as they are typed. */
   kinds: { types: string[]; tiers: string[] };
-  /** The catalogue's switch; a location's form has its own "On sale" instead. */
+  /** The catalogue's switch; a location's form has its own "On Sale" instead. */
   showActive?: boolean;
   /** Told when the category changes: a location's form starts the rules from it. */
   onCategoryChange?: (category: TripCategory) => void;
@@ -217,7 +217,7 @@ export function VehicleClassFieldset({
       </Card>
 
       <Card>
-        <CardTitle>Seats and luggage</CardTitle>
+        <CardTitle>Seats and Luggage</CardTitle>
         <div className="grid gap-4 sm:grid-cols-3">
           <Field {...classField("minPassengers")}>
             <WholeNumberInput

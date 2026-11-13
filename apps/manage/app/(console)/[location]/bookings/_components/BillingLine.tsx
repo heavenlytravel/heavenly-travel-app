@@ -58,7 +58,7 @@ export function BillingLine({
   return (
     <Notice tone="info">
       <span className="block font-semibold tabular-nums">
-        Booking total {formatMyr(nowSen)} → {formatMyr(chargedSen)}
+        Booking Total {formatMyr(nowSen)} → {formatMyr(chargedSen)}
         {difference !== 0 ? (
           <span className="font-normal">
             {" "}

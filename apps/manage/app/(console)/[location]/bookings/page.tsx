@@ -71,7 +71,7 @@ const textOf = (value: unknown) => (typeof value === "string" ? value : "");
  * the service, the vehicle class and the kind of trip)
  * narrow the counts and the list alike.
  * A draft location's opens too, though its menu has no row for it. Every
- * team that sees bookings opens it; "New booking" is Reservation's and
+ * team that sees bookings opens it; "New Booking" is Reservation's and
  * Sales'.
  */
 export default async function BookingsPage({
@@ -139,7 +139,7 @@ export default async function BookingsPage({
       label: "Agent",
       value: agent ?? "",
       options: [
-        { value: DIRECT, label: "Direct, no agent" },
+        { value: DIRECT, label: "Direct, No Agent" },
         ...agents.map((a) => ({ value: a.id, label: a.name })),
       ],
     },
@@ -169,7 +169,7 @@ export default async function BookingsPage({
             <Button asChild>
               <Link href={newBookingHref(scope.slug)}>
                 <PlusIcon className="size-4" />
-                New booking
+                New Booking
               </Link>
             </Button>
           ) : null

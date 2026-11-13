@@ -22,7 +22,7 @@ export function TripRulesList({
   const { reach, oddHours, weekend } = rules;
   return (
     <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-[11rem_1fr]">
-      <dt className="text-muted">Extra road</dt>
+      <dt className="text-muted">Extra Road</dt>
       <dd className="font-medium text-ink">
         {extraRoadLabel(reach)} past a zone&apos;s edge
       </dd>
@@ -35,11 +35,11 @@ export function TripRulesList({
           {crossLocationNote(reach.crossLocation, locationName)}
         </span>
       </dd>
-      <dt className="text-muted">Odd hours</dt>
+      <dt className="text-muted">Odd Hours</dt>
       <dd className="text-muted">
         {oddHours ? `Pickups from ${oddHoursLabel(oddHours)}.` : "Off."}
       </dd>
-      <dt className="text-muted">Weekends and holidays</dt>
+      <dt className="text-muted">Weekends and Holidays</dt>
       <dd className="text-muted">
         {weekend
           ? `${weekendLabel(weekend)}.${weekend.dates.length > 0 ? ` Holidays: ${weekend.dates.map(formatDay).join(", ")}.` : ""}`

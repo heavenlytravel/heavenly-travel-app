@@ -128,7 +128,7 @@ describe("revision snapshots", () => {
       source({
         charges: [{ itemId: "i1", label: "Parking", amountSen: 1500 }],
       }),
-      () => "Car with driver",
+      () => "Car with Driver",
     );
     assert.equal(snapshot.trips[0]!.pickup, "A");
     assert.equal(snapshot.trips[0]!.quotedSen, 50000);
@@ -165,7 +165,7 @@ describe("the customer's change list", () => {
       { number: 1, summary: "Booked", chargedSen: 35000, createdAt: at(1) },
       {
         number: 2,
-        summary: "Tour guide added",
+        summary: "Tour Guide added",
         chargedSen: 55000,
         createdAt: at(2),
       },
@@ -173,7 +173,7 @@ describe("the customer's change list", () => {
     assert.deepEqual(
       changes.map((c) => [c.summary, c.differenceSen, c.totalSen]),
       [
-        ["Tour guide added", 20000, 55000],
+        ["Tour Guide added", 20000, 55000],
         ["Stop at B added", 9000, 64000],
       ],
     );
@@ -190,7 +190,7 @@ describe("what a revision changed", () => {
     position: 1,
     status: "confirmed",
     startsAt: "2026-11-11T05:00:00.000Z",
-    heading: "Car with driver",
+    heading: "Car with Driver",
     mode: "oneway",
     vehicleClassName: "Standard Van",
     vehicleModelName: null,
@@ -231,7 +231,7 @@ describe("what a revision changed", () => {
     );
     assert.deepEqual(
       details.map((d) => d.label),
-      ["Trip 1 · Pick-up time", "Trip 1 · Vehicle", "Trip 1 · Price"],
+      ["Trip 1 · Pick-up Time", "Trip 1 · Vehicle", "Trip 1 · Price"],
     );
     assert.deepEqual(details[1], {
       label: "Trip 1 · Vehicle",
@@ -256,7 +256,7 @@ describe("what a revision changed", () => {
     );
     assert.deepEqual(
       details.map((d) => d.label),
-      ["Trip 2 added", "Charge added", "Charge taken off"],
+      ["Trip 2 Added", "Charge Added", "Charge Taken Off"],
     );
     assert.equal(details[2]!.before, "Parking (Trip 1), RM 50.00");
   });

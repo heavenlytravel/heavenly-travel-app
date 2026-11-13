@@ -26,10 +26,10 @@ export type GuideRatePrice = (typeof GUIDE_RATE_PRICES)[number];
 
 export const GUIDE_RATE_PRICE_LABELS: Record<GuideRatePrice, string> = {
   oneWaySen: "Transfer",
-  hours4Sen: "4 hours",
-  hours8Sen: "8 hours",
-  hours12Sen: "12 hours",
-  extraHourSen: "Extra hour",
+  hours4Sen: "4 Hours",
+  hours8Sen: "8 Hours",
+  hours12Sen: "12 Hours",
+  extraHourSen: "Extra Hour",
 };
 
 /** One language's row: on sale or not, and its prices in sen, null where none is set. */

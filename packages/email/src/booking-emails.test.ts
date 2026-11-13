@@ -63,9 +63,9 @@ describe("bookingEmails", () => {
     assert.equal(customer!.message.to, "aina@gmail.com");
     assert.match(
       customer!.message.text,
-      /Verify your email once to see updates and cancel online\.\n\nManage booking online: https:\/\/site\.test\/sign-up\?email=aina%40gmail\.com&redirect_url=%2Faccount%2Fbookings%2FHTB-1042/,
+      /Verify your email once to see updates and cancel online\.\n\nManage Booking Online: https:\/\/site\.test\/sign-up\?email=aina%40gmail\.com&redirect_url=%2Faccount%2Fbookings%2FHTB-1042/,
     );
-    assert.doesNotMatch(customer!.message.text, /View booking/);
+    assert.doesNotMatch(customer!.message.text, /View Booking/);
     assert.equal(customer!.message.text.split("Verify your email").length, 2);
 
     const [confirmed] = bookingEmails(
@@ -73,7 +73,7 @@ describe("bookingEmails", () => {
       { ...guest, status: "confirmed" },
       settings,
     );
-    assert.match(confirmed!.message.text, /Manage booking online: /);
+    assert.match(confirmed!.message.text, /Manage Booking Online: /);
   });
 
   it("keeps the account holder's button and never offers them an account", () => {
@@ -87,7 +87,7 @@ describe("bookingEmails", () => {
       );
       assert.match(
         customer!.message.text,
-        /View booking: https:\/\/site\.test\/booking\/HTB-1042/,
+        /View Booking: https:\/\/site\.test\/booking\/HTB-1042/,
       );
       assert.doesNotMatch(customer!.message.text, /Verify your email|sign-up/);
     }
@@ -322,11 +322,11 @@ describe("bookingEmails", () => {
     assert.equal(coach.length, 2);
     for (const { message } of car) {
       assert.match(message.text, /CAR WITH DRIVER\nTrip: Transfer/);
-      assert.match(message.html, />Car with driver</);
+      assert.match(message.html, />Car with Driver</);
     }
     for (const { message } of coach) {
-      assert.match(message.text, /COACH CHARTER\nTrip: By the hour/);
-      assert.match(message.html, />Coach charter</);
+      assert.match(message.text, /COACH CHARTER\nTrip: By the Hour/);
+      assert.match(message.html, />Coach Charter</);
       assert.match(message.text, /Vehicle: Coach VIP/);
       assert.match(message.text, /Duration: 8 hours/);
       assert.doesNotMatch(message.text, /Child seats|Drop-off|Flight/);

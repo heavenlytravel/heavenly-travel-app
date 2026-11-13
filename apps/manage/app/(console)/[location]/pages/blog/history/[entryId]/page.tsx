@@ -50,7 +50,7 @@ async function publishDetails(entryId: string) {
       edit={
         publish.entry.isDeleted
           ? { href: blogHref(), label: "Go to Blog" }
-          : { href: blogPostHref(publish.postId), label: "Edit this post" }
+          : { href: blogPostHref(publish.postId), label: "Edit This Post" }
       }
     >
       <PagePublishCards

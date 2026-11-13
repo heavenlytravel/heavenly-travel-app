@@ -22,7 +22,7 @@ export function GuidesTable({
       {...table}
       people={guides}
       hrefOf={guideHref}
-      heading="Tour guide"
+      heading="Tour Guide"
       lead={[
         {
           heading: "Languages",

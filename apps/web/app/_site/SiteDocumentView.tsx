@@ -73,7 +73,7 @@ export function SiteDocumentView({
           </div>
         </div>
       </article>
-      <Faqs title="Good to know" faqs={content.faqs} empty={empty.faqs} />
+      <Faqs title="Good to Know" faqs={content.faqs} empty={empty.faqs} />
     </main>
   );
 }

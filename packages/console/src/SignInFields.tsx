@@ -19,7 +19,7 @@ export function ConfirmEmailField({
   hint: string;
 }) {
   return (
-    <Field label="Confirm email" hint={hint}>
+    <Field label="Confirm Email" hint={hint}>
       <Input
         name={CONFIRM_EMAIL_FIELD}
         type="email"
@@ -65,7 +65,7 @@ export function SignInFields({
           minLength={PASSWORD_MIN}
         />
       </Field>
-      <Field label="Confirm password" hint="Only when a password is set above.">
+      <Field label="Confirm Password" hint="Only when a password is set above.">
         <PasswordInput
           name={CONFIRM_PASSWORD_FIELD}
           autoComplete="new-password"

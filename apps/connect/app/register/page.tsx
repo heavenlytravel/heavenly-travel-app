@@ -9,7 +9,7 @@ import { Panel } from "../_ui/parts";
 import { BandHeading, Screen } from "../_ui/Screen";
 import { RegisterFlow } from "./RegisterFlow";
 
-export const metadata: Metadata = { title: "Register your business | Connect" };
+export const metadata: Metadata = { title: "Register Your Business | Connect" };
 
 /** What happens after the registration, beside the form. */
 const STEPS = [
@@ -80,7 +80,7 @@ export default async function RegisterPage() {
                 href="/sign-in"
                 className="font-semibold text-brand underline-offset-4 hover:underline focus-ring"
               >
-                Sign in
+                Sign In
               </Link>
             </p>
           )}
@@ -89,7 +89,7 @@ export default async function RegisterPage() {
       band={
         <BandHeading
           eyebrow="Heavenly Travel Connect"
-          title="Register your business"
+          title="Register Your Business"
         >
           Fill it all in, then confirm your email with a code. A driver for a
           vendor already with us doesn&rsquo;t register: their vendor adds them.

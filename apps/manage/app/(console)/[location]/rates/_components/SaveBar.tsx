@@ -31,7 +31,7 @@ export function SaveBar({
   canSave: boolean;
   onDiscard: () => void;
   onSave: () => void;
-  /** The button's words: "Save rates". */
+  /** The button's words: "Save Rates". */
   label: string;
 }) {
   return (

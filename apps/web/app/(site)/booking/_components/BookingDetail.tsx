@@ -55,7 +55,7 @@ export function BookingDetail({
   const several = trips.length > 1;
 
   const rows: [string, ReactNode][] = [
-    ["Booking number", <strong key="ref">{bookingLabelOf(booking)}</strong>],
+    ["Booking Number", <strong key="ref">{bookingLabelOf(booking)}</strong>],
     ["Status", <BookingStatusBadge key="status" status={booking.status} />],
     ["Name", booking.contactName],
     ["Phone", booking.contactPhone],
@@ -111,7 +111,7 @@ export function BookingDetail({
                     {formatLocalDate(change.at)}
                   </span>
                   <span className="text-right text-caption text-muted tabular-nums">
-                    New total {formatMyr(change.totalSen)}
+                    New Total {formatMyr(change.totalSen)}
                   </span>
                 </li>
               ))}

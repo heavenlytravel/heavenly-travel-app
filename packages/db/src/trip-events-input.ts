@@ -29,12 +29,12 @@ export const isTripEventKind = guardFor(TRIP_EVENT_KINDS);
 
 /** What each tap says, on its button and in the history. */
 export const TRIP_EVENT_LABELS: Record<TripEventKind, string> = {
-  "on-the-way": "On the way",
-  arrived: "Arrived at pickup",
-  "on-board": "Passenger on board",
-  "dropped-off": "Dropped off",
+  "on-the-way": "On the Way",
+  arrived: "Arrived at Pickup",
+  "on-board": "Passenger on Board",
+  "dropped-off": "Dropped Off",
   "no-show": "No-show",
-  problem: "Report a problem",
+  problem: "Report a Problem",
 };
 
 /**

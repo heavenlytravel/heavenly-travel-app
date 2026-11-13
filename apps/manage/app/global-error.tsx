@@ -17,18 +17,18 @@ export default function GlobalError({ retry }: { retry: () => void }) {
   return (
     <html lang="en" data-app="console" className={fontVars}>
       <body>
-        <title>Something Went Wrong</title>
+        <title>Something went wrong</title>
         <AuthShell
           tone="dark"
-          eyebrow="Admin portal"
+          eyebrow="Admin Portal"
           brand={<Logo tone="white" loading="eager" className="h-9" />}
         >
-          <PortalCard title="Something Went Wrong">
+          <PortalCard title="Something went wrong">
             <p className="mt-3 text-muted">
               This screen could not load. Try again, or come back in a minute.
             </p>
             <Button className="mt-8" onClick={() => retry()}>
-              Try again
+              Try Again
             </Button>
           </PortalCard>
         </AuthShell>

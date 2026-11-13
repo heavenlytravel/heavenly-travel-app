@@ -19,8 +19,8 @@ export const TRIP_CATEGORIES = ["car-with-driver", "coach-charter"] as const;
 export type TripCategory = (typeof TRIP_CATEGORIES)[number];
 export const isTripCategory = guardFor(TRIP_CATEGORIES);
 export const TRIP_CATEGORY_LABELS: Record<TripCategory, string> = {
-  "car-with-driver": "Car with driver",
-  "coach-charter": "Coach charter",
+  "car-with-driver": "Car with Driver",
+  "coach-charter": "Coach Charter",
 };
 
 /** Child seats are fitted in a car. They are never asked for a coach. */
@@ -46,7 +46,7 @@ export type TripMode = (typeof TRIP_MODES)[number];
 export const isTripMode = guardFor(TRIP_MODES);
 export const TRIP_MODE_LABELS: Record<TripMode, string> = {
   oneway: "Transfer",
-  hourly: "By the hour",
+  hourly: "By the Hour",
 };
 
 /** received -> confirmed -> assigned -> completed, or cancelled from any of them. */
@@ -62,7 +62,7 @@ export const isItemStatus = guardFor(ITEM_STATUSES);
 export const ITEM_STATUS_LABELS: Record<ItemStatus, string> = {
   received: "Received",
   confirmed: "Confirmed",
-  assigned: "Driver assigned",
+  assigned: "Driver Assigned",
   completed: "Completed",
   cancelled: "Cancelled",
 };

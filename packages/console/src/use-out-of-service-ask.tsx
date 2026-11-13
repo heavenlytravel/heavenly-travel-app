@@ -24,7 +24,7 @@ export function useOutOfServiceAsk({
   /** In service as saved: only taking it out asks. */
   wasActive: boolean;
   held: readonly HeldBooking[];
-  /** The answer that goes ahead: "Take out of service". */
+  /** The answer that goes ahead: "Take Out of Service". */
   action: string;
 }) {
   const [active, setActive] = useState(wasActive);

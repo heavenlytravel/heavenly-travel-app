@@ -39,7 +39,7 @@ function owedParts(trip: FulfilmentTrip) {
 }
 
 /**
- * "Who does it", inside the trip's card: where its assignment stands, its
+ * "Who Does It", inside the trip's card: where its assignment stands, its
  * vehicle and driver, and its tour guide when it goes with one, their
  * vendor and whose answer they wait for. Assigning is Operation's, on the
  * trip's page under Assign, which "Open in Assign" leads to. A trip
@@ -64,7 +64,7 @@ export function TripCrew({
     return (
       <section className="grid gap-2">
         <h3 className="text-sm font-semibold text-ink">
-          Cancelled: pay the vendor
+          Cancelled: Pay the Vendor
         </h3>
         {owed.map((part) => (
           <CostRow
@@ -83,7 +83,7 @@ export function TripCrew({
   return (
     <section className="grid gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-sm font-semibold text-ink">Who does it</h3>
+        <h3 className="text-sm font-semibold text-ink">Who Does It</h3>
         {trip.status === "received" ? (
           <span className="text-caption text-muted">
             Assigned once confirmed
@@ -177,7 +177,7 @@ function CostRow({
             variant="ghost"
             onClick={() => setOpen(true)}
           >
-            Change cost
+            Change Cost
           </Button>
         ) : null}
       </div>

@@ -33,7 +33,7 @@ export type { LocationVehicleClass };
  * sale there. The readers serve the location's Vehicle classes tab and the
  * customer site; the writers are the tab's, each taking the actor and
  * logging against the location inside its transaction. See
- * docs/261015-locations-as-operation-areas.md, "Vehicle classes", and
+ * docs/261015-locations-as-operation-areas.md, "Vehicle Classes", and
  * docs/261018-location-work-and-class-catalogue.md.
  */
 
@@ -189,7 +189,7 @@ export function getOffering(id: string): Promise<Offering | null> {
   return db.locationVehicleClass.findUnique({ where: { id }, ...withClass });
 }
 
-/** The catalogue classes the location does not offer yet, for "Add class". */
+/** The catalogue classes the location does not offer yet, for "Add Class". */
 export async function listClassesNotOffered(
   locationId: string,
 ): Promise<VehicleClass[]> {
@@ -200,7 +200,7 @@ export async function listClassesNotOffered(
   return rows.sort(byCategory);
 }
 
-/** What "Add class" picks: a catalogue class by id, or a new one with its fields. */
+/** What "Add Class" picks: a catalogue class by id, or a new one with its fields. */
 export type OfferingClassChoice =
   { vehicleClassId: string } | { newClass: VehicleClassFields };
 

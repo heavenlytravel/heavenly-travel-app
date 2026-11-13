@@ -251,11 +251,11 @@ describe("missingFields", () => {
 
   it("lists everything an empty main page needs, in the order of the form", () => {
     assert.deepEqual(missingFields("landing", pageContentOf("landing", {})), [
-      "Meta title",
-      "Meta description",
+      "Meta Title",
+      "Meta Description",
       "Headline",
       "Subheadline",
-      "Hero image",
+      "Hero Image",
       "Intro: at least 100 words (0 so far)",
       "FAQs: at least 3 (0 so far)",
     ]);
@@ -263,16 +263,16 @@ describe("missingFields", () => {
 
   it("names the hero's lines as the kind calls them", () => {
     assert.deepEqual(missingFields("place", emptyPageContent("place")), [
-      "Meta title",
-      "Meta description",
+      "Meta Title",
+      "Meta Description",
       "Name",
       "Short description",
-      "Hero image",
+      "Hero Image",
       "Intro: at least 100 words (0 so far)",
     ]);
     assert.deepEqual(missingFields("document", emptyPageContent("document")), [
-      "Meta title",
-      "Meta description",
+      "Meta Title",
+      "Meta Description",
       "Title",
       "Summary",
       "Text: at least 100 words (0 so far)",
@@ -309,7 +309,7 @@ describe("missingFields", () => {
       faqs: [base.faqs[0]!, { question: "Q?", answer: "" }],
     };
     assert.deepEqual(missingFields("landing", content), [
-      "Hero image: the alt text",
+      "Hero Image: the alt text",
       "Intro: at least 100 words (62 so far)",
       "FAQs: at least 3 (2 so far)",
       "FAQ 2: the answer",
@@ -324,7 +324,7 @@ describe("missingFields", () => {
     );
     assert.deepEqual(
       missingFields("document", { ...base, heroImage: image("") }),
-      ["Hero image: the alt text"],
+      ["Hero Image: the alt text"],
     );
   });
 
@@ -364,7 +364,7 @@ describe("pageChecks", () => {
     const base = complete("landing");
     assert.deepEqual(
       missingFields("landing", { ...base, shareImage: image("") }),
-      ["Share image: the alt text"],
+      ["Share Image: the alt text"],
     );
   });
 });
@@ -381,7 +381,7 @@ describe("changedPageParts", () => {
         shareImage: image("Share"),
         addressId: null,
       }),
-      ["Meta title", "Share image", "Intro", "Saved address"],
+      ["Meta Title", "Share Image", "Intro", "Saved Address"],
     );
   });
 });
@@ -395,7 +395,7 @@ describe("checkPageComplete", () => {
     const base = complete("landing");
     assert.equal(
       errorOf(checkPageComplete("landing", { ...base, metaTitle: "" })),
-      "The page is not complete. Still missing: Meta title.",
+      "The page is not complete. Still missing: Meta Title.",
     );
     assert.equal(
       errorOf(
@@ -406,7 +406,7 @@ describe("checkPageComplete", () => {
           faqs: [],
         }),
       ),
-      "The page is not complete. Still missing: Meta title, and 2 more.",
+      "The page is not complete. Still missing: Meta Title, and 2 more.",
     );
   });
 

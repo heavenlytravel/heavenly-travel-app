@@ -20,7 +20,7 @@ type LocationRef = { id: string; name: string; slug: string };
 /**
  * A page a file is on: a location's, by its section and slug, one of the
  * site's own, the footer, or a blog post, by its id; with the title the
- * screens give it, "Eagle Square", "Coach charter page", "About us",
+ * screens give it, "Eagle Square", "Coach Charter page", "About Us",
  * "Footer", "A day in Langkawi".
  */
 export type MediaPage =
@@ -93,10 +93,10 @@ export const MEDIA_STATUSES = ["used", "earlier", "unused", "recent"] as const;
 export type MediaStatus = (typeof MEDIA_STATUSES)[number];
 
 export const MEDIA_STATUS_LABELS: Record<MediaStatus, string> = {
-  used: "In use",
-  earlier: "Past versions only",
+  used: "In Use",
+  earlier: "Past Versions Only",
   unused: "Unused",
-  recent: "Just uploaded",
+  recent: "Just Uploaded",
 };
 
 /** Where a file uploaded at `uploadedAt`, with its uses, stands at `now`. */
@@ -121,8 +121,8 @@ export const MEDIA_FILTERS = {
 export type MediaFilter = keyof typeof MEDIA_FILTERS;
 
 export const MEDIA_FILTER_LABELS: Record<MediaFilter, string> = {
-  used: "In use",
-  earlier: "Past versions only",
+  used: "In Use",
+  earlier: "Past Versions Only",
   unused: "Unused",
 };
 

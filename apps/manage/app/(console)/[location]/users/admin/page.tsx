@@ -40,7 +40,7 @@ import { WallSwitch } from "./WallSwitch";
  * Route: /~/users/admin?q=…&sort=…. Admin: who has access to Manage,
  * their level and teams, each to edit or revoke, in the order they were
  * made admins or the newest first, the list narrowed by a search of
- * names and emails; "Add admin", which promotes an account or makes one;
+ * names and emails; "Add Admin", which promotes an account or makes one;
  * the wall between the teams; and what each team can do, which SUPER may change.
  * Console-wide: under a slug it is not found. SUPER only.
  */
@@ -104,7 +104,7 @@ async function staffList({
           }
           action={<WallSwitch active={wallActive} />}
         >
-          The wall between teams
+          The Wall Between Teams
         </CardTitle>
         <p className="text-sm text-body">
           {wallActive
@@ -135,7 +135,7 @@ async function staffList({
             />
           }
         >
-          Everyone with access
+          Everyone with Access
         </CardTitle>
         <Table bare>
           <THead>
@@ -186,7 +186,7 @@ async function staffList({
                   <Td>
                     {needsTeam(profile) ? (
                       <Badge dot tone="amber">
-                        No team
+                        No Team
                       </Badge>
                     ) : teams.length === 0 ? (
                       <span className="text-muted">Everything</span>

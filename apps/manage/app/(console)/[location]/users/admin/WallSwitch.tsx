@@ -14,12 +14,12 @@ const CONFIRM: Record<"on" | "off", ConfirmRequest> = {
     title: "Turn the wall on?",
     description:
       "Each admin will reach only the screens and actions of their teams.",
-    action: "Turn on",
+    action: "Turn On",
   },
   off: {
     title: "Turn the wall off?",
     description: "Every admin will reach every team screen and action.",
-    action: "Turn off",
+    action: "Turn Off",
   },
 };
 

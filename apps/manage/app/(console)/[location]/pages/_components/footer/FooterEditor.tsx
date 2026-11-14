@@ -6,7 +6,6 @@ import {
   CONNECT_FOOTER_KEY,
   FOOTER_LIMITS,
   FOOTER_LINK_KINDS,
-  FOOTER_LINK_KIND_LABELS,
   IMAGE_TYPES,
   SOCIAL_NETWORKS,
   SOCIAL_NETWORK_LABELS,
@@ -15,8 +14,6 @@ import {
   footerContentOf,
   footerProblems,
   formatLocalDateTime,
-  isFooterLinkKind,
-  isWebsitePageKey,
   isSocialNetwork,
   pageStatusOf,
   sameFooterContent,
@@ -27,7 +24,6 @@ import {
   type FooterLinkTarget,
   type FooterSocial,
   type PageImage,
-  type WebsitePageKey,
   type UploadedImage,
   IMAGE_SIZES,
 } from "@repo/db";
@@ -60,6 +56,15 @@ import { useLeaveGuard } from "@repo/console/use-leave-guard";
 import { RowControls, movedRow } from "../../../../../_components/RowControls";
 import { publishFooterAction, saveFooterDraftAction } from "./actions";
 import { FooterContentView } from "./FooterContentView";
+import {
+  LinkTargetFields,
+  firstTargetOf,
+  targetNameOf,
+  targetNoteOf,
+  type LinkChoices,
+  type LinkableLocation,
+  type LinkablePage,
+} from "../../../../../_components/page-editor/LinkTargetFields";
 import { logoSrc } from "./logo-src";
 
 /** A row of a list in the form, with an id that stays while the form is open. A logo has its own `key`, UploadThing's. */
@@ -79,16 +84,6 @@ type FormContent = Omit<
   legalLinks: Rowed<FooterLink>[];
   since: string;
 };
-
-/** A site page a link may open, and whether the public sees it. */
-export type LinkablePage = {
-  page: WebsitePageKey;
-  label: string;
-  published: boolean;
-};
-
-/** A location a link may open, and whether the public sees it. */
-export type LinkableLocation = { slug: string; name: string; public: boolean };
 
 const L = FOOTER_LIMITS;
 
@@ -941,29 +936,13 @@ function HeadingField({
   );
 }
 
-/** A new link: to the first site page, about us. */
+/** A new link: to the first site page, about us, named after it. */
 function firstLink(pages: readonly LinkablePage[]): FooterLink {
-  const first = pages.find((page) => page.page !== "home") ?? pages[0];
+  const target = firstTargetOf("page", { pages, locations: [] });
   return {
-    label: first?.label ?? "",
-    target: first
-      ? { kind: "page", page: first.page }
-      : { kind: "url", url: "" },
+    label: targetNameOf(target, { pages, locations: [] }) ?? "",
+    target: target as FooterLinkTarget,
   };
-}
-
-/**
- * Why a link to a location is left out, or null when it shows: the
- * location is not public, or no location has the address any more, its
- * slug changed or it was deleted.
- */
-function locationNote(locations: readonly LinkableLocation[], slug: string) {
-  if (slug === "") return null;
-  const location = locations.find((l) => l.slug === slug);
-  if (!location) {
-    return `No location is at /${slug} any more, so this link is left out. Choose its location again.`;
-  }
-  return location.public ? null : "Left out until the location is public.";
 }
 
 /** The first network not in the list yet, for a new row. */
@@ -1001,32 +980,19 @@ function LinkRows({
       ),
     );
 
-  /** The target a kind starts at, its text filled from it while there is none. */
-  function retarget(link: Rowed<FooterLink>, kind: string) {
-    if (!isFooterLinkKind(kind) || kind === link.target.kind) return;
-    const target: FooterLinkTarget =
-      kind === "page"
-        ? firstLink(pages).target
-        : kind === "location"
-          ? { kind: "location", slug: locations[0]?.slug ?? "" }
-          : { kind: "url", url: "" };
-    update(link.rowId, { target });
-  }
+  const choices: LinkChoices = { pages, locations };
 
-  /** A page or location chosen: its name as the text, while the text is still the last one's. */
+  /**
+   * A page or location chosen: its name as the text, while the text is
+   * still the last one's. A kind picked starts at its first choice.
+   */
   function choose(link: Rowed<FooterLink>, target: FooterLinkTarget) {
-    const nameOf = (t: FooterLinkTarget) =>
-      t.kind === "page"
-        ? pages.find((p) => p.page === t.page)?.label
-        : t.kind === "location"
-          ? locations.find((l) => l.slug === t.slug)?.name
-          : undefined;
     // Compared in small letters: a footer saved before 2026-11-13 has
     // "About us" where the page is now named "About Us".
-    const was = nameOf(link.target)?.toLowerCase();
+    const was = targetNameOf(link.target, choices)?.toLowerCase();
     const label =
       link.label.trim() === "" || link.label.toLowerCase() === was
-        ? (nameOf(target) ?? link.label)
+        ? (targetNameOf(target, choices) ?? link.label)
         : link.label;
     update(link.rowId, { target, label });
   }
@@ -1037,14 +1003,7 @@ function LinkRows({
         <CardRows>
           {links.map((link, index) => {
             const { target } = link;
-            const hidden =
-              target.kind === "page"
-                ? pages.find((p) => p.page === target.page)?.published === false
-                  ? "Left out until the page is published."
-                  : null
-                : target.kind === "location"
-                  ? locationNote(locations, target.slug)
-                  : null;
+            const hidden = targetNoteOf(target, choices);
             return (
               <li
                 key={link.rowId}
@@ -1062,61 +1021,12 @@ function LinkRows({
                       update(link.rowId, { label: event.target.value })
                     }
                   />
-                  <Select
-                    aria-label="Opens"
-                    className="w-36"
-                    value={target.kind}
-                    options={FOOTER_LINK_KINDS.map((kind) => ({
-                      value: kind,
-                      label: FOOTER_LINK_KIND_LABELS[kind],
-                    }))}
-                    onValueChange={(kind) => retarget(link, kind)}
+                  <LinkTargetFields
+                    kinds={FOOTER_LINK_KINDS}
+                    target={target}
+                    choices={choices}
+                    onChange={(next) => choose(link, next)}
                   />
-                  {target.kind === "page" ? (
-                    <Select
-                      aria-label="Site page"
-                      className="w-56"
-                      value={target.page}
-                      options={pages.map((p) => ({
-                        value: p.page,
-                        label: p.published
-                          ? p.label
-                          : `${p.label} (not published)`,
-                      }))}
-                      onValueChange={(page) => {
-                        if (isWebsitePageKey(page)) {
-                          choose(link, { kind: "page", page });
-                        }
-                      }}
-                    />
-                  ) : target.kind === "location" ? (
-                    <Select
-                      aria-label="Location"
-                      className="w-56"
-                      value={target.slug}
-                      placeholder="Choose a location"
-                      options={locations.map((l) => ({
-                        value: l.slug,
-                        label: l.public ? l.name : `${l.name} (not public)`,
-                      }))}
-                      onValueChange={(slug) =>
-                        choose(link, { kind: "location", slug })
-                      }
-                    />
-                  ) : (
-                    <Input
-                      aria-label="Address"
-                      className="w-56"
-                      autoComplete="off"
-                      placeholder="https://… or /booking"
-                      value={target.url}
-                      onChange={(event) =>
-                        update(link.rowId, {
-                          target: { kind: "url", url: event.target.value },
-                        })
-                      }
-                    />
-                  )}
                   <RowControls
                     name={link.label || `link ${index + 1}`}
                     isFirst={index === 0}

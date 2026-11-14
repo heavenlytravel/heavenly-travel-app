@@ -61,9 +61,9 @@ import {
   pageStatusOf,
   publicCopyOf,
   type PageContent,
-  type PageImage,
   type PageKind,
 } from "./page-content";
+import { type PageImage } from "./page-text";
 import {
   PAGE_CHANGED,
   pageWriteData,
@@ -333,22 +333,31 @@ export async function listServiceLocationCards(
 }
 
 /**
- * The locations the public sees, by slug: live or paused, with their main
- * page published. The footer leaves out a link to any other.
+ * Every location the public sees, live or paused with its main page
+ * published, as a card: its name, its tagline and
+ * its main page's hero, by name. What a link to a location may open, and
+ * the photo a card leading to one shows when it has none of its own.
  */
-export async function listPublicLocationSlugs(): Promise<string[]> {
+export async function listPublicLocationCards(): Promise<TopChoiceCard[]> {
   const locations = await db.location.findMany({
     where: { state: { in: LOCATION_STATES.filter(isPublicState) } },
+    orderBy: { name: "asc" },
     include: {
       addresses: { orderBy: { position: "asc" } },
       // The main page alone decides whether the public sees a location.
       pages: { where: { locale: PAGE_LOCALE, page: LANDING_PAGE, slug: "" } },
     },
   });
-  // The public view's own rule, so the footer links what the routes serve.
-  return locations.flatMap((location) =>
-    publicLocationViewOf({ ...location, offerings: [] }) ? [location.slug] : [],
-  );
+  // The public view's own rule, so the links match what the routes serve.
+  return locations.flatMap((location) => {
+    const view = publicLocationViewOf({ ...location, offerings: [] });
+    return view ? [topChoiceCardOf(view)] : [];
+  });
+}
+
+/** The slugs of the locations the public sees, for the footer's links. */
+export async function listPublicLocationSlugs(): Promise<string[]> {
+  return (await listPublicLocationCards()).map((card) => card.slug);
 }
 
 /** One page of a location, as its editor opens it. */

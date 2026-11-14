@@ -1,8 +1,14 @@
 import {
   HOME_PAGE,
+  PAGE_KIND_RULES,
+  SITE_PAGES,
   SITE_PAGE_LABELS,
   checkSitePageUnpublish,
   hasBuiltInCopy,
+  isHubPage,
+  isPagePublished,
+  isSitePagePublic,
+  isWebsitePageKey,
   sitePageAppOf,
   sitePageFallbackTitle,
   sitePageKindOf,
@@ -10,7 +16,12 @@ import {
 } from "@repo/db";
 import {
   getSitePage,
+  listBlogPostSummaries,
+  listClassOptions,
+  listLocationNames,
+  listPublicLocationSlugs,
   listSitePagePublishes,
+  listSitePageSummaries,
   listTopChoiceCandidates,
   listTopChoices,
 } from "@repo/db/server";
@@ -31,6 +42,7 @@ import {
   sitePagePublicUrl,
   sitePageShownPath,
 } from "../../../../_lib/site";
+import type { SectionData } from "../../../../_components/page-editor/sections/data";
 import { TopChoiceControl } from "../website/TopChoiceControl";
 
 /**
@@ -61,9 +73,12 @@ export function SitePageEditorScreen({ page }: { page: SitePageKey }) {
 
 /** The page in its editor, under its header. */
 async function editorDetails({ page }: { page: SitePageKey }) {
-  const [details, published] = await Promise.all([
+  const [details, published, sectionData] = await Promise.all([
     getSitePage(page),
     listSitePagePublishes(page),
+    PAGE_KIND_RULES[sitePageKindOf(page)].sections
+      ? sectionDataOf(page)
+      : undefined,
   ]);
   const label = SITE_PAGE_LABELS[page];
   // This page's publishes, newest first, each opening its before and after.
@@ -101,6 +116,7 @@ async function editorDetails({ page }: { page: SitePageKey }) {
         previewUrl={sitePagePreviewUrl(page)}
         publicUrl={sitePagePublicUrl(page)}
         fallbackTitle={sitePageFallbackTitle(page)}
+        sectionData={sectionData}
         unpublishedNote={
           hasBuiltInCopy(page)
             ? "The public sees the page in the words it was built with until you publish."
@@ -123,6 +139,60 @@ async function editorDetails({ page }: { page: SitePageKey }) {
       ) : null}
     </>
   );
+}
+
+/**
+ * What a page's sections pick from: where a service card may lead, each
+ * marked where the public cannot open it; the class catalogue, a hub's
+ * own service's alone; and the other pages with sections, from their
+ * saved drafts, for "Copy From…".
+ */
+async function sectionDataOf(page: SitePageKey): Promise<SectionData> {
+  const otherPages = SITE_PAGES.filter(
+    (other) =>
+      other !== page && PAGE_KIND_RULES[sitePageKindOf(other)].sections,
+  );
+  const [summaries, locations, publicSlugs, posts, classes, others] =
+    await Promise.all([
+      listSitePageSummaries(),
+      listLocationNames(),
+      listPublicLocationSlugs(),
+      listBlogPostSummaries(),
+      listClassOptions(),
+      Promise.all(otherPages.map((other) => getSitePage(other))),
+    ]);
+  const isPublic = new Set(publicSlugs);
+  return {
+    choices: {
+      pages: summaries.flatMap(({ page: key, status }) =>
+        isWebsitePageKey(key)
+          ? [
+              {
+                page: key,
+                label: SITE_PAGE_LABELS[key],
+                published: isSitePagePublic(key, isPagePublished(status)),
+              },
+            ]
+          : [],
+      ),
+      locations: locations.map((location) => ({
+        slug: location.slug,
+        name: location.name,
+        public: isPublic.has(location.slug),
+      })),
+      posts: posts.map((post) => ({
+        slug: post.slug,
+        title: post.title,
+        published: isPagePublished(post.status),
+      })),
+    },
+    classes,
+    classCategory: isHubPage(page) ? page : null,
+    others: others.map((other) => ({
+      label: SITE_PAGE_LABELS[other.page],
+      sections: other.draft.sections,
+    })),
+  };
 }
 
 /** The top choices and the locations that could join them. */

@@ -33,10 +33,14 @@
    header once the card has scrolled away, and the booking pages' trips.
    Glass over a pale page is only a pale tint, so the photo comes along:
    the brand's photo (`--frost-photo`), melted and tinted as the card's
-   backdrop melts and tints the hero, drawn behind the content and kept
-   inside the corners (`--frost-radius`); the photo's lower half, the
-   island and the sea, darker than its sky under white words. Blurred
-   past its edges, then cut back to them, so the edges do not fade. */
+   backdrop melts and tints the hero, drawn behind the content inside the
+   panel's own corners; the photo's lower half, the island and the sea,
+   darker than its sky under white words. The tinted photo fills the
+   panel (`::before`) and a pane over it melts it (`::after`): a backdrop
+   blur reads only what lies under the pane, so the edges do not fade, and
+   nothing reaches past the panel. A layer drawn past it and cut back
+   would still widen the page by what it reaches past, and a phone then
+   lays the bars fixed under the header out that much wider. */
 .frosted {
   position: relative;
   isolation: isolate;
@@ -44,21 +48,25 @@
     0 0 0 1px rgb(255 255 255 / 0.16),
     0 30px 60px -28px color-mix(in srgb, var(--ink) 45%, transparent);
 }
-.frosted::before {
+.frosted::before,
+.frosted::after {
   content: "";
   position: absolute;
-  /* Three blurs past each edge: a blur fades that far into its edge. */
-  inset: -120px;
+  inset: 0;
   z-index: -1;
+  border-radius: inherit;
   pointer-events: none;
+}
+.frosted::before {
   background:
     linear-gradient(
       color-mix(in srgb, var(--glass) 35%, transparent),
       color-mix(in srgb, var(--glass) 35%, transparent)
     ),
     var(--frost-photo) center 65% / cover no-repeat;
-  filter: blur(40px) saturate(1.6);
-  clip-path: inset(120px round var(--frost-radius, 0px));
+}
+.frosted::after {
+  backdrop-filter: blur(40px) saturate(1.6);
 }
 
 /* The button that removes a trip. Where the trip's boxes stand one under

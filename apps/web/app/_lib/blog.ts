@@ -17,7 +17,7 @@ import { REFRESH_SECONDS } from "./locations";
  */
 
 /** The version of `BlogPostView` the cache holds; a change to its shape bumps it. */
-const BLOG_VERSION = 1;
+const BLOG_VERSION = 2;
 
 /** Every published post, newest first, without its text. */
 export const publishedBlogPosts = unstable_cache(

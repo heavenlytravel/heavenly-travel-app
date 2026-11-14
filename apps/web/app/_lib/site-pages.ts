@@ -3,11 +3,11 @@ import {
   FOOTER_KEY,
   SITE_PAGES_TAG,
   defaultFooterContent,
-  footerAudienceOf,
   getFooter,
   getPublishedFooter,
   getSitePage,
   listPublishedSitePages,
+  siteLinkAudienceOf,
   visibleFooterOf,
   type FooterContent,
   type PublishedSitePage,
@@ -30,7 +30,7 @@ import {
  */
 
 /** The version of what the cache holds; a change to its shape bumps it. */
-const SITE_PAGES_VERSION = 1;
+const SITE_PAGES_VERSION = 2;
 
 /** The site pages that are published, by key. */
 export const publishedSitePages = unstable_cache(
@@ -79,5 +79,5 @@ export async function shownFooter(preview: boolean): Promise<FooterContent> {
     publishedSitePages(),
     publicLocationSlugs(),
   ]);
-  return visibleFooterOf(content, footerAudienceOf(pages, locations));
+  return visibleFooterOf(content, siteLinkAudienceOf(pages, locations, []));
 }

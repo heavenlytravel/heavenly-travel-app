@@ -60,7 +60,7 @@ describe("a site page's title without a meta title", () => {
 describe("the services' hubs", () => {
   it("are service pages at the sections' names", () => {
     for (const page of HUB_PAGES) {
-      assert.equal(sitePageKindOf(page), "service");
+      assert.equal(sitePageKindOf(page), "hub");
       assert.equal(sitePagePath(page), `/${page}`);
       assert.ok(isLocationSection(page));
     }

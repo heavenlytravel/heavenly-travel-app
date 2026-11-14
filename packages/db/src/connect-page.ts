@@ -71,6 +71,7 @@ export const CONNECT_PAGE_COPY: PageContent = {
         "Yes. Tell us every place you serve when you register. Offers come only for the places and classes you run.",
     },
   ],
+  sections: [],
   addressId: null,
   indexable: true,
 };

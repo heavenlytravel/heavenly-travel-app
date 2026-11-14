@@ -24,9 +24,9 @@ import {
   pageStatusOf,
   publicCopyOf,
   type PageContent,
-  type PageImage,
   type PageStatus,
 } from "./page-content";
+import { type PageImage } from "./page-text";
 import {
   PAGE_CHANGED,
   pageWriteData,

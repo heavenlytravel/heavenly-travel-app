@@ -1,7 +1,22 @@
 import type { Change } from "./change";
 import { guardFor } from "./const-enum";
-import { isUploadUrl, uploadKeyOf, type UploadedImage } from "./images";
+import { isUploadUrl, uploadKeyOf } from "./images";
 import { markdownImagesOf, markdownWordCount } from "./markdown";
+import {
+  missingInSections,
+  pageSectionsOf,
+  sectionImages,
+  sectionLimitError,
+  type PageSection,
+} from "./page-sections";
+import {
+  lineOf,
+  pageImageOf,
+  paragraphTextOf,
+  recordOf,
+  wordCount,
+  type PageImage,
+} from "./page-text";
 
 /**
  * The content of the pages Marketing writes and the rules it is checked
@@ -18,8 +33,9 @@ import { markdownImagesOf, markdownWordCount } from "./markdown";
  * What a page is, which decides its fields: a location's main page; a
  * service's page, such as car with driver; a page that lists others, such
  * as popular places; a vehicle class's page; a place, an attraction or a
- * hotel; a blog post; the site's home page; one of the site's documents,
- * such as the terms; Connect's landing page, for vendors.
+ * hotel; a blog post; the site's home page; a service's hub, such as
+ * /car-with-driver; one of the site's documents, such as the terms;
+ * Connect's landing page, for vendors.
  */
 export const PAGE_KINDS = [
   "landing",
@@ -29,6 +45,7 @@ export const PAGE_KINDS = [
   "place",
   "article",
   "home",
+  "hub",
   "document",
   "connect",
 ] as const;
@@ -48,6 +65,8 @@ type KindRule = {
   faqs: Exclude<Need, "none">;
   /** The saved address "Take Me Here" fills in. */
   address: boolean;
+  /** Sections between the hero and the intro (./page-sections). */
+  sections: boolean;
 };
 
 /** What each kind of page holds and needs. Every kind needs its meta title and description and a hero headline and subheadline. */
@@ -59,6 +78,7 @@ export const PAGE_KIND_RULES: Record<PageKind, KindRule> = {
     body: false,
     faqs: "required",
     address: false,
+    sections: false,
   },
   service: {
     tagline: false,
@@ -67,6 +87,7 @@ export const PAGE_KIND_RULES: Record<PageKind, KindRule> = {
     body: false,
     faqs: "required",
     address: false,
+    sections: false,
   },
   listing: {
     tagline: false,
@@ -75,6 +96,7 @@ export const PAGE_KIND_RULES: Record<PageKind, KindRule> = {
     body: false,
     faqs: "optional",
     address: false,
+    sections: false,
   },
   class: {
     tagline: false,
@@ -83,6 +105,7 @@ export const PAGE_KIND_RULES: Record<PageKind, KindRule> = {
     body: false,
     faqs: "required",
     address: false,
+    sections: false,
   },
   place: {
     tagline: false,
@@ -91,6 +114,7 @@ export const PAGE_KIND_RULES: Record<PageKind, KindRule> = {
     body: false,
     faqs: "optional",
     address: true,
+    sections: false,
   },
   article: {
     tagline: false,
@@ -99,6 +123,7 @@ export const PAGE_KIND_RULES: Record<PageKind, KindRule> = {
     body: true,
     faqs: "optional",
     address: false,
+    sections: false,
   },
   home: {
     tagline: true,
@@ -107,6 +132,17 @@ export const PAGE_KIND_RULES: Record<PageKind, KindRule> = {
     body: false,
     faqs: "optional",
     address: false,
+    sections: true,
+  },
+  /** A service's page as a location's is, with sections. */
+  hub: {
+    tagline: false,
+    heroImage: "required",
+    intro: "required",
+    body: false,
+    faqs: "required",
+    address: false,
+    sections: true,
   },
   document: {
     tagline: false,
@@ -115,6 +151,7 @@ export const PAGE_KIND_RULES: Record<PageKind, KindRule> = {
     body: true,
     faqs: "optional",
     address: false,
+    sections: false,
   },
   /**
    * The intro is who Connect is for; the text, a Markdown of `##` parts,
@@ -128,6 +165,7 @@ export const PAGE_KIND_RULES: Record<PageKind, KindRule> = {
     body: true,
     faqs: "required",
     address: false,
+    sections: false,
   },
 };
 
@@ -154,9 +192,6 @@ export function heroLabelsOf(kind: PageKind): {
 /** The locale every page row is written in. Malay pages are future work. */
 export const PAGE_LOCALE = "en";
 
-/** An uploaded image as the content keeps it, with the alt text Marketing writes. */
-export type PageImage = UploadedImage & { alt: string };
-
 export type PageFaq = { question: string; answer: string };
 
 /** What Marketing writes on one page. The working draft and the published copy both hold one. */
@@ -182,6 +217,8 @@ export type PageContent = {
   /** Markdown, on a post or a document only. */
   body: string;
   faqs: PageFaq[];
+  /** On the home page and a hub: the sections, in their order; none on the other kinds. */
+  sections: PageSection[];
   /** On a place only: the saved address "Take Me Here" fills in; null for none. */
   addressId: string | null;
   /**
@@ -214,51 +251,11 @@ export const PAGE_LIMITS = {
 
 const fail = (error: string): Change => ({ ok: false, error });
 
-export function wordCount(text: string) {
-  return text.split(/\s+/).filter(Boolean).length;
-}
-
-/** The paragraphs of a plain text, as the page renders them. */
-export function paragraphsOf(text: string): string[] {
-  return text
-    .split(/\n+/)
-    .map((line) => line.replace(/\s+/g, " ").trim())
-    .filter(Boolean);
-}
-
-/** One line: runs of white space become one space; "" for anything that is not text. */
-export function lineOf(value: unknown) {
-  return typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "";
-}
-
-/** Plain paragraphs with one blank line between them. */
-function paragraphTextOf(value: unknown) {
-  return typeof value === "string" ? paragraphsOf(value).join("\n\n") : "";
-}
-
 /** Markdown as typed, with its line ends made one kind and its ends trimmed: its spaces mean something. */
 function markdownOf(value: unknown) {
   return typeof value === "string"
     ? value.replace(/\r\n?/g, "\n").replace(/^\n+|\s+$/g, "")
     : "";
-}
-
-/** The fields of a stored or submitted object; none for anything else. */
-export function recordOf(value: unknown): Record<string, unknown> {
-  return typeof value === "object" && value !== null
-    ? (value as Record<string, unknown>)
-    : {};
-}
-
-const isSize = (value: unknown): value is number =>
-  typeof value === "number" && Number.isInteger(value) && value > 0;
-
-/** The image, with its alt text as one line, or null for anything that is not an uploaded one. */
-export function pageImageOf(value: unknown): PageImage | null {
-  const { url, key, width, height, alt } = recordOf(value);
-  if (!isUploadUrl(url) || typeof key !== "string" || key === "") return null;
-  if (!isSize(width) || !isSize(height)) return null;
-  return { url, key, width, height, alt: lineOf(alt) };
 }
 
 /**
@@ -287,6 +284,7 @@ export function pageContentOf(kind: PageKind, value: unknown): PageContent {
       const { question, answer } = recordOf(row);
       return { question: lineOf(question), answer: paragraphTextOf(answer) };
     }),
+    sections: rule.sections ? pageSectionsOf(kind, raw.sections) : [],
     addressId:
       rule.address && typeof raw.addressId === "string" && raw.addressId !== ""
         ? raw.addressId
@@ -355,6 +353,8 @@ export function checkPageLimits(content: PageContent): Change {
   if (content.faqs.length > L.maxFaqs) {
     return fail(`A page holds at most ${L.maxFaqs} FAQs.`);
   }
+  const sections = sectionLimitError(content.sections);
+  if (sections) return fail(sections);
   for (const [i, faq] of content.faqs.entries()) {
     if (over(faq.question, L.faqQuestion)) {
       return fail(
@@ -381,7 +381,7 @@ function missingOfImage(
 }
 
 /** The two tabs of the page editor: what the page shows, and what search engines and shared links show. */
-export type PageEditorTab = "content" | "search";
+export type PageEditorTab = "content" | "sections" | "search";
 
 /**
  * One thing a page needs before it is published, as the publish dialog
@@ -389,7 +389,7 @@ export type PageEditorTab = "content" | "search";
  * what is still missing, empty once it is done.
  */
 export type PageCheck = {
-  key: "search" | "hero" | "intro" | "body" | "faqs";
+  key: "search" | "hero" | "intro" | "body" | "sections" | "faqs";
   label: string;
   tab: PageEditorTab;
   missing: string[];
@@ -477,6 +477,16 @@ export function pageChecks(kind: PageKind, content: PageContent): PageCheck[] {
     });
   }
 
+  if (rule.sections) {
+    checks.push({
+      key: "sections",
+      label:
+        "Each section switched on, with its title and what each of its items needs",
+      tab: "sections",
+      missing: missingInSections(kind, content.sections),
+    });
+  }
+
   const faqs: string[] = [];
   if (rule.faqs === "required" && content.faqs.length < L.minFaqs) {
     faqs.push(`FAQs: at least ${L.minFaqs} (${content.faqs.length} so far)`);
@@ -517,6 +527,7 @@ const PAGE_PARTS: readonly (readonly [keyof PageContent, string])[] = [
   ["heroImage", "Hero Image"],
   ["intro", "Intro"],
   ["body", "Text"],
+  ["sections", "Sections"],
   ["faqs", "FAQs"],
   ["addressId", "Saved Address"],
   ["indexable", "Search Engines"],
@@ -556,6 +567,7 @@ export function pageImageUrls(content: PageContent): string[] {
     content.shareImage?.url,
     content.heroImage?.url,
     ...markdownImagesOf(content.body).map((image) => image.url),
+    ...sectionImages(content.sections).map((image) => image.url),
   ].filter((url): url is string => url !== undefined && isUploadUrl(url));
 }
 

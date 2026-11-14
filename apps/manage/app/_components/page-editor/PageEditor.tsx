@@ -61,18 +61,25 @@ import { CompareDialog } from "./PageHistory";
 import { BarLink, PublishBar } from "./PublishBar";
 import { PublishDialog } from "./PublishDialog";
 import { useSaveShortcut } from "./use-save-shortcut";
+import type { SectionData } from "./sections/data";
+import { formSectionOf, type FormSection } from "./sections/form";
+import { SectionsCard } from "./sections/SectionsCard";
 import { SearchResultPreview, SharedLinkPreview } from "./SearchPreviews";
 import type { PageTarget } from "./target";
 
 /** A row of a list in the form, with a key that stays while the form is open. */
 type Keyed<T> = T & { key: string };
 
-/** The content as the form holds it: as typed, its FAQs keyed. */
-type FormContent = Omit<PageContent, "faqs"> & { faqs: Keyed<PageFaq>[] };
+/** The content as the form holds it: as typed, its FAQs keyed, its sections' items with row ids. */
+type FormContent = Omit<PageContent, "faqs" | "sections"> & {
+  faqs: Keyed<PageFaq>[];
+  sections: FormSection[];
+};
 
 const formContentOf = (content: PageContent): FormContent => ({
   ...content,
   faqs: content.faqs.map((faq, i) => ({ ...faq, key: `faq-${i}` })),
+  sections: content.sections.map(formSectionOf),
 });
 
 /** The id of the part of the editor a check is about, which "Go to It" scrolls to. */
@@ -184,6 +191,7 @@ export function PageEditor({
   entry,
   notice,
   unpublishedNote = "The public does not see this page.",
+  sectionData,
 }: {
   target: PageTarget;
   kind: PageKind;
@@ -226,6 +234,8 @@ export function PageEditor({
   notice?: ReactNode;
   /** What the public sees while the page is not published. */
   unpublishedNote?: string;
+  /** On a page with sections, what their fields pick from. */
+  sectionData?: SectionData;
 }) {
   const rule = PAGE_KIND_RULES[kind];
   const labels = heroLabelsOf(kind);
@@ -728,6 +738,18 @@ export function PageEditor({
             </Part>
           </div>
         </Card>
+
+        {rule.sections && sectionData ? (
+          <SectionsCard
+            id={partId("sections")}
+            className={PART_SCROLL}
+            kind={kind}
+            sections={content.sections}
+            data={sectionData}
+            meta={toDoIn("sections")}
+            onChange={(sections) => edit({ sections })}
+          />
+        ) : null}
 
         <Card>
           <CardTitle meta={toDoIn("search")}>SEO</CardTitle>

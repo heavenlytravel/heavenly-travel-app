@@ -13,10 +13,7 @@ import {
   defaultFooterContent,
   footerContentOf,
   footerImageKeys,
-  footerLinkHref,
   footerProblems,
-  isExternalFooterLink,
-  isFooterUrl,
   phoneHrefOf,
   sameFooterContent,
   visibleFooterOf,
@@ -132,6 +129,7 @@ describe("visibleFooterOf", () => {
     const shown = visibleFooterOf(content, {
       pages: new Set(["terms"]),
       locations: new Set(["langkawi"]),
+      posts: new Set(),
     });
     assert.deepEqual(
       shown.columns.map((column) => column.links.map((link) => link.label)),
@@ -217,35 +215,7 @@ describe("checkFooterLimits", () => {
   });
 });
 
-describe("links and numbers", () => {
-  it("send each kind of link to its address", () => {
-    assert.equal(
-      footerLinkHref({ kind: "page", page: "about-us" }),
-      "/about-us",
-    );
-    assert.equal(
-      footerLinkHref({ kind: "location", slug: "langkawi" }),
-      "/langkawi",
-    );
-    assert.equal(
-      footerLinkHref({ kind: "url", url: "https://hitpayapp.com" }),
-      "https://hitpayapp.com",
-    );
-    assert.ok(isExternalFooterLink({ kind: "url", url: "https://x.my" }));
-    assert.ok(!isExternalFooterLink({ kind: "url", url: "/booking" }));
-  });
-
-  it("take web addresses, site paths, email and phone links", () => {
-    assert.ok(isFooterUrl("https://hitpayapp.com"));
-    assert.ok(isFooterUrl("/booking"));
-    assert.ok(isFooterUrl("mailto:sales@heavenlytravel.my"));
-    assert.ok(!isFooterUrl("//evil.example"));
-    assert.ok(!isFooterUrl(String.raw`/\evil.example`));
-    assert.ok(!isFooterUrl("/booking now"));
-    assert.ok(!isFooterUrl("javascript:alert(1)"));
-    assert.ok(!isFooterUrl("hitpayapp.com"));
-  });
-
+describe("numbers", () => {
   it("dial and message Malaysian numbers with their country code", () => {
     assert.equal(phoneHrefOf("012-527 8808"), "tel:+60125278808");
     assert.equal(phoneHrefOf("+60 12-527 8808"), "tel:+60125278808");

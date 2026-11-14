@@ -1,5 +1,5 @@
 import Image from "next/image";
-import type { PageContent, TopChoiceCard } from "@repo/db/server";
+import type { PageContent } from "@repo/db/server";
 import { Photo } from "../_components/Brand";
 import {
   Faqs,
@@ -9,21 +9,19 @@ import {
   MissingPart,
   emptyPartsOf,
 } from "../_components/page-parts";
-import { HomeSectionHeading } from "../_components/page-headings";
 import { SearchProvider } from "../_components/search/SearchProvider";
-import {
-  DestinationCards,
-  PhotoCards,
-  type PhotoCard,
-} from "../_home/DestinationCards";
 import styles from "../_home/home.module.css";
-import { Booking, Trust } from "../_home/Sections";
+import { Booking } from "../_home/Sections";
 import { faqDataOf } from "../_lib/seo";
+import type { SectionData } from "../_sections/data";
+import { PageSections } from "../_sections/PageSections";
 
 /**
  * The home page: a full-screen pale photo hero with the booking card for
- * all six services resting on its floor, why to book with us, the services
- * we offer, each opening its hub, the locations we cover, then the intro and the FAQs when Marketing wrote them. The
+ * all six services resting on its floor, then Marketing's sections in
+ * their order (`PageSections`): why to book with us, the services, the
+ * locations we cover and the rest; then the intro and the FAQs when
+ * Marketing wrote them. The
  * hero's words and photo are the published home page's (`content`); until
  * the home page is first published it shows the words and photo it was
  * designed with. The public page and the staff preview render this. The preview marks each empty part: a dashed placeholder
@@ -43,15 +41,13 @@ export const HOME_DEFAULTS = {
 
 export function HomeView({
   content,
-  services,
-  choices,
+  sections,
   preview = false,
 }: {
   /** The home page's content; null before its first publish. */
   content: PageContent | null;
-  /** The services, each opening its hub. */
-  services: readonly PhotoCard[];
-  choices: TopChoiceCard[];
+  /** Its sections and what they show (`sectionDataOf`). */
+  sections: SectionData;
   preview?: boolean;
 }) {
   const tagline = content ? content.tagline : HOME_DEFAULTS.tagline;
@@ -147,37 +143,9 @@ export function HomeView({
           <Booking />
         </section>
 
-        <Trust />
-
-        <section
-          id="services"
-          aria-labelledby="services-title"
-          className="scroll-mt-8 px-3 pt-[75px] text-center sm:px-[clamp(20px,4vw,70px)] sm:pt-[105px]"
-        >
-          <HomeSectionHeading
-            id="services-title"
-            eyebrow="What We Offer"
-            lead="See where each one runs."
-          >
-            Our Services
-          </HomeSectionHeading>
-          <PhotoCards cards={services} />
-        </section>
-
-        <section
-          id="destinations"
-          aria-labelledby="destinations-title"
-          className="scroll-mt-8 px-3 pt-[75px] pb-[55px] text-center sm:px-[clamp(20px,4vw,70px)] sm:pt-[105px] sm:pb-[90px]"
-        >
-          <HomeSectionHeading
-            id="destinations-title"
-            eyebrow="Locations We Cover"
-            lead="Start with where you are going."
-          >
-            Choose Your Destination
-          </HomeSectionHeading>
-          <DestinationCards choices={choices} />
-        </section>
+        <div className="pb-[55px] sm:pb-[90px]">
+          <PageSections look="home" data={sections} preview={preview} />
+        </div>
 
         {content && (
           <div className="pb-[60px] sm:pb-[88px] [&>section:first-child]:pt-0">

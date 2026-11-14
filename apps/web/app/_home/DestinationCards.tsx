@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { locationPagePath, type TopChoiceCard } from "@repo/db";
+import { MissingMark } from "../_components/page-parts";
 import styles from "./home.module.css";
 
 /**
@@ -26,17 +27,44 @@ export type PhotoCard = {
   tag: string | null;
   name: string;
   line: string;
+  /** The button's words at the card's foot, in place of the arrow; none for the arrow. */
+  cta?: string;
+  /** In a staff preview, why the public does not see the card. */
+  note?: string;
 };
 
 function CardText({
   tag,
   name,
   line,
+  cta,
 }: {
   tag: string | null;
   name: string;
   line: string;
+  cta?: string;
 }) {
+  if (cta) {
+    return (
+      <span className="absolute right-[25px] bottom-6 left-[25px] z-(--layer-raised)">
+        {tag && (
+          <small className="block text-2xs tracking-eyebrow text-white/90 uppercase">
+            {tag}
+          </small>
+        )}
+        <strong className="mt-1 mb-[7px] block font-serif text-3xl leading-[1.1] font-normal">
+          {name}
+        </strong>
+        {line && (
+          <span className="block text-caption text-white/82">{line}</span>
+        )}
+        <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/92 px-4 py-2 text-copy font-bold text-brand transition-colors group-hover:bg-white">
+          {cta}
+          <span aria-hidden>↗</span>
+        </span>
+      </span>
+    );
+  }
   return (
     <>
       <span className="absolute right-[60px] bottom-6 left-[25px] z-(--layer-raised)">
@@ -66,7 +94,7 @@ export function PhotoCards({ cards }: { cards: readonly PhotoCard[] }) {
     <ul className="mx-auto flex max-w-[1450px] flex-wrap justify-center gap-3 sm:gap-4">
       {cards.map((entry) => (
         <li key={entry.key} className={cell}>
-          <Link href={entry.href} className={card}>
+          <Link href={entry.href} className={`group ${card}`}>
             {entry.image && (
               <>
                 <Image
@@ -79,7 +107,17 @@ export function PhotoCards({ cards }: { cards: readonly PhotoCard[] }) {
                 <span className={`${styles.cardShade} absolute inset-0`} />
               </>
             )}
-            <CardText tag={entry.tag} name={entry.name} line={entry.line} />
+            {entry.note && (
+              <span className="absolute top-4 left-4 z-(--layer-raised)">
+                <MissingMark part={entry.note} alone />
+              </span>
+            )}
+            <CardText
+              tag={entry.tag}
+              name={entry.name}
+              line={entry.line}
+              cta={entry.cta}
+            />
           </Link>
         </li>
       ))}

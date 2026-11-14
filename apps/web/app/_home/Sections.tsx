@@ -1,52 +1,6 @@
 import { SEARCH_CARD_ID } from "../_lib/search";
 import { SearchCard } from "../_components/search/SearchCard";
 
-/** Sections of the home page that need no state of their own. */
-
-const TRUST = [
-  {
-    icon: "✓",
-    title: "Trusted Local Team",
-    text: "Quality you can rely on",
-  },
-  { icon: "◇", title: "Clear, Fair Pricing", text: "No surprise charges" },
-  {
-    icon: "◉",
-    title: "Support When Needed",
-    text: "Real people, ready to help",
-  },
-];
-
-/** Why book with us: a quiet strip between the hero and the destinations. */
-export function Trust() {
-  return (
-    <section
-      id="why-us"
-      aria-label="Why Heavenly"
-      className="scroll-mt-8 border-b border-card-edge px-5 py-7 sm:px-[clamp(20px,5vw,78px)] sm:py-9"
-    >
-      <ul className="mx-auto grid max-w-[1240px] sm:grid-cols-3">
-        {TRUST.map((t) => (
-          <li
-            key={t.title}
-            className="flex gap-[13px] border-b border-card-edge px-[5px] py-[11px] last:border-0 sm:justify-center sm:border-r sm:border-b-0 sm:px-[22px] sm:py-0"
-          >
-            <span aria-hidden className="text-figure text-brand">
-              {t.icon}
-            </span>
-            <p>
-              <strong className="block">{t.title}</strong>
-              <small className="mt-0.5 block text-caption text-muted">
-                {t.text}
-              </small>
-            </p>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
 /** The booking card, resting on the floor of the hero. */
 export function Booking() {
   return (

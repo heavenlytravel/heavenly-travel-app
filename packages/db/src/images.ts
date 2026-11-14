@@ -71,7 +71,21 @@ export const IMAGE_SIZES = {
     fit: "cover",
     note: "Landscape 3:2. The list crops other shapes; the full view shows all.",
   },
-  /** A logo in the footer: a registration or a payment mark. */
+  /** A card's photo in a page's section: a service on the home page. */
+  card: {
+    width: 1200,
+    height: 800,
+    fit: "cover",
+    note: "Landscape 3:2, the subject in the middle: the card crops the edges.",
+  },
+  /** A person's photo beside their words: a client's testimonial. */
+  face: {
+    width: 400,
+    height: 400,
+    fit: "cover",
+    note: "Square, the face in the middle: it shows in a circle.",
+  },
+  /** A logo in the footer or a section: a registration, a payment mark, a client. */
   logo: {
     width: 480,
     height: 160,

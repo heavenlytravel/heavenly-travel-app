@@ -4,9 +4,9 @@ import type { ReactNode } from "react";
 import {
   addressLinesOf,
   copyrightOf,
-  footerLinkHref,
-  isExternalFooterLink,
-  isFooterUrl,
+  siteLinkHref,
+  isExternalSiteLink,
+  isSiteUrl,
   isUploadUrl,
   phoneHrefOf,
   whatsappHrefOf,
@@ -270,7 +270,7 @@ function BadgeTile({
   onSite: (url: string) => string;
 }) {
   // A draft's preview shows a link before it is checked: only a sound one opens.
-  const href = isFooterUrl(badge.link) ? onSite(badge.link) : null;
+  const href = isSiteUrl(badge.link) ? onSite(badge.link) : null;
   const body = (
     <>
       {badge.image && (
@@ -320,7 +320,7 @@ function FooterAnchor({
   link: FooterLink;
   siteUrl: string;
 }) {
-  const href = footerLinkHref(link.target);
+  const href = siteLinkHref(link.target);
   if (siteUrl && href.startsWith("/")) {
     // A page of the customer site, from Connect.
     return (
@@ -329,7 +329,7 @@ function FooterAnchor({
       </a>
     );
   }
-  if (isExternalFooterLink(link.target)) {
+  if (isExternalSiteLink(link.target)) {
     return (
       <a
         href={href}

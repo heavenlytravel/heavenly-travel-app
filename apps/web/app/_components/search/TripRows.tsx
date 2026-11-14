@@ -1,8 +1,9 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import type { BBox, TripCategory } from "@repo/db";
 import { PlusIcon, TrashIcon, UsersIcon } from "@repo/ui/icons";
+import { prefersReducedMotion } from "@repo/ui/motion";
 import { NumberField } from "@repo/ui/number-field";
 import type { PlacePresets } from "@repo/ui/place-input";
 import {
@@ -110,9 +111,26 @@ export function TripRows({
   const several = trips.rows.length > 1;
   const groupId = `${scope}-group-issue`;
   const passengersId = `${scope}-passengers`;
+
+  // A trip added while the rows scroll on their own lands out of sight
+  // below them: bring it in, moving the rows' box only, not the page.
+  const rowsBox = useRef<HTMLDivElement>(null);
+  const count = useRef(trips.rows.length);
+  useEffect(() => {
+    const added = trips.rows.length > count.current;
+    count.current = trips.rows.length;
+    const box = rowsBox.current;
+    if (added && box && box.scrollHeight > box.clientHeight) {
+      box.scrollTo({
+        top: box.scrollHeight,
+        behavior: prefersReducedMotion() ? "instant" : "smooth",
+      });
+    }
+  }, [trips.rows.length]);
+
   return (
     <>
-      <div className={`grid gap-2.5 ${rowsClassName}`}>
+      <div ref={rowsBox} className={`grid gap-2.5 ${rowsClassName}`}>
         {trips.rows.map((row, index) => {
           const id = (key: string) => `${scope}-${row.id}-${key}`;
           const issues = trips.issuesOf(row.id);

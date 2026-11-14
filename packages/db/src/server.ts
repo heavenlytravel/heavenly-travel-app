@@ -62,6 +62,7 @@ export { unionOf, joinPieces, cutOut, shapesOverlap } from "./zone-geometry";
 export type { StateShape, DistrictShape } from "./district-index";
 export {
   listVehicleClasses,
+  listActiveClassCards,
   listClassOptions,
   getVehicleClass,
   createVehicleClass,
@@ -73,6 +74,7 @@ export type {
   VehicleClass,
   ClassWithKinds,
   CatalogueClass,
+  ClassCard,
   ClassOption,
 } from "./vehicle-classes";
 export { listModelSuggestions } from "./vehicle-models";
@@ -276,6 +278,7 @@ export {
   getLocationPreview,
   listTopChoiceCards,
   listPublicLocationSlugs,
+  listPublicLocationCards,
   listServiceLocationCards,
   listLocationPages,
   saveLocationPageDraft,
@@ -515,6 +518,9 @@ export * from "./delete-impact";
 export * from "./zone-routes";
 export * from "./location-page-input";
 export * from "./page-content";
+export * from "./page-text";
+export * from "./page-sections";
+export * from "./site-link";
 export * from "./site-page-input";
 export * from "./blog-input";
 export * from "./connect-page";

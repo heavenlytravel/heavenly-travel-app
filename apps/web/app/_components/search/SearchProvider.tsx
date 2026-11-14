@@ -16,19 +16,18 @@ import {
   type Product,
   type ProductKey,
 } from "../../_lib/search";
-import type { PlannedTrip } from "../../_lib/trip-plan";
-import { usePlanner, type Planner } from "../trips/usePlanner";
+import { useTripRows, type TripRows } from "./useTripRows";
 
 /**
  * Holds the search card's state above the card, so something else on the
  * page can fill a place into it: a place's "Take Me Here" fills the
- * drop-off of the trip being typed. Filling brings the card into view.
- * The card's trips, the one being typed and the group's size live here:
+ * drop-off of the last trip. Filling brings the card into view.
+ * The card's trips and the group's size live here:
  * on a location's pages the provider sits in the layout, so what was
  * typed stays while the customer moves between them. With `location` the
  * card starts at the location: the place fields search all of Malaysia
  * with the location's area first, and each empty field offers the saved
- * addresses its end of a trip from there may be at. "Get prices" sends
+ * addresses its end of a trip from there may be at. "Search" sends
  * the trips to the vehicle page as the home page's card does, and that
  * page prices each at the location that picks up there, or says why none
  * can. See @repo/db's location-search and docs/261027-multi-trip-booking.md.
@@ -37,8 +36,8 @@ import { usePlanner, type Planner } from "../trips/usePlanner";
 type SearchCard = {
   product: Product;
   setProduct: (key: ProductKey) => void;
-  /** The trips typed so far and the form for the next. */
-  planner: Planner;
+  /** The trips being typed, a row of the form each. */
+  trips: TripRows;
   /** The most travelling on any trip. */
   passengers: number;
   setPassengers: (passengers: number) => void;
@@ -78,13 +77,8 @@ export function SearchProvider({
   children: ReactNode;
 }) {
   const [key, setProduct] = useState<ProductKey>(product ?? "car-with-driver");
-  const [trips, setTrips] = useState<PlannedTrip[]>([]);
-  const [passengers, setPassengers] = useState(1);
-  const planner = usePlanner({
-    trips,
-    onTrips: setTrips,
-    openWhenEmpty: true,
-  });
+  const [passengers, setPassengers] = useState(0);
+  const trips = useTripRows();
   // A product page opens the card on its tab. A page with no product of its
   // own leaves the tab where the customer put it.
   const [opened, setOpened] = useState(product);
@@ -110,8 +104,8 @@ export function SearchProvider({
   }
 
   function fillDropoff(place: { label: string; placeId: string }) {
-    // An hourly trip has no drop-off.
-    planner.fill({
+    // As a one-way trip: a hire asks its drop-off only when ticked.
+    trips.fill({
       mode: "oneway",
       to: place.label,
       placeIds: { to: place.placeId },
@@ -124,7 +118,7 @@ export function SearchProvider({
       value={{
         product: PRODUCTS[key],
         setProduct,
-        planner,
+        trips,
         passengers,
         setPassengers,
         presetsOf,

@@ -50,7 +50,7 @@ import { ArticleHeader } from "../_components/ArticleHeader";
 import { HeroHeading } from "../_components/page-headings";
 import { BlogCards } from "../_blog/BlogCards";
 import { blogPostsAt } from "../_lib/blog";
-import { ServiceTabsSearch } from "../_components/search/ServiceTabsSearch";
+import { SearchCard } from "../_components/search/SearchCard";
 import styles from "../_home/home.module.css";
 import { SEARCH_CARD_ID, type ProductKey } from "../_lib/search";
 import { vehicleClassCards, type VehicleClassCard } from "../_lib/locations";
@@ -387,12 +387,12 @@ function Hero({
       aria-labelledby="hero-title"
       className="relative flex flex-col lg:min-h-[620px]"
     >
-      {/* Below lg the stacked card outgrows the photo, so the photo stops
-          at a fixed height and the card rests across its lower edge. In a
+      {/* The photo runs the hero's whole height: the search card's glass
+          needs it behind all of the card, stacked tall on a phone. In a
           preview with no photo, its area takes the placeholder's look and
           the placeholder's mark opens the words, where nothing covers it. */}
       <div
-        className={`absolute inset-x-0 top-0 h-[460px] overflow-hidden ${missingImage ? missingLook : "bg-mist"} lg:h-full`}
+        className={`absolute inset-0 overflow-hidden ${missingImage ? missingLook : "bg-mist"}`}
       >
         {content.heroImage && (
           <Image
@@ -453,7 +453,7 @@ function Hero({
         aria-label="Travel booking search"
         className="relative z-(--layer-overlap) mx-auto mb-2 w-[calc(100%-24px)] max-w-[1240px] sm:w-[88%] lg:mb-12"
       >
-        {paused ? <PausedNotice name={location.name} /> : <ServiceTabsSearch />}
+        {paused ? <PausedNotice name={location.name} /> : <SearchCard />}
       </div>
     </section>
   );

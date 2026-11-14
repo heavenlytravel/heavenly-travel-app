@@ -26,10 +26,6 @@ import { Bone, Loading } from "@repo/ui/skeleton";
 import { toast } from "@repo/ui/toast";
 import { ClassPicture } from "../../../../../_components/ClassPicture";
 import { TripsFold } from "../../../../../_components/trips/TripsBar";
-import {
-  TripTimeline,
-  type TripNote,
-} from "../../../../../_components/trips/TripTimeline";
 import { useLinkSeed } from "../../../../../_components/trips/useLinkSeed";
 import { useNewBooking } from "../../../../../_components/trips/useNewBooking";
 import {
@@ -59,6 +55,7 @@ import {
   Stop,
   surface,
 } from "../../../../_components/Page";
+import { PlanTrips } from "../PlanTrips";
 import { BookingStepTitle, FoldedTripsBones } from "../StepParts";
 import { usePlanPricing } from "../usePlanPricing";
 import { forWhichOf, guideAddOnOf } from "../plan-add-ons";
@@ -95,15 +92,14 @@ function tripsNote(on: readonly number[], count: number): string | null {
 }
 
 /**
- * The confirm step, laid out as B: the trips and the vehicle on the left,
- * which stay in view while "Customer Info" on the right scroll with the
- * page. On a phone the trips and the vehicle fold into one line above the
- * details, which come first; it pins under the header as the page
- * scrolls, and unfolds by itself when a trip turns red. The trips are
- * shown, priced with today's rates, not changed: "Edit Trips", or on a
- * phone the fold's one "Edit Trips or Vehicle", goes back to the vehicle
- * page, where they are changed or added and the vehicle chosen again. A
- * trip that cannot be booked as it is says so under it: it starts with
+ * The confirm step, laid out as B: the trips at the top in the search
+ * card's rows (`PlanTrips`; "Search" there goes back to the vehicle
+ * page, where the vehicle is seen again), then the vehicle on the left,
+ * which stays in view while "Customer Info" on the right scrolls with the
+ * page. On a phone the vehicle folds into one line above the details,
+ * which pins under the header as the page scrolls, and unfolds by itself
+ * when a trip turns red. A trip that cannot be booked as it is says so
+ * under its row: it starts with
  * another or during a hire, the vehicle needs more notice or hours for
  * it, or it cannot be priced; so does a price changed since the trip was
  * added. "Your Vehicle" has the class for all the trips, pictured as
@@ -314,8 +310,10 @@ export function ConfirmStep({
     : cutoff !== undefined
       ? `Free cancellation until ${cutoff} hours before ${several ? "each trip, each on its own" : "the trip"}.`
       : "Free cancellation until each trip's own cutoff, each on its own.";
-  /** What a trip says for itself in the list; the list says a clash itself. */
-  function noteOf(trip: PlannedTrip): TripNote | null {
+  /** What a trip says for itself under its row: red when it cannot be booked as it is, blue for a price changed since it was added. */
+  function noteOf(
+    trip: PlannedTrip,
+  ): { tone: "red" | "blue"; text: string } | null {
     const index = trips.findIndex((t) => t.id === trip.id);
     const view = quoteOf(priced, trip)?.view;
     if (!view) return null;
@@ -385,51 +383,26 @@ export function ConfirmStep({
     ...guideEntries(guide),
   ];
 
-  const timeline = (
-    <TripTimeline
-      trips={trips}
-      fullRoutes
-      className=""
-      action={
-        <Link
-          href={vehiclePage}
-          className="hidden text-copy text-link lg:inline"
-        >
-          Edit Trips
-        </Link>
-      }
-      priceOf={(trip) => {
-        const index = trips.findIndex((t) => t.id === trip.id);
-        if (!quotes[index]) {
-          return <span className="text-muted">…</span>;
-        }
-        const price = priceOn(index);
-        return price === null ? null : formatMyr(price);
-      }}
-      noteOf={noteOf}
-    />
-  );
-
-  const tripsPanel = (
-    <section aria-label="Your trips" className={panelFromLarge}>
-      {timeline}
-      {error ? (
-        <div className="mx-1 mt-3 flex flex-wrap items-baseline gap-x-1 text-copy">
-          <FormError size="copy" error={error} />
-          <button type="button" onClick={retry} className="text-link">
-            Try Again
-          </button>
-        </div>
-      ) : pricing && complete ? (
-        <p
-          role="status"
-          className="mx-1 mt-3 flex items-center text-copy text-muted"
-        >
-          <Pending>Checking today&apos;s prices…</Pending>
-        </p>
-      ) : null}
-    </section>
-  );
+  /** Today's prices being checked, or why they could not be. */
+  const pricingLine = error ? (
+    <div className="flex flex-wrap items-baseline gap-x-1 text-copy">
+      <FormError size="copy" error={error} />
+      <button type="button" onClick={retry} className="text-link">
+        Try Again
+      </button>
+    </div>
+  ) : pricing && complete ? (
+    <p role="status" className="flex items-center text-copy text-muted">
+      <Pending>Checking today&apos;s prices…</Pending>
+    </p>
+  ) : null;
+  /** Prices changed since the trips were added, said under the vehicle. */
+  const changed = trips.flatMap((trip, index) => {
+    const note = noteOf(trip);
+    return note?.tone === "blue"
+      ? [several ? `Trip ${index + 1}: ${note.text}` : note.text]
+      : [];
+  });
 
   const vehiclePanel = card ? (
     <section className={`${panelFromLarge} grid gap-5`}>
@@ -457,6 +430,11 @@ export function ConfirmStep({
           <p className="mt-3 text-copy text-muted">
             For {forWhich} · {plural(passengers, "passenger")}
           </p>
+          {changed.map((line) => (
+            <p key={line} className="mt-1.5 text-copy text-navy">
+              {line}
+            </p>
+          ))}
         </div>
       </div>
       {guideOffers.length > 0 ? (
@@ -481,6 +459,22 @@ export function ConfirmStep({
   return (
     <>
       <StepTitle category={category} count={trips.length} />
+      <PlanTrips
+        category={category}
+        trips={trips}
+        passengers={passengers}
+        summary={[
+          plural(passengers, "passenger"),
+          ...(card ? [card.name] : []),
+        ].join(" · ")}
+        backToVehicles
+        alertsOf={(id) => {
+          const trip = trips.find((t) => t.id === id);
+          const note = trip ? noteOf(trip) : null;
+          return note?.tone === "red" ? [note.text] : [];
+        }}
+        className="mb-8"
+      />
 
       <div className={columns}>
         {/* In view while the details scroll, unless it is the taller side.
@@ -502,15 +496,15 @@ export function ConfirmStep({
             className={`${surface} lg:rounded-none lg:bg-transparent lg:shadow-none`}
           >
             <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:gap-7">
-              {tripsPanel}
               {vehiclePanel}
+              {pricingLine}
               <Button
                 asChild
                 variant="outline"
                 size="lg"
                 className="w-full lg:hidden"
               >
-                <Link href={vehiclePage}>Edit Trips or Vehicle</Link>
+                <Link href={vehiclePage}>Change Vehicle</Link>
               </Button>
             </div>
           </TripsFold>
@@ -599,9 +593,6 @@ function ConfirmStepSkeleton({ category }: { category: TripCategory }) {
       <Loading className={columns}>
         <div className="grid gap-6 lg:gap-7">
           <FoldedTripsBones className={surface} />
-          <div className={`hidden lg:block ${panelFromLarge}`}>
-            <Bone className="h-24 w-full" />
-          </div>
           <div className={`hidden lg:grid lg:gap-5 ${panelFromLarge}`}>
             <Bone className="h-8 w-40" />
             <div className="grid grid-cols-[minmax(0,300px)_minmax(0,1fr)] items-center gap-6">

@@ -1,5 +1,5 @@
 import { SEARCH_CARD_ID } from "../_lib/search";
-import { ServiceTabsSearch } from "../_components/search/ServiceTabsSearch";
+import { SearchCard } from "../_components/search/SearchCard";
 
 /** Sections of the home page that need no state of their own. */
 
@@ -55,9 +55,9 @@ export function Booking() {
       id={SEARCH_CARD_ID}
       role="search"
       aria-label="Travel booking search"
-      className="relative z-(--layer-overlap) mx-auto mt-auto mb-8 w-[calc(100%-24px)] max-w-[1240px] sm:mb-14 sm:w-[88%]"
+      className="relative z-(--layer-overlap) mx-auto mt-auto mb-8 w-[calc(100%-24px)] max-w-[1400px] sm:mb-14 sm:w-[88%]"
     >
-      <ServiceTabsSearch />
+      <SearchCard />
     </div>
   );
 }

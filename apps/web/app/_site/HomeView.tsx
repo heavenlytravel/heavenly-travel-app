@@ -70,9 +70,10 @@ export function HomeView({
         >
           {/* From lg up the photo is fixed to the viewport, so it fills the
               window the same at any zoom. The clip keeps it inside the hero
-              without clipping the booking card's menus. Below lg the stacked
-              card outgrows the screen, so the photo stops at the first one. */}
-          <div className="absolute inset-x-0 top-0 h-svh bg-mist [clip-path:inset(0)] lg:h-full">
+              without clipping the booking card's menus. Below lg the photo runs
+              the hero's whole height: the card's glass needs it behind all
+              of the stacked card. */}
+          <div className="absolute inset-x-0 top-0 h-full bg-mist [clip-path:inset(0)]">
             {image ? (
               <Image
                 src={image.url}

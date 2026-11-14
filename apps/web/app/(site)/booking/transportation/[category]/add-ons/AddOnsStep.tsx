@@ -17,6 +17,7 @@ import {
 import { useNavigate } from "../../../../../_lib/useNavigate";
 import { panel, Pending, Stop } from "../../../../_components/Page";
 import { forWhichOf, guideAddOnOf } from "../plan-add-ons";
+import { PlanTrips } from "../PlanTrips";
 import { BookingStepTitle } from "../StepParts";
 import { usePlanPricing } from "../usePlanPricing";
 import { AddOns } from "./AddOns";
@@ -111,6 +112,14 @@ export function AddOnsStep({ category }: { category: TripCategory }) {
   return (
     <>
       <StepTitle category={category} count={plan.trips.length} />
+      <PlanTrips
+        category={category}
+        trips={plan.trips}
+        passengers={plan.passengers}
+        summary={[plural(plan.passengers, "passenger"), card.name].join(" · ")}
+        backToVehicles
+        className="mb-8"
+      />
       <div className="grid max-w-[760px] gap-6">
         <section className={`${panel} grid gap-4`}>
           <div className="flex items-baseline justify-between gap-4">

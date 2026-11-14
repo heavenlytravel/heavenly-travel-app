@@ -14,14 +14,12 @@ import {
   pageContentOf,
   pageImageKeys,
   pageStatusOf,
-  paragraphsOf,
   publicCopyOf,
   samePageContent,
-  wordCount,
   type PageContent,
-  type PageImage,
   type PageKind,
 } from "./page-content";
+import { paragraphsOf, wordCount, type PageImage } from "./page-text";
 
 const errorOf = (result: { ok: true } | { ok: false; error: string }) =>
   result.ok ? "" : result.error;
@@ -82,6 +80,7 @@ describe("pageContentOf", () => {
       intro: "",
       body: "",
       faqs: [],
+      sections: [],
       addressId: null,
       indexable: true,
     };

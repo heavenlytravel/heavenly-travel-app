@@ -27,10 +27,10 @@ import {
   pageStatusOf,
   publicCopyOf,
   type PageContent,
-  type PageImage,
   type PageKind,
   type PageStatus,
 } from "./page-content";
+import { type PageImage } from "./page-text";
 import { isPlace } from "./place";
 import { slugify } from "./slug";
 

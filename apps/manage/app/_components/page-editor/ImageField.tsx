@@ -10,13 +10,17 @@ import { Count } from "./Count";
 /**
  * One image of a page: upload it, replace it, write its alt text or take it
  * away. The file is stored as soon as it is chosen; the page keeps it once
- * the draft is saved.
+ * the draft is saved. `withAlt` off for an image whose alt text is said
+ * elsewhere, such as a client's logo named by its client; `look` "logo"
+ * shows it whole on white.
  */
 export function ImageField({
   label,
   image,
   onChange,
   size,
+  withAlt = true,
+  look,
 }: {
   /** What the image is, as a screen reader hears the controls: "Hero Image". */
   label: string;
@@ -24,6 +28,8 @@ export function ImageField({
   size: ImageSize;
   image: PageImage | null;
   onChange: (image: PageImage | null) => void;
+  withAlt?: boolean;
+  look?: "picture" | "logo";
 }) {
   const altId = useId();
 
@@ -35,12 +41,13 @@ export function ImageField({
         src={image?.url ?? null}
         alt={image?.alt ?? ""}
         size={size}
+        look={look}
         onChange={(uploaded) =>
           onChange(uploaded ? { ...uploaded, alt: image?.alt ?? "" } : null)
         }
       />
 
-      {image ? (
+      {image && withAlt ? (
         <div>
           <label
             htmlFor={altId}

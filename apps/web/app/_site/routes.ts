@@ -15,7 +15,7 @@ import { notFound, redirect } from "next/navigation";
 import { signInHref } from "../_lib/routes";
 import { pageMetadata } from "../_lib/seo";
 import { publishedSitePage, sitePageDraft } from "../_lib/site-pages";
-import { HUB_DEFAULTS } from "./HubView";
+import { HUB_DEFAULTS } from "./hub-defaults";
 
 /**
  * What a site page's route shows: the published document, or for staff the

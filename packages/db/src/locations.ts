@@ -46,8 +46,8 @@ import {
   pageContentOf,
   publicCopyOf,
   type PageContent,
-  type PageImage,
 } from "./page-content";
+import { type PageImage } from "./page-text";
 import { isPlace, type Place } from "./place";
 import { pickedAfter, type PickChange } from "./list-move";
 import { routesIntoLocation } from "./zones";

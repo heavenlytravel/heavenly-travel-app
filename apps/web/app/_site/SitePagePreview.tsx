@@ -8,10 +8,10 @@ import {
   sitePagePreviewPath,
   type SitePageKey,
 } from "@repo/db/server";
-import { serviceLocationCards, topChoiceCards } from "../_lib/locations";
-import { footerDraft, publishedSitePages } from "../_lib/site-pages";
+import { footerDraft } from "../_lib/site-pages";
+import { sectionDataOf } from "../_sections/data";
 import { HomeView } from "./HomeView";
-import { HubView, hubCards } from "./HubView";
+import { HubView } from "./HubView";
 import { SiteDocumentView } from "./SiteDocumentView";
 import { SiteFrame } from "./SiteFrame";
 import { previewSitePageAt } from "./routes";
@@ -48,8 +48,7 @@ export async function SitePagePreview({ page }: { page: SitePageKey }) {
       <SiteFrame overlay preview={preview}>
         <HomeView
           content={shown.draft}
-          services={hubCards(await publishedSitePages())}
-          choices={await topChoiceCards()}
+          sections={await sectionDataOf(shown.draft, null)}
           preview
         />
       </SiteFrame>
@@ -61,7 +60,7 @@ export async function SitePagePreview({ page }: { page: SitePageKey }) {
         <HubView
           page={page}
           content={shown.draft}
-          locations={await serviceLocationCards(page)}
+          sections={await sectionDataOf(shown.draft, page)}
           preview
         />
       </SiteFrame>

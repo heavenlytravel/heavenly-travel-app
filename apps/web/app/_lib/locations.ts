@@ -9,7 +9,8 @@ import {
   listActiveOfferingsAt,
   cheapestCellsAt,
   cheapestPackagesAt,
-  listPublicLocationSlugs,
+  listActiveClassCards,
+  listPublicLocationCards,
   listServiceLocationCards,
   listTopChoiceCards,
   locationTag,
@@ -46,7 +47,7 @@ export function isLocationSlug(slug: string) {
  * deploy, so a change to its shape bumps this, or the pages read the old
  * shape until it expires.
  */
-const LOCATION_VIEW_VERSION = 3;
+const LOCATION_VIEW_VERSION = 4;
 
 /** The location at the slug as the public sees it, or null. Once per request. */
 export const publicLocation = cache(
@@ -97,14 +98,31 @@ export const topChoiceCards = unstable_cache(
 );
 
 /**
- * The slugs of the locations the public sees, for the footer's links. A
- * location going live, paused or deleted refreshes the top choices' tag,
- * so the list is kept under it.
+ * The locations the public sees, as cards, for the links that may open
+ * them and the photo of a card leading to one. A location going live,
+ * paused or deleted, or its main page published, refreshes the top
+ * choices' tag, so the list is kept under it.
  */
-export const publicLocationSlugs = unstable_cache(
-  listPublicLocationSlugs,
-  ["public-location-slugs"],
+export const publicLocationCards = unstable_cache(
+  listPublicLocationCards,
+  ["public-location-cards"],
   { tags: [TOP_CHOICES_TAG], revalidate: REFRESH_SECONDS },
+);
+
+/** The slugs of the locations the public sees, for the footer's links. */
+export async function publicLocationSlugs() {
+  return (await publicLocationCards()).map((card) => card.slug);
+}
+
+/**
+ * The classes on sale in the catalogue, for a page's Vehicle Options.
+ * Tagged with the catalogue, which the admin refreshes after a change to a
+ * class.
+ */
+export const activeClassCards = unstable_cache(
+  listActiveClassCards,
+  ["active-class-cards"],
+  { tags: [VEHICLE_CLASSES_TAG], revalidate: REFRESH_SECONDS },
 );
 
 /**

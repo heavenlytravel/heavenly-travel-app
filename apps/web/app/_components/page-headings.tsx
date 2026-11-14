@@ -97,7 +97,10 @@ export function ArticleHeading({
   );
 }
 
-/** A home section's heading, centred by its section: eyebrow, h2, its lead. */
+/**
+ * A home section's heading, centred by its section: eyebrow, h2, its lead;
+ * an empty eyebrow or lead is left out.
+ */
 export function HomeSectionHeading({
   id,
   eyebrow,
@@ -113,11 +116,16 @@ export function HomeSectionHeading({
 }) {
   return (
     <>
-      <p className={`${eyebrowLook} mb-2`}>{eyebrow}</p>
-      <h2 id={id} className="font-serif text-display leading-none">
+      {eyebrow ? <p className={`${eyebrowLook} mb-2`}>{eyebrow}</p> : null}
+      <h2
+        id={id}
+        className={`font-serif text-display leading-none ${lead ? "" : "mb-[34px]"}`}
+      >
         {children}
       </h2>
-      <p className="mt-[13px] mb-[34px] text-lead text-muted">{lead}</p>
+      {lead ? (
+        <p className="mt-[13px] mb-[34px] text-lead text-muted">{lead}</p>
+      ) : null}
     </>
   );
 }

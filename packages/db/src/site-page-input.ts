@@ -91,7 +91,7 @@ export function sitePageFallbackTitle(page: SitePageKey): string {
 export function sitePageKindOf(page: SitePageKey): PageKind {
   if (page === HOME_PAGE) return "home";
   if (page === CONNECT_PAGE) return "connect";
-  return isHubPage(page) ? "service" : "document";
+  return isHubPage(page) ? "hub" : "document";
 }
 
 /**

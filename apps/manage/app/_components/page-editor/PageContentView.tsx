@@ -1,10 +1,15 @@
 import {
   PAGE_KIND_RULES,
+  SECTION_LABELS,
+  SITE_LINK_KIND_LABELS,
   heroLabelsOf,
   paragraphsOf,
+  plural,
+  siteLinkHref,
   type PageContent,
   type PageImage,
   type PageKind,
+  type PageSection,
 } from "@repo/db";
 import Image from "next/image";
 import { ContentPart, NONE } from "./ContentPart";
@@ -43,6 +48,79 @@ function Picture({ image }: { image: PageImage | null }) {
         Open the File
       </a>
     </div>
+  );
+}
+
+/** What a section holds, in a few words or a short list. */
+function SectionItems({ section }: { section: PageSection }) {
+  const list = (lines: string[]) =>
+    lines.length === 0 ? (
+      <span className="text-muted">Nothing in it</span>
+    ) : (
+      <ol className="list-decimal pl-5">
+        {lines.map((line, i) => (
+          <li key={i}>{line}</li>
+        ))}
+      </ol>
+    );
+  switch (section.type) {
+    case "why-us":
+      return list(section.points.map((p) => `${p.title}: ${p.text}`));
+    case "services":
+      return list(
+        section.cards.map(
+          (c) =>
+            `${c.title} · "${c.button}" · ${SITE_LINK_KIND_LABELS[c.link.kind]} ${siteLinkHref(c.link)}`,
+        ),
+      );
+    case "vehicles":
+      return <span>{plural(section.classIds.length, "class", "classes")}</span>;
+    case "steps":
+      return list(section.steps.map((s) => `${s.title}: ${s.text}`));
+    case "trusted-by":
+      return list(
+        section.logos.map((l) => (l.link ? `${l.name} · ${l.link}` : l.name)),
+      );
+    case "testimonials":
+      return list(
+        section.quotes.map(
+          (q) => `“${q.quote}” · ${q.name}${q.detail ? `, ${q.detail}` : ""}`,
+        ),
+      );
+    case "news":
+      return <span>The newest {plural(section.count, "post")}</span>;
+    case "destinations":
+    case "locations":
+      return <span className="text-muted">Read from the site</span>;
+  }
+}
+
+/** The sections, in their order: each shown or hidden, its heading and what it holds. */
+function Sections({ sections }: { sections: readonly PageSection[] }) {
+  if (sections.length === 0) return NONE;
+  return (
+    <ol className="grid gap-3">
+      {sections.map((section) => (
+        <li key={section.type}>
+          <p className="font-medium">
+            {SECTION_LABELS[section.type]}{" "}
+            <span className="font-normal text-muted">
+              · {section.on ? "Shown" : "Hidden"}
+            </span>
+          </p>
+          {section.eyebrow || section.title || section.lead ? (
+            <p className="text-body">
+              {[section.eyebrow, section.title, section.lead]
+                .filter(Boolean)
+                .join(" · ")}
+            </p>
+          ) : null}
+          <div className="mt-1 text-body">
+            <SectionItems section={section} />
+          </div>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -131,6 +209,11 @@ export function PageContentView({
           ) : (
             NONE
           )}
+        </ContentPart>
+      ) : null}
+      {rule.sections ? (
+        <ContentPart label="Sections" changed={changed("sections")}>
+          <Sections sections={content.sections} />
         </ContentPart>
       ) : null}
       <ContentPart label="FAQs" changed={changed("faqs")}>

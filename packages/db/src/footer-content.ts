@@ -2,26 +2,30 @@ import { refuse, type Change } from "./change";
 import { guardFor } from "./const-enum";
 import { isValidEmail, normalizeEmail } from "./booking-contact";
 import { CONTACT } from "./contact";
-import { locationPagePath } from "./location-page-input";
+import { PAGE_LIMITS, samePageContent } from "./page-content";
 import {
-  PAGE_LIMITS,
+  isSize,
   lineOf,
+  listOf,
   pageImageOf,
   recordOf,
-  samePageContent,
   type PageImage,
-} from "./page-content";
+} from "./page-text";
 import { isUploadUrl, uploadKeyOf } from "./images";
 import { isValidPhone, normalizePhone } from "./phone";
 import {
+  isSiteLinkShown,
+  isSiteUrl,
+  isWebUrl,
+  siteLinkTargetOf,
+  type SiteLinkAudience,
+  type SiteLinkKind,
+  type SiteLinkTargetOf,
+} from "./site-link";
+import {
   CONNECT_PAGES_PATH,
   SITE_PAGES_PATH,
-  WEBSITE_PAGES,
-  isSitePagePublic,
-  isWebsitePageKey,
-  sitePagePath,
   type SitePageApp,
-  type SitePageKey,
   type WebsitePageKey,
 } from "./site-page-input";
 
@@ -72,21 +76,16 @@ export function footerEditorPath(key: FooterKey) {
     : `${SITE_PAGES_PATH}/${FOOTER_KEY}`;
 }
 
-/** What a link in the footer opens: one of the site's pages, a location's main page, or any address. */
-export const FOOTER_LINK_KINDS = ["page", "location", "url"] as const;
+/** What a link in the footer opens: one of the site's pages, a location's main page, or any address (./site-link). */
+export const FOOTER_LINK_KINDS = [
+  "page",
+  "location",
+  "url",
+] as const satisfies readonly SiteLinkKind[];
 export type FooterLinkKind = (typeof FOOTER_LINK_KINDS)[number];
 export const isFooterLinkKind = guardFor(FOOTER_LINK_KINDS);
 
-export const FOOTER_LINK_KIND_LABELS: Record<FooterLinkKind, string> = {
-  page: "Site Page",
-  location: "Location",
-  url: "Web Address",
-};
-
-export type FooterLinkTarget =
-  | { kind: "page"; page: WebsitePageKey }
-  | { kind: "location"; slug: string }
-  | { kind: "url"; url: string };
+export type FooterLinkTarget = SiteLinkTargetOf<FooterLinkKind>;
 
 export type FooterLink = { label: string; target: FooterLinkTarget };
 
@@ -130,9 +129,6 @@ const BUNDLED_IMAGE =
 export function isBundledImageUrl(url: unknown): url is string {
   return typeof url === "string" && BUNDLED_IMAGE.test(url);
 }
-
-const isSize = (value: unknown): value is number =>
-  typeof value === "number" && Number.isInteger(value) && value > 0;
 
 /** The logo, uploaded or shipped, or null for anything else. */
 function footerImageOf(value: unknown): FooterImage | null {
@@ -289,24 +285,12 @@ function linesOf(value: unknown) {
     : "";
 }
 
-function listOf(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
-}
-
-function targetOf(value: unknown): FooterLinkTarget {
-  const raw = recordOf(value);
-  if (raw.kind === "page" && isWebsitePageKey(raw.page)) {
-    return { kind: "page", page: raw.page };
-  }
-  if (raw.kind === "location") {
-    return { kind: "location", slug: lineOf(raw.slug) };
-  }
-  return { kind: "url", url: lineOf(raw.url) };
-}
-
 function linkOf(value: unknown): FooterLink {
   const raw = recordOf(value);
-  return { label: lineOf(raw.label), target: targetOf(raw.target) };
+  return {
+    label: lineOf(raw.label),
+    target: siteLinkTargetOf(raw.target, FOOTER_LINK_KINDS),
+  };
 }
 
 function sinceOf(value: unknown) {
@@ -471,41 +455,6 @@ export function whatsappHrefOf(number: string) {
     : null;
 }
 
-/** Whether the text is an address a browser opens: http or https. */
-function isWebUrl(text: string) {
-  if (!URL.canParse(text)) return false;
-  const { protocol } = new URL(text);
-  return protocol === "https:" || protocol === "http:";
-}
-
-/**
- * Whether a footer link's address is one it may hold: a web address, a
- * path on the site ("/booking"), or an email or phone link.
- */
-export function isFooterUrl(text: string) {
-  // A path on the site; never "//host" or "/\host", which browsers open as another site.
-  if (/^\/(?![/\\])[^\s\\]*$/.test(text)) return true;
-  if (/^(mailto|tel):\S+$/.test(text)) return true;
-  return isWebUrl(text);
-}
-
-/** Where a link goes on the site, or the address it holds. */
-export function footerLinkHref(target: FooterLinkTarget) {
-  switch (target.kind) {
-    case "page":
-      return sitePagePath(target.page);
-    case "location":
-      return locationPagePath(target.slug);
-    case "url":
-      return target.url;
-  }
-}
-
-/** Whether a link leaves the site, and so opens in a new tab. */
-export function isExternalFooterLink(target: FooterLinkTarget) {
-  return target.kind === "url" && isWebUrl(target.url);
-}
-
 /** Every link in the footer: its columns' and the copyright line's. */
 export function footerLinksOf(content: FooterContent): FooterLink[] {
   return [
@@ -515,39 +464,15 @@ export function footerLinksOf(content: FooterContent): FooterLink[] {
 }
 
 /**
- * What a footer's links may open in public, from the site pages that are
- * published, by key, and the locations the public sees.
- */
-export function footerAudienceOf(
-  published: Partial<Record<SitePageKey, unknown>>,
-  locations: readonly string[],
-) {
-  return {
-    pages: new Set(
-      WEBSITE_PAGES.filter((page) => isSitePagePublic(page, page in published)),
-    ),
-    locations: new Set(locations),
-  };
-}
-
-/**
  * The footer as the public is shown it: each link to a site page that is
  * not published or a location that is not public left out, so none leads
  * to a 404, then each column with nothing left in it.
  */
 export function visibleFooterOf(
   content: FooterContent,
-  shown: {
-    pages: ReadonlySet<WebsitePageKey>;
-    locations: ReadonlySet<string>;
-  },
+  shown: SiteLinkAudience,
 ): FooterContent {
-  const isShown = ({ target }: FooterLink) =>
-    target.kind === "page"
-      ? shown.pages.has(target.page)
-      : target.kind === "location"
-        ? shown.locations.has(target.slug)
-        : true;
+  const isShown = ({ target }: FooterLink) => isSiteLinkShown(target, shown);
   return {
     ...content,
     columns: content.columns
@@ -646,7 +571,7 @@ export function footerProblems(content: FooterContent): string[] {
       if (target.kind === "location" && target.slug === "") {
         problems.push(`A link in ${where} names no location.`);
       }
-      if (target.kind === "url" && !isFooterUrl(target.url)) {
+      if (target.kind === "url" && !isSiteUrl(target.url)) {
         problems.push(
           target.url === ""
             ? `A link in ${where} has no address.`
@@ -698,7 +623,7 @@ export function footerProblems(content: FooterContent): string[] {
     if (badge.name === "")
       problems.push(`Registration ${index + 1} has no name.`);
     if (!badge.image) problems.push(`${where} has no logo.`);
-    if (badge.link && !isFooterUrl(badge.link)) {
+    if (badge.link && !isSiteUrl(badge.link)) {
       problems.push(`${where}'s certificate link is not a web address.`);
     }
   });

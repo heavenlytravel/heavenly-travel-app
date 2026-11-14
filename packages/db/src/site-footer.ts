@@ -8,7 +8,6 @@ import {
   checkFooterComplete,
   checkFooterLimits,
   defaultFooterContent,
-  footerAudienceOf,
   footerContentOf,
   footerImageUrls,
   isFooterKey,
@@ -17,6 +16,7 @@ import {
   type FooterKey,
 } from "./footer-content";
 import { listPublicLocationSlugs, listTopChoiceCards } from "./location-pages";
+import { siteLinkAudienceOf } from "./site-link";
 import { listPublishedSitePages } from "./site-pages";
 import { deletedMediaRefusal } from "./media";
 import { PAGE_LOCALE, pageStatusOf, type PageStatus } from "./page-content";
@@ -97,7 +97,7 @@ export async function getConnectFooter(
     listPublishedSitePages(),
     listPublicLocationSlugs(),
   ]);
-  return visibleFooterOf(content, footerAudienceOf(published, locations));
+  return visibleFooterOf(content, siteLinkAudienceOf(published, locations, []));
 }
 
 /** The footer as its editor opens it, or as the preview shows its draft. */

@@ -1,5 +1,6 @@
 import {
   HOURLY_PACKAGES,
+  SEARCH_CARD_ANCHOR,
   DURATION_CHOICES,
   TRIP_CATEGORY_LABELS,
   TRIP_MODE_LABELS,
@@ -132,7 +133,7 @@ const TRIP_FIELDS: FieldDef[] = [
  * module: a server component importing a value from there gets a client
  * reference, not the string.
  */
-export const SEARCH_CARD_ID = "booking";
+export const SEARCH_CARD_ID = SEARCH_CARD_ANCHOR;
 
 export const PRODUCTS: Record<ProductKey, Product> = {
   "car-with-driver": {

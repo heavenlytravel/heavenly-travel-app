@@ -11,8 +11,29 @@ import {
   formatPageDate,
   missingBlock,
   type EmptyPart,
+  type PageCardData,
 } from "../_components/page-parts";
 import type { ReactNode } from "react";
+
+/**
+ * The posts as page cards: the cover, the title, the first publish date
+ * and the summary, each opening the post; in a staff preview, its preview.
+ */
+export function blogPostCards(
+  posts: readonly BlogPostView[],
+  preview: boolean,
+): PageCardData[] {
+  const pathOf = preview ? blogPostPreviewPath : blogPostPath;
+  return posts.map((post) => ({
+    key: post.slug,
+    href: pathOf(post.slug),
+    title: post.content.heroHeadline || post.slug,
+    text: post.firstPublishedAt
+      ? `${formatPageDate(post.firstPublishedAt)} · ${post.content.heroSubheadline}`
+      : post.content.heroSubheadline,
+    image: post.content.heroImage,
+  }));
+}
 
 /**
  * The blog's posts as cards, wherever they are listed: the blog's home,
@@ -46,22 +67,11 @@ export function BlogCards({
   preview: boolean;
 }) {
   if (posts.length === 0 && lead === "" && !emptyLead && !empty) return null;
-  const pathOf = preview ? blogPostPreviewPath : blogPostPath;
   return (
     <Section id={id} eyebrow={eyebrow} title={title} action={action}>
       <Lead text={lead} empty={emptyLead} />
       {posts.length > 0 ? (
-        <PageCards
-          cards={posts.map((post) => ({
-            key: post.slug,
-            href: pathOf(post.slug),
-            title: post.content.heroHeadline || post.slug,
-            text: post.firstPublishedAt
-              ? `${formatPageDate(post.firstPublishedAt)} · ${post.content.heroSubheadline}`
-              : post.content.heroSubheadline,
-            image: post.content.heroImage,
-          }))}
-        />
+        <PageCards cards={blogPostCards(posts, preview)} />
       ) : (
         empty && <MissingPart part={empty} className={missingBlock} />
       )}

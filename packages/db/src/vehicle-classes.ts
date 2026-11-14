@@ -90,6 +90,38 @@ export async function listVehicleClasses(
   return order ? classes : classes.sort(byCategory);
 }
 
+/** A class as the site shows it in a list of vehicle options. */
+export type ClassCard = Pick<
+  VehicleClass,
+  | "id"
+  | "name"
+  | "category"
+  | "minPassengers"
+  | "maxPassengers"
+  | "luggage"
+  | "imageUrls"
+>;
+
+/**
+ * Every class on sale in the catalogue, as the site shows it: what a
+ * page's Vehicle Options picks from, by id. A class taken off is left out.
+ */
+export function listActiveClassCards(): Promise<ClassCard[]> {
+  return db.vehicleClass.findMany({
+    where: { isActive: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      name: true,
+      category: true,
+      minPassengers: true,
+      maxPassengers: true,
+      luggage: true,
+      imageUrls: true,
+    },
+  });
+}
+
 /** A class as a form picks it: what it is called, its category and whether it is on. */
 export type ClassOption = Pick<
   VehicleClass,

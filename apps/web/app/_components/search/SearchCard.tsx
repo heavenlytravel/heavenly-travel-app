@@ -15,7 +15,6 @@ import {
   clearOfHeader,
   TripsBar,
   UnderHeader,
-  useLarge,
   useTripsSheet,
 } from "../trips/TripsBar";
 import { NO_PASSENGERS } from "../trips/PassengersStepper";
@@ -128,7 +127,6 @@ export function TripSearchPanel({
   className?: string;
 }) {
   const { watch, away, open, setOpen } = useTripsSheet();
-  const large = useLarge();
   const scope = useId();
   // Why the group cannot be sent: shown once a search found none.
   const [groupIssue, setGroupIssue] = useState<string | null>(null);
@@ -181,10 +179,12 @@ export function TripSearchPanel({
     />
   );
 
-  // In the sheet, rows too many for the screen scroll on their own, so the
-  // group's size and the send button stay in view under them: with the
-  // boxes one under the other on a phone, that is from the second trip.
-  const scrolls = trips.rows.length > (large ? 4 : 1);
+  // In the sheet, rows too many for the screen scroll on their own, so
+  // "Add Another Trip", the group's size and the send button stay in view
+  // under them; the page never has to scroll, which would fold the sheet.
+  // The bar is narrower than the boxes' one line on every screen, so they
+  // stand one under the other there: that is from the second trip.
+  const scrolls = trips.rows.length > 1;
 
   return (
     <form
@@ -199,7 +199,7 @@ export function TripSearchPanel({
       <section
         ref={watch}
         aria-label="Your Trips"
-        className={`${plain ? `${look.frosted} [--frost-radius:var(--radius-panel)]` : look.panel} relative z-(--layer-raised) rounded-panel p-4 ${clearOfHeader}`}
+        className={`${plain ? look.frosted : look.panel} relative z-(--layer-raised) rounded-panel p-4 ${clearOfHeader}`}
       >
         {rows("panel")}
         {plain ? <AddTrip trips={trips} className={wideOnly} /> : null}
@@ -216,7 +216,7 @@ export function TripSearchPanel({
           open={open}
           onOpenChange={setOpen}
           tone="dark"
-          className={`${look.frosted} rounded-b-card text-white [--frost-radius:0_0_var(--radius-card)_var(--radius-card)]`}
+          className={`${look.frosted} rounded-b-card text-white`}
         >
           {/* Only while it is open: the fields are then named once a page. */}
           {open ? (

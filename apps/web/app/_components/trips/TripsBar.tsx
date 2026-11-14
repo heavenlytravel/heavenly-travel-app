@@ -4,7 +4,6 @@ import { useEffect, useEffectEvent, useState, type ReactNode } from "react";
 import { ChevronDownIcon, MapIcon } from "@repo/ui/icons";
 import { isTyping } from "@repo/ui/keys";
 import { prefersReducedMotion } from "@repo/ui/motion";
-import { useMediaQuery } from "@repo/ui/use-media-query";
 import { spanOf, type PlannedTrip } from "../../_lib/trip-plan";
 
 /** What pins under the site header sits at its height, its border included. */
@@ -28,16 +27,8 @@ export const clearOfHeader = "scroll-mt-[calc(var(--header-height)+2.25rem)]";
 export const clearOfFold =
   "scroll-mt-[calc(var(--header-height)+5.5rem)] lg:scroll-mt-[calc(var(--header-height)+2.25rem)]";
 
-/** Where a page's trips stop folding on a phone: Tailwind's `lg`. */
-const LARGE = "(min-width: 64rem)";
-
 /** How far the page may scroll before an open sheet folds: a nudge does not. */
 const FOLD_AFTER_PX = 24;
-
-/** Whether the screen is `lg` or wider; false on the server and a phone. */
-export function useLarge() {
-  return useMediaQuery(LARGE);
-}
 
 /**
  * Folds an open sheet once the page scrolls, as a pinned sheet should,

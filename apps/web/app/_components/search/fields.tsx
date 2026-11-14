@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { BOOKING_RULES, type BBox } from "@repo/db";
 import {
   DateField,
@@ -14,11 +15,14 @@ import {
   FlagIcon,
   MapPinIcon,
   UsersIcon,
+  XIcon,
 } from "@repo/ui/icons";
+import { Checkbox, Radio } from "@repo/ui/field";
 import { NumberField } from "@repo/ui/number-field";
 import { PlaceInput, type PlacePresets } from "@repo/ui/place-input";
 import { Select } from "@repo/ui/select";
 import {
+  fieldKeys,
   isPlaceKey,
   type FieldDef,
   type FieldKey,
@@ -233,7 +237,7 @@ export const fieldRing =
 
 /** The label laid over the top of a `fieldBox`, its icon leading. */
 export const fieldLabel =
-  "pointer-events-none absolute top-2.5 left-[18px] z-(--layer-raised) flex items-center gap-1.5 text-caption/5 font-semibold text-body";
+  "pointer-events-none absolute top-2.5 left-[18px] z-(--layer-raised) flex items-center gap-1.5 text-caption/5 font-semibold whitespace-nowrap text-body";
 
 /**
  * A field filling its `fieldBox`, under the label: what is filled in ink,
@@ -243,3 +247,162 @@ export const fieldControl = (clearable: boolean) =>
   `h-full min-h-[70px] w-full border-0 bg-transparent pt-[34px] pb-2.5 pl-[18px] text-ink outline-none placeholder:text-muted data-placeholder:text-muted ${
     clearable ? "pr-11" : "pr-[18px]"
   }`;
+
+/** Whether a field shows its ×: a place or a day with something in it. */
+function isClearable(def: FieldDef, values: SearchValues) {
+  if (def.kind !== "place" && def.kind !== "when") return false;
+  return fieldKeys(def).some((key) => values[key] !== "");
+}
+
+/**
+ * The kind of trip in its box: two radios side by side under the label,
+ * whose icon follows the choice. `badge` follows the label, such as the
+ * trip's number; `textClassName` sizes the choices' words, and
+ * `className` draws the box's edge and width where it sits.
+ */
+export function KindBox({
+  def,
+  id,
+  values,
+  onChange,
+  badge,
+  textClassName = "",
+  className = "",
+}: {
+  def: FieldDef;
+  /** The label's id, which also names the radios. */
+  id: string;
+  values: SearchValues;
+  onChange: (key: FieldKey, value: string) => void;
+  badge?: ReactNode;
+  textClassName?: string;
+  className?: string;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-labelledby={id}
+      className={`${fieldBox} border-card-edge ${className}`}
+    >
+      <span id={id} className={fieldLabel}>
+        <FieldIcon
+          def={def}
+          values={values}
+          className="size-[15px] text-muted"
+        />
+        {def.label}
+        {badge}
+      </span>
+      <div className="flex min-h-[70px] items-end gap-x-5 px-[18px] pt-[34px] pb-2.5">
+        {def.options?.map(({ value, label }) => (
+          <label
+            key={value}
+            className={`flex cursor-pointer items-center gap-2 text-base/6 font-semibold whitespace-nowrap text-muted hover:text-ink has-[:checked]:text-brand ${textClassName}`}
+          >
+            <Radio
+              name={id}
+              value={value}
+              checked={values[def.key] === value}
+              onChange={() => onChange(def.key, value)}
+            />
+            {label}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A field in its box, as the trip forms ask it: the field fills the box,
+ * its label laid over the top, so a click anywhere in the box reaches the
+ * field and its list or calendar opens under the box, lined up with its
+ * edges. A field with a tick (`FieldDef.tick`) shows it after the label,
+ * on its line, so the box keeps its height however wide it grows. A
+ * filled place or day has an × at its end that empties it, a day and its
+ * time together, and puts the cursor back in it. `invalid` draws the
+ * box in red over its neighbours and `describedBy` ties the field to the
+ * line that says why. `textClassName` sizes what is typed; `className`
+ * draws the box's edge and width where it sits.
+ */
+export function FieldBox({
+  def,
+  id,
+  values,
+  onChange,
+  presets,
+  near,
+  invalid = false,
+  describedBy,
+  textClassName = "",
+  className = "",
+}: {
+  def: FieldDef;
+  id: string;
+  values: SearchValues;
+  onChange: (key: FieldKey, value: string, placeId?: string) => void;
+  /** What a place field offers when it is opened empty. */
+  presets?: PlacePresets;
+  /** The box whose places a place field suggests first. */
+  near?: BBox;
+  invalid?: boolean;
+  describedBy?: string;
+  textClassName?: string;
+  className?: string;
+}) {
+  const clearable = isClearable(def, values);
+  const tick = def.tick?.shown(values) ? def.tick : null;
+  const label = def.label;
+  return (
+    <div
+      className={`${fieldBox} ${fieldRing} ${
+        invalid ? "z-(--layer-raised) border-danger" : "border-card-edge"
+      } ${className}`}
+    >
+      {tick ? (
+        <div className={`${fieldLabel} gap-4`}>
+          <label htmlFor={id} className="flex items-center gap-1.5">
+            <FieldIcon def={def} className="size-[15px] text-muted" />
+            {label}
+          </label>
+          <label className="pointer-events-auto flex cursor-pointer items-center gap-1.5 font-normal">
+            <Checkbox
+              checked={values[tick.key] === "1"}
+              onChange={(e) => onChange(tick.key, e.target.checked ? "1" : "")}
+            />
+            {tick.label}
+          </label>
+        </div>
+      ) : (
+        <label htmlFor={id} className={fieldLabel}>
+          <FieldIcon def={def} className="size-[15px] text-muted" />
+          {label}
+        </label>
+      )}
+      <FieldInput
+        def={def}
+        id={id}
+        values={values}
+        presets={presets}
+        near={near}
+        onChange={onChange}
+        invalid={invalid}
+        describedBy={invalid ? describedBy : undefined}
+        className={`${fieldControl(clearable)} ${textClassName}`}
+      />
+      {clearable && (
+        <button
+          type="button"
+          aria-label={`Clear ${label}`}
+          onClick={() => {
+            for (const key of fieldKeys(def)) onChange(key, "");
+            document.getElementById(id)?.focus();
+          }}
+          className="absolute right-2.5 bottom-[11px] z-(--layer-raised) flex size-7 cursor-pointer items-center justify-center rounded-full text-muted hover:bg-hairline hover:text-ink focus-ring"
+        >
+          <XIcon className="size-4" />
+        </button>
+      )}
+    </div>
+  );
+}

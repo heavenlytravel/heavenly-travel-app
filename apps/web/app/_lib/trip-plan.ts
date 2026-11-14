@@ -4,7 +4,6 @@ import {
   classFit,
   formatLocalTime,
   hireEndOf,
-  hourlyChoiceLabel,
   namedHours,
   parseTripSearch,
   startOfTrip,
@@ -13,7 +12,6 @@ import {
   type ClassFit,
   type GuideOffer,
   type HourlyChoice,
-  type TripClash,
   type TripClassPrice,
   type TripMode,
   type TripSearch,
@@ -188,11 +186,6 @@ export function draftOf(trip: PlannedTrip): SearchValues {
   };
 }
 
-/** Whether nothing is typed in the form yet. */
-export function isBlankDraft(values: SearchValues) {
-  return !values.from && !values.to && !values.date && !values.time;
-}
-
 /** The form's values as a trip, or what to fix first. */
 export function tripOfDraft(
   values: SearchValues,
@@ -215,6 +208,37 @@ export function tripOfDraft(
       hourly: search.hourly,
       hours: search.hourly ? namedHours(search.hourly) : null,
     },
+  };
+}
+
+/**
+ * The form's trip for the clash checks while it is typed: once its day and
+ * time are set, the trip itself when it is complete, or else one that only
+ * holds its time and length, since it may still miss a place. Null before
+ * it has a day and a time.
+ */
+export function timedDraft(
+  values: SearchValues,
+  id: string,
+): PlannedTrip | null {
+  if (!values.date || !values.time) return null;
+  const typed = tripOfDraft(values, id);
+  if (typed.ok) return typed.trip;
+  const hourly = values.mode === "hourly";
+  return {
+    id,
+    mode: hourly ? "hourly" : "oneway",
+    pickup: { placeId: "", label: values.from },
+    dropoff: null,
+    date: values.date,
+    time: values.time,
+    hourly: null,
+    hours: hourly
+      ? namedHours({
+          packageHours: Number(values.duration),
+          extraHours: 0,
+        }) || null
+      : null,
   };
 }
 
@@ -260,26 +284,6 @@ export function spanOf(trips: readonly PlannedTrip[]) {
   return first.date === last.date
     ? dayOf(first)
     : `${shortDayOf(first)} to ${shortDayOf(last)}`;
-}
-
-/** A trip in a few words: "Langkawi Airport → Pelangi Beach Resort", "8 hours from Pelangi Beach Resort", or with "to Langkawi Airport" after it when the hire ends there. */
-export function routeOf(trip: PlannedTrip) {
-  // A trip from a link has its places named once it is priced.
-  const name = (place: PlanPlace | null) => place?.label || "…";
-  if (trip.mode === "hourly") {
-    const hire = trip.hourly
-      ? `${hourlyChoiceLabel(trip.hourly)} from ${name(trip.pickup)}`
-      : `${trip.hours} hours from ${name(trip.pickup)}`;
-    return trip.dropoff ? `${hire}, to ${name(trip.dropoff)}` : hire;
-  }
-  return `${name(trip.pickup)} → ${name(trip.dropoff)}`;
-}
-
-/** What the list says of a trip that clashes, in a few words. */
-export function clashLabel(kind: TripClash["kind"]) {
-  return kind === "during-hire"
-    ? "Starts during another trip"
-    : "Same time as another trip";
 }
 
 /**

@@ -43,51 +43,64 @@ together, one vehicle chosen once, confirmed once.
 - **A new search in place of trips the customer has asks first** ("Start a new booking?"),
   and says the flight numbers and notes go too.
 
-### The search card (home page and location pages)
+### The search card (home, location and service hub pages)
 
-- **The trip type is a box like the others,** "Trip" over the top, its icon the arrow or,
-  for Hourly, the clock, and the two radios side by side, where the live card has its
-  "Trip" list.
-- **With no trips yet the form is the card,** so one trip looks like today's card. "Add
-  another trip" under it keeps the trip in "Your trips" and opens "Trip 2".
-- **"Your trips" stays open** once a trip is in, the list by date, numbered as the trips
-  are booked and priced, with "Add another trip" under it. The open form is "Trip 2",
-  with "Save trip" and "Cancel".
-- **Choosing a trip opens it in the form** ("Change trip 2"): Save changes, Cancel,
-  Remove trip. A new trip half typed waits until the change is done.
-- **One row under the trip:** "Add another trip", or the form's buttons, on the left;
-  passengers and "Get prices" on the right. On a phone they stack, a line between the
-  trip and the booking.
-- **Passengers** is one line the height of the buttons, the label on the left and a minus
-  and a plus either side of the number. Today the live code asks it on the options page
-  (`_lib/search.ts`); it moves to the card.
-- **Once the card scrolls away the vehicle page's bar follows the page** under the
-  header, before a trip is in too ("Plan a trip · Where and when"). From `lg` its sheet
-  holds the form too; on a phone it holds the list, passengers and "Get prices", and
-  choosing a trip or "Add another trip", or the bar itself before there is a trip, goes
-  back up to the card.
-- **"Get prices"** sends the list with the form's trip when one is typed: "Get my price",
-  or "Get prices · 4 trips".
-- **Errors stay at the field:** what is missing, and a trip that starts during another,
-  naming it and what to do.
+Redesigned on 2026-11-13 (`_components/search/SearchCard.tsx`); what it replaced, a form
+with "Your trips" and Save trip, is under "Tried and dropped".
+
+- **The services are a dock** of the brand's blue glass (`--brand`, the buttons' blue,
+  since 2026-11-14; navy before) over the hero photo, an icon over
+  each name, a white tile sliding under the chosen one. Only Car with Driver and Coach
+  Charter are booked online; the other four are marked "Soon" and cannot be chosen. On a
+  phone the dock shows the first three and "More", which opens the other three under them.
+- **The trips are a panel of the same glass,** a row each, every row open. A row's boxes
+  are joined in one white frame: "Trip" (Transfer or By the Hour, two radios), Pick-up,
+  Drop-off, a hire's Duration (4, 8 or 12 hours) and When. A hire asks its drop-off only
+  when "Drop off elsewhere", beside the Pick-up label, is ticked. (Tried and dropped on
+  2026-11-14: one Trip list holding the hours, an always-shown optional drop-off, the tick
+  alone in the Drop-off box, and Passengers inside the When picker.)
+- **From 64rem of card (about a 1200px screen) a trip is one line,** every kind
+  alike; narrower its boxes stand one under the other, as on a phone. When (200px) and
+  Duration (124px) are as wide as what they show, so the places keep the room. (A
+  two-line layout between the two was tried and dropped on 2026-11-14.)
+- **Passengers starts at none,** so the customer gives the real number; "Search" with
+  none says "Enter how many passengers are travelling." With one trip it is the row's
+  last box, and the row ends with "Search".
+- **"Add Another Trip" floats under the panel** (where the boxes stand one under the
+  other it comes after the last trip, before Passengers and "Search") and adds an empty row straight away,
+  whatever the others hold; nothing is saved along the way. From the second trip each row
+  is numbered beside "Trip" and has a bin to remove it (at the row's end on a wide card,
+  in its first box's corner on a phone), and Passengers moves down beside "Search": the
+  group is asked once for the booking.
+- **Checks happen on "Search":** every row is a trip, so an empty row says what it
+  misses under itself as a half-typed one does, until it is filled or removed (before
+  2026-11-14 an empty row was left out, and the search went on without it); and two trips that cannot share the vehicle say so as
+  soon as both times are set.
+- **Where no photo lies behind the glass** (the bar under the header, the booking steps)
+  the panel brings the brand photo along, melted and tinted as the card's backdrop does,
+  so it looks the same; a plain tint over a pale page only looked pale.
+- **Once the card scrolls away a bar of the same glass follows the page** under the header
+  ("Plan a Trip · Where and when", or the trips and days, and the passengers). Its sheet
+  holds the same rows over the same trips, so what is typed in one is in the other.
+  Adding or removing a trip in the sheet keeps it open: the page is held where it was
+  while the card above grows or shrinks.
+- **On a phone the hero photo runs behind the whole card,** which stands tall there; the
+  glass needs the photo under it.
+- **The trips and the group live in `SearchProvider`,** so on a location's pages they stay
+  while the customer moves between them, and a place's "Take Me Here" fills the last
+  trip's drop-off.
 
 ### The vehicle page (`/booking/transportation/[category]`)
 
-- **"Your trips" at the top,** the same list and form as the card, each trip with its
-  price in the vehicle chosen before, if any. A trip changed or added here is priced in
-  place, with a toast; removing one offers Undo. No "Change trips" back to the home page.
-- **On a phone the trips are folded into one line** ("4 trips · 3 Nov to 6 Nov · Show",
-  the group, the vehicle and the total under it), so the vehicles come first. It sits
-  under the title and pins under the header as the page scrolls. Choosing it opens the
-  trips in a sheet hung from the line, over the page, wherever the line is: the page
-  does not move, the sheet scrolls on its own when long, and it folds again once the
-  page scrolls, unless the customer is typing. It opens by itself when a trip turns red.
-- **A sticky trips bar from `lg`.** Once the list scrolls away, a thin bar slides in
-  under the site header: "4 trips · 3 Nov to 6 Nov · 5 passengers · MPV · RM 950 · Show".
-  Choosing it opens the list in a sheet below it with a short animation. A trip is
-  changed or added right there in the sheet, without scrolling back up. Only the list
-  scrolls inside the sheet, and the form's place suggestions hang below it. The search
-  card has the same bar, on a phone too.
+- **"Your Trips" at the top are the search card's rows** (since 2026-11-14,
+  `PlanTrips` over `TripSearchPanel`), in the same glass, on the vehicle, add-ons and
+  confirm steps alike. On the add-ons and confirm steps "Search" goes back to the vehicle
+  page, where the new prices and the vehicle are seen again. Every trip is open to change; "Search" checks them and prices
+  the plan again with them and the group, with a toast. Why a trip cannot be priced
+  shows under its row. This replaced the list of trips with a price each, the form that
+  opened one at a time, Undo on removing, and the phone's folded line.
+- **The same bar under the header** as the search card's once the trips scroll away, with
+  the group, the vehicle and the total.
 - **Vehicle cards like the location page's class cards,** three across: photo, name,
   blurb, models, seats and bags, and the late-night line.
 - **Each card has its own button, "Continue · RM 950",** with the total for all the
@@ -95,27 +108,25 @@ together, one vehicle chosen once, confirmed once.
   selecting first. The vehicle chosen before is marked "Your choice".
 - **A class too small for the group is not shown.** A line says which ("Not shown:
   Sedan, for fewer than 5"). No stock is kept, so a class is never "none free" on a day.
-- **Passengers** is the search card's, right of "Add another trip" at the foot of "Your
-  trips"; a group larger than any car gets the coach charter link.
+- **Passengers** is the search card's, beside "Search"; a group larger than any car gets the coach charter link.
 - **Gone from the page:** the side "Your details" card, child seats, radios, and the list
   of trip prices inside each card (the list above shows them).
 
 ### The confirm page
 
-- **Laid out as B:** the trips and the vehicle on the left, "Your details" on the right.
+- **The trips at the top in the search card's rows** (since 2026-11-14, as on the vehicle
+  and add-ons steps); "Search" there goes back to the vehicle page. The list of trips
+  with a price each is gone from the page.
+- **Laid out as B under them:** the vehicle on the left, "Your details" on the right.
   The left side stays in view while the details scroll with the page, unless it is the
   taller side; nothing scrolls on its own.
-- **On a phone the trips and the vehicle fold into one line** ("2 trips · 3 Nov to 6 Nov",
-  the vehicle and the group under it) above the details, so the form comes first. It
-  pins under the header as the page scrolls and opens as a sheet over the page, as on
-  the vehicle page, and opens by itself when a trip turns red. Open, it shows what is
-  booked with one "Edit trips or vehicle" button.
-- **The trips are shown, not changed.** The same list, priced, with no editing and no
-  "Add a trip". "Edit trips" (or the phone's one button) goes back to the vehicle page,
-  where trips are changed or added, and the vehicle chosen again.
-- **A trip that cannot be booked says so under it in the list:** it is too soon to book
-  online, or it is at the same time as another trip or during a hire. So do a trip we
-  quote by email, a driver's night away, and a price changed since the trip was added.
+- **On a phone the vehicle folds into one line** ("2 trips · 3 Nov to 6 Nov", the vehicle
+  and the group under it) above the details, so the form comes first. It pins under the
+  header as the page scrolls, opens as a sheet over the page and opens by itself when a
+  trip turns red. Open, it shows the vehicle with one "Change Vehicle" button.
+- **A trip that cannot be booked says so under its row:** it is too soon to book online,
+  the vehicle is not offered for it, or it is at the same time as another trip or during
+  a hire. A price changed since the trip was added is said under the vehicle.
 - **"Your vehicle":** the class pictured at the vehicle cards' size, its blurb,
   passengers and "Change" (to the vehicle page). The models are not named (since
   2026-11-04: they were "Honda City, Nissan Almeera or Toyota Vios, or similar", with
@@ -162,6 +173,9 @@ So nobody brings them back without a new reason:
 - **Editing and adding trips on the confirm page,** and two layouts for it (A: trips
   across the top).
 - **Planning day by day** (a stay's days as cards).
+- **The search card's "Your trips" list with Save trip and Cancel** (replaced 2026-11-13).
+  A trip had to be complete before the next could start, and the white card with tabs
+  gave way to the dock and the glass panel, a row per trip, every row open.
 
 ## What the code has today
 
@@ -361,15 +375,15 @@ above.
   flight on each pick-up at an airport and the departing one on each drop-off at one,
   copies the note onto every trip, and stops with "now RM X, up from RM Y" when a
   price changed. The page then prices the trips again. On success the plan empties.
-- **Pages:** the search card is the planner (`app/_components/trips/`); the vehicle
-  page has the trips panel and the class cards (`app/_components/ClassCard.tsx`,
-  shared with the location pages); the confirm page is layout B, its one button under
-  the details. `TripsPanel` (the list, the form, passengers and
-  the send button) serves the search card and the vehicle page. `TripsBar.tsx` holds the
-  folded line (`TripsBar`), the phone's fold that pins under the header and opens a
-  sheet over the page (`TripsFold`, on the vehicle and confirm pages), the bar under the
-  header once the trips scroll away (`UnderHeader`, the search card, before a trip too,
-  and from `lg` the vehicle page), and `useFoldOnScroll`, which folds an open sheet once
+- **Pages (since 2026-11-14):** the search card (`app/_components/search/SearchCard.tsx`)
+  and the vehicle page share `TripSearchPanel`: the rows (`TripRows`, held by
+  `useTripRows`), "Add Another Trip", passengers and "Search", and the bar under the
+  header. The class cards (`app/_components/ClassCard.tsx`) are shared with the location
+  pages; the confirm page is layout B, its one button under the details. `TripsBar.tsx`
+  holds the folded line (`TripsBar`), the phone's fold that pins under the header and
+  opens a sheet over the page (`TripsFold`, on the confirm page), the bar under the
+  header once the trips scroll away (`UnderHeader`), and `useFoldOnScroll`, which folds
+  an open sheet once
   the page scrolls unless the customer is typing. Today's one-trip links still open the vehicle and confirm pages as a
   list of one; the address is cleaned with the browser's history,
   because a server action in flight drops a router navigation.

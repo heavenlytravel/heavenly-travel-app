@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  clashesOf,
   classFitNote,
   CONTACT,
   formatMyr,
@@ -15,24 +14,15 @@ import {
 import { Button } from "@repo/ui/button";
 import { Notice } from "@repo/ui/notice";
 import { Bone, Loading } from "@repo/ui/skeleton";
-import { toast } from "@repo/ui/toast";
 import { ClassCard } from "../../../../_components/ClassCard";
-import { PassengersStepper } from "../../../../_components/trips/PassengersStepper";
-import { clearOfHeader } from "../../../../_components/trips/TripsBar";
-import { TripsPanel } from "../../../../_components/trips/TripsPanel";
 import { useLinkSeed } from "../../../../_components/trips/useLinkSeed";
 import { useNewBooking } from "../../../../_components/trips/useNewBooking";
-import {
-  usePlanner,
-  type PlannerChange,
-} from "../../../../_components/trips/usePlanner";
 import {
   classOnTrip,
   planPrices,
   quoteOf,
   tripNameOf,
   tripOfSearch,
-  type PlannedTrip,
 } from "../../../../_lib/trip-plan";
 import {
   currentPlan,
@@ -47,6 +37,7 @@ import {
 import { useNavigate } from "../../../../_lib/useNavigate";
 import { surface, panel, Pending, Stop } from "../../../_components/Page";
 import { guideAddOnOf } from "./plan-add-ons";
+import { PlanTrips } from "./PlanTrips";
 import { BookingStepTitle, FoldedTripsBones } from "./StepParts";
 import { usePlanPricing } from "./usePlanPricing";
 
@@ -113,24 +104,6 @@ export function VehicleStep({
   const { pricing, error, retry } = usePlanPricing(
     seeded && plan?.category === category ? plan : null,
   );
-  const planner = usePlanner({
-    trips: plan?.trips ?? [],
-    openWhenEmpty: false,
-    onTrips: (next: PlannedTrip[], change: PlannerChange) => {
-      const before = currentPlan().trips;
-      updatePlan((now) => ({ ...now, trips: next }));
-      if (change === "removed") {
-        toast.success("Trip removed", {
-          action: {
-            label: "Undo",
-            onClick: () => updatePlan((now) => ({ ...now, trips: before })),
-          },
-        });
-      } else {
-        toast.success(change === "added" ? "Trip added" : "Trip updated");
-      }
-    },
-  });
 
   // The page's category is the plan's.
   useEffect(() => {
@@ -221,40 +194,22 @@ export function VehicleStep({
     <>
       <StepTitle category={category} count={trips.length} />
 
-      <TripsPanel
-        planner={planner}
+      <PlanTrips
         category={category}
-        foldOnSmall
-        attention={failed.length > 0 || clashesOf(trips).size > 0}
-        className={`${surface} mb-8 ${clearOfHeader} lg:p-7`}
+        trips={trips}
+        passengers={passengers}
         summary={[
           plural(passengers, "passenger"),
           ...(chosen?.fit.ok
             ? [`${chosen.card.name} · ${formatMyr(chosen.fit.totalSen)}`]
             : []),
         ].join(" · ")}
-        passengers={
-          <PassengersStepper
-            value={passengers}
-            onChange={(next) =>
-              updatePlan((now) => ({ ...now, passengers: next }))
-            }
-            className="w-full @3xl:w-[250px]"
-          />
-        }
-        priceOf={(trip) => {
-          const quote = quoteOf(priced, trip);
-          if (!quote) return <span className="text-muted">…</span>;
-          if (!chosen) return null;
-          const price = classOnTrip(quote, chosen.card.id)?.totalSen;
-          return price === undefined || price === null
-            ? null
-            : formatMyr(price);
+        alertsOf={(id) => {
+          const trip = trips.find((t) => t.id === id);
+          const view = trip ? quoteOf(priced, trip)?.view : null;
+          return view && !view.ok ? [view.error] : [];
         }}
-        noteOf={(trip) => {
-          const view = quoteOf(priced, trip)?.view;
-          return view && !view.ok ? { tone: "red", text: view.error } : null;
-        }}
+        className="mb-8"
       />
 
       <section aria-labelledby="vehicles">

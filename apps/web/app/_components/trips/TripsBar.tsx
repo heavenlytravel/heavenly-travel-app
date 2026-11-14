@@ -34,10 +34,6 @@ const LARGE = "(min-width: 64rem)";
 /** How far the page may scroll before an open sheet folds: a nudge does not. */
 const FOLD_AFTER_PX = 24;
 
-/** The frame of a bar held under the site header: its sides and foot drawn, its top the header's. */
-export const underHeaderFrame =
-  "rounded-b-card border border-t-0 border-card-edge bg-white shadow-raised";
-
 /** Whether the screen is `lg` or wider; false on the server and a phone. */
 export function useLarge() {
   return useMediaQuery(LARGE);
@@ -46,25 +42,54 @@ export function useLarge() {
 /**
  * Folds an open sheet once the page scrolls, as a pinned sheet should,
  * unless the customer is typing: a phone's keyboard scrolls the page
- * itself to show the field.
+ * itself to show the field. With `element`, what counts is how far it
+ * moved on the screen, not the page: a trip added or removed in the sheet
+ * grows or shrinks the same trips up in the page, and the scroll the
+ * browser makes to keep the screen still is not the customer's.
  */
-export function useFoldOnScroll(open: boolean, fold: () => void) {
+function useFoldOnScroll(
+  open: boolean,
+  fold: () => void,
+  element?: HTMLElement | null,
+) {
   const onScrolled = useEffectEvent(fold);
   useEffect(() => {
     if (!open) return;
-    const from = window.scrollY;
+    const at = () =>
+      element ? element.getBoundingClientRect().bottom : -window.scrollY;
+    const from = at();
     function onScroll() {
       if (
         !isTyping(document.activeElement) &&
-        Math.abs(window.scrollY - from) > FOLD_AFTER_PX
+        Math.abs(at() - from) > FOLD_AFTER_PX
       ) {
         onScrolled();
       }
     }
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, [open]);
+  }, [open, element]);
 }
+
+/** A bar's colours: on white, or on the search card's dark glass. */
+const TONES = {
+  light: {
+    ring: "focus-ring",
+    accent: "text-brand",
+    strong: "text-ink",
+    quiet: "text-muted",
+    rule: "border-hairline",
+  },
+  dark: {
+    ring: "focus-ring focus-ring-dark",
+    accent: "text-azure-light",
+    strong: "text-white",
+    quiet: "text-white/70",
+    rule: "border-white/15",
+  },
+} as const;
+
+export type BarTone = keyof typeof TONES;
 
 /**
  * The booking's trips in one line: how many and the days they span, or
@@ -78,6 +103,7 @@ function TripsLine({
   open,
   onToggle,
   alert = false,
+  tone = "light",
   className = "",
 }: {
   trips: readonly PlannedTrip[];
@@ -85,34 +111,40 @@ function TripsLine({
   open: boolean;
   onToggle: () => void;
   alert?: boolean;
+  tone?: BarTone;
   className?: string;
 }) {
+  const colour = TONES[tone];
   return (
     <button
       type="button"
       onClick={onToggle}
       aria-expanded={open}
-      className={`flex min-h-[46px] w-full items-center gap-3 px-4 py-2.5 text-left text-copy focus-ring sm:px-5 ${className}`}
+      className={`flex min-h-[46px] w-full items-center gap-3 px-4 py-2.5 text-left text-copy ${colour.ring} sm:px-5 ${className}`}
     >
-      <MapIcon className="size-[18px] shrink-0 text-brand" />
+      <MapIcon className={`size-[18px] shrink-0 ${colour.accent}`} />
       <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-0.5">
-        <b className={`shrink-0 ${alert ? "text-danger" : "text-ink"}`}>
+        <b className={`shrink-0 ${alert ? "text-danger" : colour.strong}`}>
           {trips.length === 0
             ? "Plan a Trip"
             : trips.length === 1
               ? "1 trip"
               : `${trips.length} trips`}
         </b>
-        <span className="min-w-0 truncate text-muted">
+        <span className={`min-w-0 truncate ${colour.quiet}`}>
           {trips.length === 0 ? "Where and when" : spanOf(trips)}
         </span>
         {summary ? (
-          <span className="w-full font-semibold text-ink sm:ml-auto sm:w-auto">
+          <span
+            className={`w-full font-semibold ${colour.strong} sm:ml-auto sm:w-auto`}
+          >
             {summary}
           </span>
         ) : null}
       </span>
-      <span className="flex shrink-0 items-center gap-1 font-semibold text-brand">
+      <span
+        className={`flex shrink-0 items-center gap-1 font-semibold ${colour.accent}`}
+      >
         {open ? "Hide" : "Show"}
         <ChevronDownIcon
           className={`size-4 transition-transform duration-300 ${
@@ -128,13 +160,15 @@ function TripsLine({
  * The trips' line with `children` unfolding under it with a short
  * animation, for the bar under the site header. Escape folds them again.
  * They are clipped while they move and free once open, so a place field's
- * suggestions can hang below the bar. `className` draws its frame.
+ * suggestions can hang below the bar. `className` draws its frame, and
+ * `tone` says whether that frame is white or dark.
  */
 export function TripsBar({
   trips,
   summary,
   open,
   onOpenChange,
+  tone = "light",
   className,
   children,
 }: {
@@ -143,6 +177,7 @@ export function TripsBar({
   summary?: ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  tone?: BarTone;
   className: string;
   children: ReactNode;
 }) {
@@ -165,6 +200,7 @@ export function TripsBar({
         summary={summary}
         open={open}
         onToggle={() => show(!open)}
+        tone={tone}
       />
       <div
         onTransitionEnd={(e) => {
@@ -180,7 +216,9 @@ export function TripsBar({
             open && settled ? "overflow-visible" : "overflow-hidden"
           } ${open ? "visible" : "invisible"}`}
         >
-          <div className="border-t border-hairline px-3 pt-3 pb-4 sm:px-4">
+          <div
+            className={`border-t ${TONES[tone].rule} px-3 pt-3 pb-4 sm:px-4`}
+          >
             {children}
           </div>
         </div>
@@ -269,7 +307,35 @@ export function useTripsSheet() {
   const [element, watch] = useState<HTMLElement | null>(null);
   const [away, setAway] = useState(false);
   const [open, setOpen] = useState(false);
-  useFoldOnScroll(open, () => setOpen(false));
+  useFoldOnScroll(open, () => setOpen(false), element);
+
+  // While it is away, it keeps its foot where it was on the screen as it
+  // grows or shrinks: a trip added in the sheet adds it up in the page
+  // too, which would otherwise push the page down, bring the trips back
+  // into view and fold the sheet. A browser that keeps the screen still
+  // itself leaves nothing to do. Observed sizes come before observed
+  // crossings in a frame, so the crossing sees the page put back.
+  const isAway = useEffectEvent(() => away);
+  useEffect(() => {
+    if (!element) return;
+    let bottom = element.getBoundingClientRect().bottom;
+    const onScroll = () => {
+      bottom = element.getBoundingClientRect().bottom;
+    };
+    const sizes = new ResizeObserver(() => {
+      const now = element.getBoundingClientRect().bottom;
+      if (isAway() && Math.abs(now - bottom) > 0.5) {
+        window.scrollBy({ top: now - bottom, behavior: "instant" });
+      }
+      bottom = element.getBoundingClientRect().bottom;
+    });
+    sizes.observe(element);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      sizes.disconnect();
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [element]);
 
   useEffect(() => {
     if (!element) return;

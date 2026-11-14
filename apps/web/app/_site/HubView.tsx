@@ -26,13 +26,15 @@ import {
   missingBlock,
 } from "../_components/page-parts";
 import { HeroHeading } from "../_components/page-headings";
+import { SearchProvider } from "../_components/search/SearchProvider";
+import { Booking } from "../_home/Sections";
 import type { PhotoCard } from "../_home/DestinationCards";
 import styles from "../_home/home.module.css";
 import { faqDataOf } from "../_lib/seo";
 
 /**
- * A service's hub, /car-with-driver or /coach-charter: its hero, the
- * locations that serve it, each opening its own page of the service, then
+ * A service's hub, /car-with-driver or /coach-charter: its hero with the
+ * search card open on the service, the locations that serve it, each opening its own page of the service, then
  * the intro and the FAQs when Marketing wrote them. Until the hub is first
  * published it shows the words and photo it was built with (`HUB_DEFAULTS`),
  * as the home page does. The public page and the staff preview render
@@ -99,50 +101,55 @@ export function HubView({
   return (
     <main className="pb-[60px] sm:pb-[88px]">
       {faqData && <JsonLd data={[faqData]} />}
-      <section
-        aria-labelledby="hero-title"
-        className="relative flex min-h-[420px] flex-col lg:min-h-[520px]"
-      >
-        <div className="absolute inset-0 overflow-hidden bg-mist">
-          <Image
-            src={content?.heroImage?.url ?? defaults.image}
-            alt={content?.heroImage?.alt ?? ""}
-            fill
-            preload
-            sizes="100vw"
-            className="object-cover"
-          />
-          <div className={`${styles.heroWash} absolute inset-0`} />
-        </div>
-        <div
-          className={`relative z-(--layer-raised) flex flex-1 flex-col justify-center pt-7 pb-12 ${gutter}`}
+      <SearchProvider product={page}>
+        <section
+          aria-labelledby="hero-title"
+          className="relative flex min-h-[420px] flex-col lg:min-h-[520px]"
         >
-          <div className={column}>
-            {content && !content.heroImage && empty.heroImage && (
-              <p className="mb-5">
-                <MissingMark part={empty.heroImage} alone />
-              </p>
-            )}
-            <HomeCrumbs current={label} />
-            <HeroHeading
-              eyebrow="Our Services"
-              line={
-                <>
-                  {subheadline}
-                  {content && !content.heroSubheadline && empty.subheadline && (
-                    <MissingMark part={empty.subheadline} />
-                  )}
-                </>
-              }
-            >
-              {headline}
-              {content && !content.heroHeadline && empty.headline && (
-                <MissingMark part={empty.headline} />
-              )}
-            </HeroHeading>
+          <div className="absolute inset-0 overflow-hidden bg-mist">
+            <Image
+              src={content?.heroImage?.url ?? defaults.image}
+              alt={content?.heroImage?.alt ?? ""}
+              fill
+              preload
+              sizes="100vw"
+              className="object-cover"
+            />
+            <div className={`${styles.heroWash} absolute inset-0`} />
           </div>
-        </div>
-      </section>
+          <div
+            className={`relative z-(--layer-raised) flex flex-1 flex-col justify-center pt-7 pb-12 ${gutter}`}
+          >
+            <div className={column}>
+              {content && !content.heroImage && empty.heroImage && (
+                <p className="mb-5">
+                  <MissingMark part={empty.heroImage} alone />
+                </p>
+              )}
+              <HomeCrumbs current={label} />
+              <HeroHeading
+                eyebrow="Our Services"
+                line={
+                  <>
+                    {subheadline}
+                    {content &&
+                      !content.heroSubheadline &&
+                      empty.subheadline && (
+                        <MissingMark part={empty.subheadline} />
+                      )}
+                  </>
+                }
+              >
+                {headline}
+                {content && !content.heroHeadline && empty.headline && (
+                  <MissingMark part={empty.headline} />
+                )}
+              </HeroHeading>
+            </div>
+          </div>
+          <Booking />
+        </section>
+      </SearchProvider>
 
       <Section
         id="locations"
